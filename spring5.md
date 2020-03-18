@@ -50,3 +50,4 @@ Use Interfaces for every class, at least for every Service class. The naming con
 
 --
 1. контекст загружать по имени интерфейса
+https://www.youtube.com/watch?v=BmBr5diz8WA

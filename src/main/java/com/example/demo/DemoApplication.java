@@ -10,6 +10,7 @@ import org.springframework.context.support.GenericApplicationContext;
 import com.example.demo.xmlconfig.MyService;
 import com.example.demo.xmlconfig.MyStaticFactoryService;
 
+import java.lang.management.ManagementFactory;
 import java.util.Random;
 
 @SpringBootApplication
