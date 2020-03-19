@@ -1,5 +1,8 @@
-package com.example.demo.xmlconfig;
+package com.example.demo.annotation;
 
+import org.springframework.stereotype.Service;
+
+@Service
 public class MyService {
     private final MyStaticFactoryService service;
 
