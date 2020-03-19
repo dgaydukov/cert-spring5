@@ -45,9 +45,3 @@ Use Interfaces for every class, at least for every Service class. The naming con
 5. When you return `Object`, and there is no `Object`, return `null`. When you return `Collection` and thre is nothing to return, return empty collection.
 6. Difference between appcontext & genericappcontext (and all others)
 7. Difference between: jdbc, spring jdbc, jpa, hibernate, spring data
-8. a
-
-
---
-1. контекст загружать по имени интерфейса
-https://www.youtube.com/watch?v=BmBr5diz8WA

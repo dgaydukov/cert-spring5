@@ -1,12 +1,19 @@
 package com.example.demo;
 
+import javafx.util.Pair;
+import org.springframework.beans.factory.support.PropertiesBeanDefinitionReader;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.context.support.GenericApplicationContext;
 
 import com.example.demo.xml.MyService;
 import com.example.demo.xml.MyStaticFactoryService;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+import java.util.List;
 
 @SpringBootApplication
 public class DemoApplication {
@@ -18,7 +25,8 @@ public class DemoApplication {
 		//ApplicationContext context = new FileSystemXmlApplicationContext("src/main/resources/xmlconfig.xml");
 		System.out.println();
 		GenericApplicationContext context = new GenericApplicationContext();
-		new XmlBeanDefinitionReader(context).loadBeanDefinitions("xmlconfig.xml");
+		int beansCount = new XmlBeanDefinitionReader(context).loadBeanDefinitions("xmlconfig.xml");
+		System.out.println("found "+beansCount+" beans for xmlconfig.xml");
 		context.refresh();
 
 
@@ -30,11 +38,14 @@ public class DemoApplication {
 		factoryService.print();
 
 		System.out.println();
+// search all beans annotated with @Component or any other annotation that includes component
+//		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+//		ctx.scan("com.example.demo.annotation");
+//		ctx.refresh();
 
-		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("com.example.demo.annotation");
+
 		System.out.println(ctx);
-		ctx.scan("com.example.demo.annotation");
-		ctx.refresh();
 
 		MyService myService = context.getBean(MyService.class);
 		myService.print();
