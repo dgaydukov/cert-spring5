@@ -1,19 +1,12 @@
 package com.example.demo;
 
-import javafx.util.Pair;
-import org.springframework.beans.factory.support.PropertiesBeanDefinitionReader;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.context.support.GenericApplicationContext;
 
 import com.example.demo.xml.MyService;
 import com.example.demo.xml.MyStaticFactoryService;
-import org.springframework.stereotype.Service;
-
-import java.util.Date;
-import java.util.List;
 
 @SpringBootApplication
 public class DemoApplication {
