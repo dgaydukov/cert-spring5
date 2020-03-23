@@ -1,13 +1,5 @@
 # Content
 
-* [youtube spring basics](https://www.youtube.com/watch?v=3wBteulZaAs&list=PL6jg6AGdCNaWF-sUH2QDudBRXo54zuN1t)
-* [spring-certification-5.0](https://github.com/vshemyako/spring-certification-5.0)
-* [SpringCertification5.0](https://github.com/MrR0807/SpringCertification5.0)
-* [Pivotal exam voucher](https://store.education.pivotal.io/confirm-course?courseid=EDU-1202)
-* [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
-* [mock](http://itestjava.com/java-certification-practice-tests/product/enter.do?product=SPRING-CORE50)
-* [guide](https://leanpub.com/corespring5certificationindetail)
-
 1. [DI and IoC](#di-and-ioc)
 * 1.1 [Dependency injection](#dependency-injection)
 * 1.2 [Interface for every class](#interface-for-every-class)
