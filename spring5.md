@@ -22,6 +22,10 @@ Use Interfaces for every class, at least for every Service class. The naming con
 ###### Xml, Groovy, Properties example
 Here is quick example to demonstrate how to use di in practice.
 Notice, that `BeanDefinitionReader` takes `BeanDefinitionRegistry` instance, so our factory should be both `BeanFactory & BeanDefinitionRegistry`.
+There are 3 ways to externalize your configs with `BeanDefinitionRegistry` interface
+* groovy script
+* xml
+* properties files
 We have 2 files
 File: `SimpleBean.java`
 ```java
@@ -77,7 +81,7 @@ beans {
     }
 }
 ```
-File: `app.properties`
+File: `app.properties` (there is no way to add `init-method` to bean with this config type)
 ```
 simpleBean.(class)=com.example.spring.app.SimpleBean
 simpleBean.name=goodBean
@@ -175,6 +179,150 @@ Loading PROPERTIES
 constructing SimpleBean...
 16:37:13.875 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'simplePrinter'
 printer => I'm SimpleBean, my name is goodBean
+```
+
+Generally you should prefer `ApplicationContext` over `BeanFactory`, cause it adds bpp, bfpp, aop, i18n and so on do di.
+Remember that you need to call `refresh()` on context.
+```java
+package com.example.demo;
+
+import org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader;
+import org.springframework.beans.factory.support.BeanDefinitionReader;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.PropertiesBeanDefinitionReader;
+import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
+
+import com.example.spring.app.SimpleBean;
+
+
+public class DemoApplication {
+	enum Type {XML, GROOVY, PROPERTIES}
+
+	public static void main(String[] args) {
+		for (Type type: Type.values()) {
+			System.out.println("Loading " + type);
+			ApplicationContext context = new GenericApplicationContext();
+			loadBeanDefinitions(context, "app", type);
+			SimpleBean simpleBean = context.getBean("simpleBean", SimpleBean.class);
+			simpleBean.print();
+			System.out.println();
+		}
+	}
+
+	private static void loadBeanDefinitions(ApplicationContext context, String fileName, Type type){
+		BeanDefinitionRegistry registry = (BeanDefinitionRegistry) context;
+		ConfigurableApplicationContext ctx = (ConfigurableApplicationContext) context;
+		BeanDefinitionReader reader;
+		switch (type) {
+			case XML:
+				reader = new XmlBeanDefinitionReader(registry);
+				break;
+			case GROOVY:
+				reader = new GroovyBeanDefinitionReader(registry);
+				break;
+			case PROPERTIES:
+				reader = new PropertiesBeanDefinitionReader(registry);
+				break;
+			default:
+				throw new IllegalArgumentException("Unknown type: " + type);
+		}
+		reader.loadBeanDefinitions(fileName + "." + type.toString().toLowerCase());
+		ctx.refresh();
+	}
+}
+```
+
+If we want to add annotation support to xml file we should add `<context:component-scan base-package="your.package"/>`. This will scan package `your.package` for all annotated with `@Component` and related to it.
+
+We can also use `GenericApplicationContext` to load data, cause it's both `ApplicationContext and BeanDefinitionRegistry`.
+Notice that for xml and groovy we have specialized generic contexts with `load` method, where `reader.loadBeanDefinitions` logic is hidden.
+Here we can also use fourth type with java config file.
+config file
+```java
+package com.example.spring.app;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class JavaConfig {
+    @Bean
+    public SimpleBean simpleBean(){
+        SimpleBean bean = new SimpleBean();
+        bean.setName("goodBean");
+        bean.setPrinter(simplePrinter());
+        // explicitly call init here
+        bean.init();
+        return bean;
+    }
+
+    @Bean
+    public SimplePrinter simplePrinter(){
+        return new SimplePrinter();
+    }
+}
+
+```
+Context initialization
+```java
+package com.example.demo;
+
+import org.springframework.beans.factory.support.BeanDefinitionReader;
+import org.springframework.beans.factory.support.PropertiesBeanDefinitionReader;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.context.support.GenericGroovyApplicationContext;
+import org.springframework.context.support.GenericXmlApplicationContext;
+
+import com.example.spring.app.JavaConfig;
+import com.example.spring.app.SimpleBean;
+
+
+public class DemoApplication {
+	enum Type {XML, GROOVY, PROPERTIES, JAVA}
+
+	public static void main(String[] args) {
+		for (Type type: Type.values()) {
+			System.out.println("Loading " + type);
+			ApplicationContext context = buildContext("app", type);
+			SimpleBean simpleBean = context.getBean("simpleBean", SimpleBean.class);
+			simpleBean.print();
+			System.out.println();
+		}
+
+	}
+
+	private static ApplicationContext buildContext(String fileName, Type type) {
+		fileName = fileName + "." + type.toString().toLowerCase();
+		switch (type) {
+			case XML:
+				GenericXmlApplicationContext xmlContext = new GenericXmlApplicationContext();
+				xmlContext.load(fileName);
+				xmlContext.refresh();
+				return xmlContext;
+			case GROOVY:
+				GenericGroovyApplicationContext groovyContext = new GenericGroovyApplicationContext();
+				groovyContext.load(fileName);
+				groovyContext.refresh();
+				return groovyContext;
+			case PROPERTIES:
+				GenericApplicationContext propsContext = new GenericXmlApplicationContext();
+				propsContext.refresh();
+				BeanDefinitionReader reader = new PropertiesBeanDefinitionReader(propsContext);
+				reader.loadBeanDefinitions(fileName);
+				return propsContext;
+			case JAVA:
+				ApplicationContext javaContext = new AnnotationConfigApplicationContext(JavaConfig.class);
+				return javaContext;
+			default:
+				throw new IllegalArgumentException("Unknown type: " + type);
+		}
+	}
+}
 ```
 
 #### Miscellaneous

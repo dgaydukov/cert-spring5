@@ -1,45 +1,55 @@
 package com.example.demo;
 
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader;
 import org.springframework.beans.factory.support.BeanDefinitionReader;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.PropertiesBeanDefinitionReader;
-import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.context.support.GenericGroovyApplicationContext;
+import org.springframework.context.support.GenericXmlApplicationContext;
 
+import com.example.spring.app.JavaConfig;
 import com.example.spring.app.SimpleBean;
 
 
 public class DemoApplication {
-	enum Type {XML, GROOVY, PROPERTIES}
+	enum Type {XML, GROOVY, PROPERTIES, JAVA}
 
 	public static void main(String[] args) {
 		for (Type type: Type.values()) {
 			System.out.println("Loading " + type);
-			BeanFactory factory = new DefaultListableBeanFactory();
-			loadBeanDefinitions((BeanDefinitionRegistry) factory, "app", type);
-			SimpleBean simpleBean = factory.getBean("simpleBean", SimpleBean.class);
+			ApplicationContext context = buildContext("app", type);
+			SimpleBean simpleBean = context.getBean("simpleBean", SimpleBean.class);
 			simpleBean.print();
 			System.out.println();
 		}
+
 	}
 
-	private static void loadBeanDefinitions(BeanDefinitionRegistry registry, String fileName, Type type){
-		BeanDefinitionReader reader;
+	private static ApplicationContext buildContext(String fileName, Type type) {
+		fileName = fileName + "." + type.toString().toLowerCase();
 		switch (type) {
 			case XML:
-				reader = new XmlBeanDefinitionReader(registry);
-				break;
+				GenericXmlApplicationContext xmlContext = new GenericXmlApplicationContext();
+				xmlContext.load(fileName);
+				xmlContext.refresh();
+				return xmlContext;
 			case GROOVY:
-				reader = new GroovyBeanDefinitionReader(registry);
-				break;
+				GenericGroovyApplicationContext groovyContext = new GenericGroovyApplicationContext();
+				groovyContext.load(fileName);
+				groovyContext.refresh();
+				return groovyContext;
 			case PROPERTIES:
-				reader = new PropertiesBeanDefinitionReader(registry);
-				break;
+				GenericApplicationContext propsContext = new GenericXmlApplicationContext();
+				propsContext.refresh();
+				BeanDefinitionReader reader = new PropertiesBeanDefinitionReader(propsContext);
+				reader.loadBeanDefinitions(fileName);
+				return propsContext;
+			case JAVA:
+				ApplicationContext javaContext = new AnnotationConfigApplicationContext(JavaConfig.class);
+				return javaContext;
 			default:
 				throw new IllegalArgumentException("Unknown type: " + type);
 		}
-		reader.loadBeanDefinitions(fileName + "." + type.toString().toLowerCase());
 	}
 }
