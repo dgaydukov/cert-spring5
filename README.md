@@ -25,7 +25,6 @@ There are 2 main reasons to get it.
 1. beanfactorypostprocessor (with non static method from javaconfig) vs beanpostprocessor
 2. bfpp several implementations (in which order they would be executed)
 2. load context by interface name
-3. load AnnotationConfigApplicationContext with java config (annotated with @Configuration) file (with beans)
 4. create custom context (load data from .properties files or json context) with PropertiesBeanDefinitionReader and with custom reader
 5. how to update prototype inside singleton (proxymode=targetclass)
 6. create custom scope (like singleton/prototype)

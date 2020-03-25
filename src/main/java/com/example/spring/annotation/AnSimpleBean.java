@@ -11,7 +11,7 @@ public class AnSimpleBean {
     @Value("goodBean")
     private String name;
     @Autowired
-    private AnSimplePrinter printer;
+    private Printer printer;
 
     public AnSimpleBean(){
         System.out.println("constructing SimpleBean...");
