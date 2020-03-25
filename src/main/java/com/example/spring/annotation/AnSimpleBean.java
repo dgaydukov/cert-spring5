@@ -22,6 +22,10 @@ public class AnSimpleBean {
         System.out.println("initializing SimpleBean...");
     }
 
+    public void init2(){
+        System.out.println("GOT IT");
+    }
+
     public void print(){
         printer.print("I'm SimpleBean, my name is " + name);
     }
