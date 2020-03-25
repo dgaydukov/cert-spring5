@@ -153,31 +153,17 @@ public class DemoApplication {
 ```
 ```
 Loading XML
-16:37:13.281 [main] DEBUG org.springframework.beans.factory.xml.XmlBeanDefinitionReader - Loaded 2 bean definitions from class path resource [app.xml]
-16:37:13.285 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'simpleBean'
 constructing SimpleBean...
-16:37:13.357 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'simplePrinter'
 initializing SimpleBean...
 printer => I'm SimpleBean, my name is goodBean
 
 Loading GROOVY
-WARNING: An illegal reflective access operation has occurred
-WARNING: Illegal reflective access by org.codehaus.groovy.reflection.CachedClass (file:/home/diman/.m2/repository/org/codehaus/groovy/groovy-all/2.4.12/groovy-all-2.4.12.jar) to method java.lang.Object.finalize()
-WARNING: Please consider reporting this to the maintainers of org.codehaus.groovy.reflection.CachedClass
-WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
-WARNING: All illegal access operations will be denied in a future release
-16:37:13.872 [main] DEBUG org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader - Loaded 2 bean definitions from class path resource [app.groovy]
-16:37:13.872 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'simpleBean'
 constructing SimpleBean...
-16:37:13.872 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'simplePrinter'
 initializing SimpleBean...
 printer => I'm SimpleBean, my name is goodBean
 
 Loading PROPERTIES
-16:37:13.874 [main] DEBUG org.springframework.beans.factory.support.PropertiesBeanDefinitionReader - Loaded 2 bean definitions from class path resource [app.properties]
-16:37:13.875 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'simpleBean'
 constructing SimpleBean...
-16:37:13.875 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'simplePrinter'
 printer => I'm SimpleBean, my name is goodBean
 ```
 
@@ -324,6 +310,79 @@ public class DemoApplication {
 	}
 }
 ```
+
+Instead of using java config with manually creating beans with `@Bean` annotation, we can inject annotations directly into beans
+File: `AnSimpleBean.java`
+```java
+package com.example.spring.annotation;
+
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+@Service
+public class AnSimpleBean {
+    @Value("goodBean")
+    private String name;
+    @Autowired
+    private AnSimplePrinter printer;
+
+    public AnSimpleBean(){
+        System.out.println("constructing SimpleBean...");
+    }
+
+    @PostConstruct
+    public void init(){
+        System.out.println("initializing SimpleBean...");
+    }
+
+    public void print(){
+        printer.print("I'm SimpleBean, my name is " + name);
+    }
+}
+```
+
+File: `AnSimplePrinter.java`
+```java
+package com.example.spring.annotation;
+
+import org.springframework.stereotype.Service;
+
+@Service
+public class AnSimplePrinter {
+    public void print(String str){
+        System.out.println("printer => " + str);
+    }
+}
+```
+
+Main method. By default bean id are like bean class name with first lowercase, in our example => anSimpleBean. But you can change it to whatever you want like this `@Service("myCoolBeanName")`
+```java
+package com.example.demo;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import com.example.spring.annotation.AnSimpleBean;
+
+
+public class DemoApplication {
+	public static void main(String[] args) {
+		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.spring.annotation");
+		AnSimpleBean simpleBean = context.getBean("anSimpleBean", AnSimpleBean.class);
+		simpleBean.print();
+	}
+}
+```
+```
+constructing SimpleBean...
+initializing SimpleBean...
+printer => I'm SimpleBean, my name is goodBean
+```
+
+We can have nested application contexts. `GenericApplicationContext` have `setParent` method, where you can pass parent context. And you can get all beans in child context from parent context.
 
 #### Miscellaneous
 
