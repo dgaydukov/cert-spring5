@@ -1,4 +1,4 @@
-package com.example.demo.annotation;
+package com.example.spring.annotation;
 
 import org.springframework.stereotype.Service;
 

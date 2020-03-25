@@ -4,9 +4,10 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans
         https://www.springframework.org/schema/beans/spring-beans.xsd">
 
-    <bean id="myXmlService" class="com.example.demo.xml.MyService" lazy-init="true">
-        <constructor-arg ref="myStaticFactoryService"/>
+    <bean id="simpleBean" class="com.example.spring.app.SimpleBean" init-method="init">
+        <property name="name" value="goodBean"/>
+        <property name="printer" ref="simplePrinter"/>
     </bean>
-    <bean id="myStaticFactoryService" class="com.example.demo.xml.MyStaticFactoryService" factory-method="createMyStaticFactoryService" lazy-init="true" scope="prototype"/>
+    <bean id="simplePrinter" class="com.example.spring.app.SimplePrinter"/>
 
 </beans>

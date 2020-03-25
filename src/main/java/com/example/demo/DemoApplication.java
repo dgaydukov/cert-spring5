@@ -1,54 +1,45 @@
 package com.example.demo;
 
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader;
+import org.springframework.beans.factory.support.BeanDefinitionReader;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.support.PropertiesBeanDefinitionReader;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.support.GenericApplicationContext;
 
-import com.example.demo.xml.MyService;
-import com.example.demo.xml.MyStaticFactoryService;
+import com.example.spring.app.SimpleBean;
 
-import javax.swing.*;
 
-@SpringBootApplication
 public class DemoApplication {
+	enum Type {XML, GROOVY, PROPERTIES}
+
 	public static void main(String[] args) {
-		 ConfigurableApplicationContext context = SpringApplication.run(DemoApplication.class, args);
-		 System.out.println(context.getClass());
+		for (Type type: Type.values()) {
+			System.out.println("Loading " + type);
+			BeanFactory factory = new DefaultListableBeanFactory();
+			loadBeanDefinitions((BeanDefinitionRegistry) factory, "app", type);
+			SimpleBean simpleBean = factory.getBean("simpleBean", SimpleBean.class);
+			simpleBean.print();
+			System.out.println();
+		}
+	}
 
-		//ApplicationContext context = new ClassPathXmlApplicationContext("xmlconfig.xml");
-
-		//ApplicationContext context = new FileSystemXmlApplicationContext("src/main/resources/xmlconfig.xml");
-//		System.out.println();
-//		GenericApplicationContext context = new GenericApplicationContext();
-//		int beansCount = new XmlBeanDefinitionReader(context).loadBeanDefinitions("xmlconfig.xml");
-//		System.out.println("found "+beansCount+" beans for xmlconfig.xml");
-//		context.refresh();
-//
-//
-//
-//		System.out.println(context);
-//		MyService service = context.getBean("myXmlService", MyService.class);
-//		service.print();
-//		MyStaticFactoryService factoryService = context.getBean("myStaticFactoryService", MyStaticFactoryService.class);
-//		factoryService.print();
-
-		System.out.println();
-// search all beans annotated with @Component or any other annotation that includes component
-//		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
-//		ctx.scan("com.example.demo.annotation");
-//		ctx.refresh();
-
-//		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("com.example.demo.annotation");
-//
-//		System.out.println(ctx);
-//
-//		MyService myService = context.getBean(MyService.class);
-//		myService.print();
-
-
-
+	private static void loadBeanDefinitions(BeanDefinitionRegistry registry, String fileName, Type type){
+		BeanDefinitionReader reader;
+		switch (type) {
+			case XML:
+				reader = new XmlBeanDefinitionReader(registry);
+				break;
+			case GROOVY:
+				reader = new GroovyBeanDefinitionReader(registry);
+				break;
+			case PROPERTIES:
+				reader = new PropertiesBeanDefinitionReader(registry);
+				break;
+			default:
+				throw new IllegalArgumentException("Unknown type: " + type);
+		}
+		reader.loadBeanDefinitions(fileName + "." + type.toString().toLowerCase());
 	}
 }

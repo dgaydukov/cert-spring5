@@ -1,4 +1,4 @@
-package com.example.demo.xml;
+package com.example.spring.xml;
 
 public class MyService {
     private final MyStaticFactoryService service;
