@@ -397,6 +397,7 @@ If you want to implement some custom logic during app lifecycle you should have 
 
 ###### Prototype into Singleton
 To add ability for singleton to get every time new prototype we should add `@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE, proxyMode = ScopedProxyMode.TARGET_CLASS)`
+In case of xml configuration, we would need to make singleton abstract, and add abstract method to get prototype instance, and add it to xml like `<lookup-method name="getPrinter" bean="prototypePrinter"/>`
 ```java
 import com.example.logic.ann.prototypeintosingleton.SingletonBean;
 
@@ -409,11 +410,8 @@ public class DemoApplication {
 		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann");
 		System.out.println();
 
-		SingletonBean bean1 = context.getBean("singletonBean", SingletonBean.class);
-		bean1.sayHello();
-
-		SingletonBean bean2 = context.getBean("singletonBean", SingletonBean.class);
-		bean2.sayHello();
+		context.getBean("singletonBean", SingletonBean.class).sayHello();
+		context.getBean("singletonBean", SingletonBean.class).sayHello();
 	}
 }
 ```

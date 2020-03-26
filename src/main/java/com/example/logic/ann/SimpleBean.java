@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.AliasFor;
 import org.springframework.stereotype.Service;
 
 import com.example.logic.ann.postprocessors.annotation.PostAppReady;

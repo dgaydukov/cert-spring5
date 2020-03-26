@@ -15,7 +15,7 @@ public class PrototypePrinter {
 
     @PostConstruct
     public void init(){
-        rand = ThreadLocalRandom.current().nextInt(1, 10);
+        rand = ThreadLocalRandom.current().nextInt(99, 999);
     }
 
     public void print(String str){
