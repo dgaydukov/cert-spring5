@@ -315,7 +315,7 @@ public class DemoApplication {
 Instead of using java config with manually creating beans with `@Bean` annotation, we can inject annotations directly into beans
 File: `AnSimpleBean.java`
 ```java
-package com.example.logic.annotation;
+package com.example.logic.ann;
 
 import javax.annotation.PostConstruct;
 
@@ -328,7 +328,7 @@ public class AnSimpleBean {
     @Value("goodBean")
     private String name;
     @Autowired
-    private AnSimplePrinter printer;
+    private SimplePrinter printer;
 
     public AnSimpleBean(){
         System.out.println("constructing SimpleBean...");
@@ -347,7 +347,7 @@ public class AnSimpleBean {
 
 File: `AnSimplePrinter.java`
 ```java
-package com.example.logic.annotation;
+package com.example.logic.ann;
 
 import org.springframework.stereotype.Service;
 
@@ -366,13 +366,13 @@ package com.example.spring5;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import com.example.logic.annotation.AnSimpleBean;
+import com.example.logic.ann.SimpleBean;
 
 
 public class DemoApplication {
 	public static void main(String[] args) {
-		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.annotation");
-		AnSimpleBean simpleBean = context.getBean("anSimpleBean", AnSimpleBean.class);
+		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann");
+		SimpleBean simpleBean = context.getBean("anSimpleBean", SimpleBean.class);
 		simpleBean.print();
 	}
 }
@@ -387,7 +387,12 @@ We can have nested application contexts. `GenericApplicationContext` have `setPa
 
 
 ###### BFPP, BPP, ApplicationListener
-If you want to implement some custom logic during app lifecycle 
+If you want to implement some custom logic during app lifecycle you should have classes that implement following interfaces
+* `BeanFactoryPostProcessor` - fires when no bean definitions has been accumulated from xml or annotations, but none bean has been created
+* `BeanPostProcessor` - fires when beans has been created, it has 2 methods
+    * `postProcessBeforeInitialization` - fires before initialization, we can be sure that in this method we have original beans
+    * `postProcessAfterInitialization` - fires after init, usually here we can substitute our bean with dynamic proxy
+* `ApplicationListener<E extends ApplicationEvent>` - fires after bfpp and bpp, when we got some events
 
 #### Miscellaneous
 

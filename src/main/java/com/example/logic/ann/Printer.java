@@ -1,4 +1,4 @@
-package com.example.logic.annotation;
+package com.example.logic.ann;
 
 public interface Printer {
     void print(String str);

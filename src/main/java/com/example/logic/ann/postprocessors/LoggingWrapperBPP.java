@@ -1,6 +1,7 @@
-package com.example.logic.annotation.postprocessors;
+package com.example.logic.ann.postprocessors;
 
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -8,9 +9,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.example.logic.annotation.postprocessors.annotation.LoggingWrapper;
+import com.example.logic.ann.postprocessors.annotation.LoggingWrapper;
 
-//@Component
+@Component
 public class LoggingWrapperBPP implements BeanPostProcessor {
     private Map<String, List<String>> map = new HashMap<>();
 

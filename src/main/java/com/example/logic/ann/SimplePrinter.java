@@ -1,13 +1,13 @@
-package com.example.logic.annotation;
+package com.example.logic.ann;
 
 import javax.annotation.PostConstruct;
 
-import com.example.logic.annotation.postprocessors.annotation.TransactionWrapper;
-import com.example.logic.annotation.postprocessors.annotation.LoggingWrapper;
+import com.example.logic.ann.postprocessors.annotation.TransactionWrapper;
+import com.example.logic.ann.postprocessors.annotation.LoggingWrapper;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AnSimplePrinter implements Printer {
+public class SimplePrinter implements Printer {
     @Override
     public void print(String str){
         System.out.println("printer => " + str);
@@ -23,12 +23,5 @@ public class AnSimplePrinter implements Printer {
     @TransactionWrapper
     public void print2(String str){
         System.out.println("printer2 => " + str);
-    }
-
-
-
-    @PostConstruct
-    public void init3(){
-        System.out.println("initializing AnSimplePrinter...");
     }
 }

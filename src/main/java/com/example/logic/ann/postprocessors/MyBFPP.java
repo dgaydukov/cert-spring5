@@ -1,4 +1,4 @@
-package com.example.logic.annotation.postprocessors;
+package com.example.logic.ann.postprocessors;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -15,9 +15,9 @@ public class MyBFPP implements BeanFactoryPostProcessor {
             // set init method
             // change bean completely
             // dynamically add new bean http://dimafeng.com/2015/11/27/dynamic-bean-definition/
-            if("anSimpleBean".equals(name)){
+            if("simpleBean".equals(name)){
                 BeanDefinition beanDefinition = factory.getBeanDefinition(name);
-                System.out.println("__"+beanDefinition);
+                beanDefinition.setInitMethodName("init2");
             }
         }
     }
