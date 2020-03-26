@@ -1,4 +1,4 @@
-package com.example.spring.annotation;
+package com.example.logic.annotation;
 
 import javax.annotation.PostConstruct;
 
@@ -23,7 +23,7 @@ public class AnSimpleBean {
     }
 
     public void init2(){
-        System.out.println("GOT IT");
+        System.out.println("initializing SimpleBean 2...");
     }
 
     public void print(){

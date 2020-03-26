@@ -3,6 +3,7 @@
 1. [DI and IoC](#di-and-ioc)
 * 1.1 [Dependency injection](#dependency-injection)
 * 1.2 [Xml, Groovy, Properties example](#xml-groovy-properties-example)
+* 1.3 [BFPP, BPP, ApplicationListener](#bfpp-bpp-applicationlistener)
 2. [Miscellaneous](#miscellaneous)
 * 2.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 
@@ -29,7 +30,7 @@ There are 3 ways to externalize your configs with `BeanDefinitionRegistry` inter
 We have 2 files
 File: `SimpleBean.java`
 ```java
-package com.example.spring.app;
+package com.example.logic.xml;
 
 public class SimpleBean {
     private String name;
@@ -58,7 +59,7 @@ public class SimpleBean {
 ```
 File: `SimplePrinter.java`
 ```java
-package com.example.spring.app;
+package com.example.logic.xml;
 
 public class SimplePrinter {
     public void print(String str){
@@ -70,7 +71,7 @@ public class SimplePrinter {
 And 3 configurations
 File: `app.groovy`
 ```
-import com.example.spring.app.*
+import com.example.logic.xml.*
 
 beans {
     simplePrinter(SimplePrinter)
@@ -83,11 +84,11 @@ beans {
 ```
 File: `app.properties` (there is no way to add `init-method` to bean with this config type)
 ```
-simpleBean.(class)=com.example.spring.app.SimpleBean
+simpleBean.(class)=com.example.logic.xml.SimpleBean
 simpleBean.name=goodBean
 simpleBean.printer(ref)=simplePrinter
 
-simplePrinter.(class)=com.example.spring.app.SimplePrinter
+simplePrinter.(class)=com.example.logic.xml.SimplePrinter
 ```
 File: `app.xml`
 ```
@@ -96,16 +97,16 @@ File: `app.xml`
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
         https://www.springframework.org/schema/beans/spring-beans.xsd">
-    <bean id="simpleBean" class="com.example.spring.app.SimpleBean" init-method="init">
+    <bean id="simpleBean" class="com.example.logic.xml.SimpleBean" init-method="init">
         <property name="name" value="goodBean"/>
         <property name="printer" ref="simplePrinter"/>
     </bean>
-    <bean id="simplePrinter" class="com.example.spring.app.SimplePrinter"/>
+    <bean id="simplePrinter" class="com.example.logic.xml.SimplePrinter"/>
 </beans>
 ```
 And main file
 ```java
-package com.example.demo;
+package com.example.spring5;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader;
@@ -115,7 +116,7 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.PropertiesBeanDefinitionReader;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 
-import com.example.spring.app.SimpleBean;
+import com.example.logic.xml.SimpleBean;
 
 
 public class DemoApplication {
@@ -170,7 +171,7 @@ printer => I'm SimpleBean, my name is goodBean
 Generally you should prefer `ApplicationContext` over `BeanFactory`, cause it adds bpp, bfpp, aop, i18n and so on do di.
 Remember that you need to call `refresh()` on context.
 ```java
-package com.example.demo;
+package com.example.spring5;
 
 import org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader;
 import org.springframework.beans.factory.support.BeanDefinitionReader;
@@ -181,7 +182,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 
-import com.example.spring.app.SimpleBean;
+import com.example.logic.xml.SimpleBean;
 
 
 public class DemoApplication {
@@ -228,7 +229,7 @@ Notice that for xml and groovy we have specialized generic contexts with `load` 
 Here we can also use fourth type with java config file.
 config file
 ```java
-package com.example.spring.app;
+package com.example.logic.xml;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -254,7 +255,7 @@ public class JavaConfig {
 ```
 Context initialization
 ```java
-package com.example.demo;
+package com.example.spring5;
 
 import org.springframework.beans.factory.support.BeanDefinitionReader;
 import org.springframework.beans.factory.support.PropertiesBeanDefinitionReader;
@@ -264,8 +265,8 @@ import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.context.support.GenericGroovyApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 
-import com.example.spring.app.JavaConfig;
-import com.example.spring.app.SimpleBean;
+import com.example.logic.xml.JavaConfig;
+import com.example.logic.xml.SimpleBean;
 
 
 public class DemoApplication {
@@ -314,7 +315,7 @@ public class DemoApplication {
 Instead of using java config with manually creating beans with `@Bean` annotation, we can inject annotations directly into beans
 File: `AnSimpleBean.java`
 ```java
-package com.example.spring.annotation;
+package com.example.logic.annotation;
 
 import javax.annotation.PostConstruct;
 
@@ -346,7 +347,7 @@ public class AnSimpleBean {
 
 File: `AnSimplePrinter.java`
 ```java
-package com.example.spring.annotation;
+package com.example.logic.annotation;
 
 import org.springframework.stereotype.Service;
 
@@ -360,17 +361,17 @@ public class AnSimplePrinter {
 
 Main method. By default bean id are like bean class name with first lowercase, in our example => anSimpleBean. But you can change it to whatever you want like this `@Service("myCoolBeanName")`
 ```java
-package com.example.demo;
+package com.example.spring5;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import com.example.spring.annotation.AnSimpleBean;
+import com.example.logic.annotation.AnSimpleBean;
 
 
 public class DemoApplication {
 	public static void main(String[] args) {
-		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.spring.annotation");
+		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.annotation");
 		AnSimpleBean simpleBean = context.getBean("anSimpleBean", AnSimpleBean.class);
 		simpleBean.print();
 	}
@@ -383,6 +384,10 @@ printer => I'm SimpleBean, my name is goodBean
 ```
 
 We can have nested application contexts. `GenericApplicationContext` have `setParent` method, where you can pass parent context. And you can get all beans in child context from parent context.
+
+
+###### BFPP, BPP, ApplicationListener
+If you want to implement some custom logic during app lifecycle 
 
 #### Miscellaneous
 

@@ -1,4 +1,4 @@
-package com.example.spring.annotation;
+package com.example.logic.annotation;
 
 public interface Printer {
     void print(String str);

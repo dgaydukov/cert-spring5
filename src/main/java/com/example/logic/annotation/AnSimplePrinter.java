@@ -1,7 +1,9 @@
-package com.example.spring.annotation;
+package com.example.logic.annotation;
 
-import com.example.spring.annotation.postprocessors.ExceptionLogger;
-import com.example.spring.annotation.postprocessors.TimeLogger;
+import javax.annotation.PostConstruct;
+
+import com.example.logic.annotation.postprocessors.annotation.TransactionWrapper;
+import com.example.logic.annotation.postprocessors.annotation.LoggingWrapper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -12,14 +14,21 @@ public class AnSimplePrinter implements Printer {
     }
 
     @Override
-    @TimeLogger
+    @LoggingWrapper
     public void print1(String str){
         System.out.println("printer1 => " + str);
     }
 
     @Override
-    @ExceptionLogger
+    @TransactionWrapper
     public void print2(String str){
         System.out.println("printer2 => " + str);
+    }
+
+
+
+    @PostConstruct
+    public void init3(){
+        System.out.println("initializing AnSimplePrinter...");
     }
 }

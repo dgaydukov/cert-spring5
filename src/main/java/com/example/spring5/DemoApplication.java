@@ -1,7 +1,7 @@
-package com.example.demo;
+package com.example.spring5;
 
-import com.example.spring.annotation.AnSimpleBean;
-import com.example.spring.annotation.Printer;
+import com.example.logic.annotation.AnSimpleBean;
+import com.example.logic.annotation.Printer;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 

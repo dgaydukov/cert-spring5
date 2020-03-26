@@ -1,4 +1,4 @@
-package com.example.spring.app;
+package com.example.logic.xml;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,4 +1,4 @@
-package com.example.spring.app;
+package com.example.logic.xml;
 
 public class SimpleBean {
     private String name;

@@ -1,6 +1,5 @@
-package com.example.spring.annotation.postprocessors;
+package com.example.logic.annotation.postprocessors;
 
-import com.example.spring.annotation.AnSimpleBean;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
