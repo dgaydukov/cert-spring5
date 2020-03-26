@@ -4,6 +4,7 @@
 * 1.1 [Dependency injection](#dependency-injection)
 * 1.2 [Xml, Groovy, Properties example](#xml-groovy-properties-example)
 * 1.3 [BFPP, BPP, ApplicationListener](#bfpp-bpp-applicationlistener)
+* 1.3 [Prototype into Singleton](#bfpp-bpp-applicationlistener)
 2. [Miscellaneous](#miscellaneous)
 * 2.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 
@@ -393,6 +394,33 @@ If you want to implement some custom logic during app lifecycle you should have 
     * `postProcessBeforeInitialization` - fires before initialization, we can be sure that in this method we have original beans
     * `postProcessAfterInitialization` - fires after init, usually here we can substitute our bean with dynamic proxy
 * `ApplicationListener<E extends ApplicationEvent>` - fires after bfpp and bpp, when we got some events
+
+###### Prototype into Singleton
+To add ability for singleton to get every time new prototype we should add `@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE, proxyMode = ScopedProxyMode.TARGET_CLASS)`
+```java
+import com.example.logic.ann.prototypeintosingleton.SingletonBean;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+
+public class DemoApplication {
+	public static void main(String[] args) {
+		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann");
+		System.out.println();
+
+		SingletonBean bean1 = context.getBean("singletonBean", SingletonBean.class);
+		bean1.sayHello();
+
+		SingletonBean bean2 = context.getBean("singletonBean", SingletonBean.class);
+		bean2.sayHello();
+	}
+}
+```
+```
+1 => I'm SingletonBean
+5 => I'm SingletonBean
+```
 
 #### Miscellaneous
 

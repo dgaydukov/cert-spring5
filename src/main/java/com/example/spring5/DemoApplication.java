@@ -1,7 +1,8 @@
 package com.example.spring5;
 
-import com.example.logic.ann.SimpleBean;
 import com.example.logic.ann.Printer;
+import com.example.logic.ann.SimpleBean;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -9,6 +10,8 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 public class DemoApplication {
 	public static void main(String[] args) {
 		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann");
+		System.out.println();
+
 		Printer p = context.getBean("simplePrinter", Printer.class);
 		System.out.println();
 		p.print1("hello");
@@ -18,3 +21,8 @@ public class DemoApplication {
 		simpleBean.print();
 	}
 }
+
+
+
+
+

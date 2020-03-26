@@ -1,6 +1,9 @@
 package com.example.logic.ann;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +17,7 @@ public class SimpleBean {
     private String name;
     @Autowired
     private Printer printer;
+
 
     public SimpleBean(){
         System.out.println("constructing SimpleBean...");
