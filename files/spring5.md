@@ -8,8 +8,11 @@
 * 1.5 [PostConstruct and PreDestroy](#postconstruct-and-predestroy)
 * 1.6 [BeanNameAware and ApplicationContextAware](#beannameaware-and-applicationcontextaware)
 * 1.7 [BeanFactory and FactoryBean<?>](#beanfactory-and-factorybean)
-* 1.7 [Spring i18n](#spring-i18n)
-2. [Miscellaneous](#miscellaneous)
+* 1.8 [Spring i18n](#spring-i18n)
+* 1.9 [Resource interface](#resource-interface)
+* 1.9 [Environment and PropertySource](#environment-and-propertysource)
+* 2 [AOP](#aop)
+3. [Miscellaneous](#miscellaneous)
 * 2.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 
 #### DI and IoC
@@ -400,6 +403,16 @@ If you want to implement some custom logic during app lifecycle you should have 
 * `ApplicationListener<E extends ApplicationEvent>` - fires after bfpp and bpp, when we got some events
 
 ###### Prototype into Singleton
+You can use following code to get scope of any class in your app context
+```java
+private static String getScope(ApplicationContext context, Class<?> cls){
+    ConfigurableListableBeanFactory factory = ((ConfigurableApplicationContext)context).getBeanFactory();
+    for(String name: factory.getBeanNamesForType(cls)){
+        return factory.getBeanDefinition(name).getScope();
+    }
+    return null;
+}
+```
 To add ability for singleton to get every time new prototype we should add `@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE, proxyMode = ScopedProxyMode.TARGET_CLASS)`
 In case of xml configuration, we would need to make singleton abstract, and add abstract method to get prototype instance, and add it to xml like `<lookup-method name="getPrinter" bean="prototypePrinter"/>`
 ```java
@@ -425,6 +438,9 @@ public class DemoApplication {
 ```
 
 `@Primary` - can be useful when handling excatly 2 beans, once you have 3 or more you will get `org.springframework.beans.factory.NoUniqueBeanDefinitionException`, so in this case use `@Qualifier("beanName")`
+If you want to use both annotation and xml config you can do
+* In case of `AnnotationConfigApplicationContext`, add `@ImportResource("app.xml")` to your `@Configuration` class
+* In case of `GenericXmlApplicationContext`, add `<context:annotation-config/>` to your xml file
 
 ###### PostConstruct and PreDestroy
 You have 4 options to hook to post construct event (when spring has set all properties)
@@ -537,9 +553,101 @@ English Resource
 French Resource
 ```
 
+###### Resource interface
+Since `ApplicationContext` extends `ResourceLoader`, that has method `getResource`, you can load resources using context
+```java
+Resource resource = context.getResource("app.xml");
+System.out.println(resource);
+```
+```
+class path resource [app.xml]
+```
+
+
+###### Environment and PropertySource
+Since `ApplicationContext` extends `EnvironmentCapable` interface with 1 method `getEnvironment()`, you can get env object from context.
+```java
+ConfigurableEnvironment env = (ConfigurableEnvironment) context.getEnvironment();
+MutablePropertySources sources = env.getPropertySources();
+Map<String, Object> props = new HashMap<>();
+props.put("myKey", "myValue");
+sources.addLast(new MapPropertySource("props", props));
+System.out.println(env.getProperty("myKey"));
+```
+```
+myValue
+```
+
+
+
+
+### AOP
+Spring aop keywords
+* Jointpoint - well-defined point during code execution (e.g. method call, object instantiation). In Spring AOP it's always method call. 
+* Advice - piece of code that executes at particular jointpoint
+* Pointcut - jointpoint with applied advice
+* Aspect - advice + pointcut
+* Weaving - process of inserting aspect into code (2 types => compile(AspectJ) & dynamic(Spring AOP))
+* Target - object whose flow is modified by aspect
+* Introduction - modification of code on the fly (e.g. add interface to a class)
+
+Simple example without app context
+```java
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.framework.ProxyFactory;
+
+
+public class DemoApplication {
+	public static void main(String[] args) {
+		Person target = new Person();
+
+		ProxyFactory pf = new ProxyFactory();
+		pf.setTarget(target);
+		pf.addAdvice(new PersonDecorator());
+
+		Person proxy = (Person) pf.getProxy();
+		System.out.println(target.getClass());
+		System.out.println(proxy.getClass());
+		proxy.sayHello();
+	}
+}
+
+class Person{
+	public void sayHello(){
+		System.out.print("I'm");
+	}
+}
+
+class PersonDecorator implements MethodInterceptor{
+	@Override
+	public Object invoke(MethodInvocation invocation) throws Throwable{
+		System.out.print("Hello, ");
+		Object retVal = invocation.proceed();
+		System.out.print(" person!");
+		return retVal;
+	}
+}
+```
+```
+class com.example.spring5.Person
+class com.example.spring5.Person$$EnhancerBySpringCGLIB$$3dce3128
+Hello, I'm person!
+```
+
+Spring supports 6 types of advices
+* `org.springframework.aop.MethodBeforeAdvice` - before method execution. has access to params. In case of exception, jointpoint is not called
+* `org.springframework.aop.AfterReturningAdvice` -  after method executed, has access to params & return value. If method execution throws exception, not called
+* `org.springframework.aop.AfterAdvice` (after-finally) - cause would be executed no matter what
+* `org.aopalliance.intercept.MethodInterceptor` (around) - has full control over method execution
+* `org.springframework.aop.ThrowsAdvice` - run if execution method throws exception
+* `org.springframework.aop.IntroductionAdvisor` - add special logic to class
+
+
+
+
 
 #### Miscellaneous
-
 ###### mvnw and mvnw.cmd
 When you download [spring boot](https://start.spring.io/) you have 2 files `mvnw` and `mvnw.cmd`. These 2 files from [Maven Wrapper Plugin](https://github.com/takari/takari-maven-plugin) 
 that allows to run app on systems where there is no mvn installed. `mvnv` - script for linux, `mvnw.cmd` - for windows. Generally you don't need them in your work, so you may delete them.
