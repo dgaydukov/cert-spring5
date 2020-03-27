@@ -5,7 +5,6 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 
 import com.example.logic.ann.SimpleBean;
 
-
 public class DemoApplication {
 	public static void main(String[] args) {
 		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann");

@@ -13,7 +13,8 @@
 * 1.9 [Environment and PropertySource](#environment-and-propertysource)
 * 2 [AOP](#aop)
 3. [Miscellaneous](#miscellaneous)
-* 2.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
+* 3.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
+* 3.2 [Get param names](#get-param-names)
 
 #### DI and IoC
 ###### Dependency injection
@@ -437,6 +438,18 @@ public class DemoApplication {
 5 => I'm SingletonBean
 ```
 
+If you declare BFPP with `@Bean`, you should make your method static
+```java
+@Bean
+public static MyBFPP myBFPP(){
+    return new MyBFPP();
+}
+```
+Otherwise you will get error `@Bean method JavaConfig.myBFPP is non-static and returns an object assignable to Spring's BeanFactoryPostProcessor interface. This will result in a failure to process annotations such as @Autowired, @Resource and @PostConstruct within the method's declaring @Configuration class. Add the 'static' modifier to this method to avoid these container lifecycle issues; see @Bean javadoc for complete details.`
+BeanFactoryPostProcessor-returning @Bean methods
+Special consideration must be taken for @Bean methods that return Spring BeanFactoryPostProcessor (BFPP) types. 
+Because BFPP objects must be instantiated very early in the container lifecycle, they can interfere with processing of annotations such as @Autowired, @Value, and @PostConstruct within @Configuration classes. To avoid these lifecycle issues, mark BFPP-returning @Bean methods as static. 
+
 `@Primary` - can be useful when handling excatly 2 beans, once you have 3 or more you will get `org.springframework.beans.factory.NoUniqueBeanDefinitionException`, so in this case use `@Qualifier("beanName")`
 If you want to use both annotation and xml config you can do
 * In case of `AnnotationConfigApplicationContext`, add `@ImportResource("app.xml")` to your `@Configuration` class
@@ -652,4 +665,28 @@ Spring supports 6 types of advices
 When you download [spring boot](https://start.spring.io/) you have 2 files `mvnw` and `mvnw.cmd`. These 2 files from [Maven Wrapper Plugin](https://github.com/takari/takari-maven-plugin) 
 that allows to run app on systems where there is no mvn installed. `mvnv` - script for linux, `mvnw.cmd` - for windows. Generally you don't need them in your work, so you may delete them.
 
+###### Get param names
+Starting from java9, you can [get names](#https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#get-param-names).
+But spring was using it's own utility classes, that could get param names from debug info, by using asm
+```java
+import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
+import org.springframework.core.ParameterNameDiscoverer;
 
+import java.util.Arrays;
+
+
+public class DemoApplication {
+	public static void main(String[] args) {
+		ParameterNameDiscoverer nameDiscoverer = new LocalVariableTableParameterNameDiscoverer();
+		String[] names = nameDiscoverer.getParameterNames(Person.class.getDeclaredConstructors()[0]);
+		System.out.println(Arrays.toString(names));
+	}
+}
+
+class Person{
+	public Person(String name, int age){}
+}
+```
+```
+[name, age]
+```

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 public class MyBFPP implements BeanFactoryPostProcessor {
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory factory) throws BeansException {
+        System.out.println("__MyBFPP");
         for(String name: factory.getBeanDefinitionNames()){
             // change primary
             // set init method
