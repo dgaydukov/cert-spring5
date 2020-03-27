@@ -38,7 +38,7 @@ public class SimpleBean {
         System.out.println("initializing SimpleBean, phase 3...");
     }
 
-    public void print(){
+    public void sayHello(){
         printer.print("I'm SimpleBean, my name is " + name);
     }
 }

@@ -9,7 +9,7 @@ There are 2 main reasons to get it.
 2. It may help your career
 
 ### Contents
-* [Spring Tips](https://github.com/dgaydukov/cert-spring5/blob/master/spring5.md)
+* [Spring Tips](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md)
 
 
 ### Useful links

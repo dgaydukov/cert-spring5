@@ -4,7 +4,11 @@
 * 1.1 [Dependency injection](#dependency-injection)
 * 1.2 [Xml, Groovy, Properties example](#xml-groovy-properties-example)
 * 1.3 [BFPP, BPP, ApplicationListener](#bfpp-bpp-applicationlistener)
-* 1.3 [Prototype into Singleton](#bfpp-bpp-applicationlistener)
+* 1.4 [Prototype into Singleton](#bfpp-bpp-applicationlistener)
+* 1.5 [PostConstruct and PreDestroy](#postconstruct-and-predestroy)
+* 1.6 [BeanNameAware and ApplicationContextAware](#beannameaware-and-applicationcontextaware)
+* 1.7 [BeanFactory and FactoryBean<?>](#beanfactory-and-factorybean)
+* 1.7 [Spring i18n](#spring-i18n)
 2. [Miscellaneous](#miscellaneous)
 * 2.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 
@@ -419,6 +423,120 @@ public class DemoApplication {
 1 => I'm SingletonBean
 5 => I'm SingletonBean
 ```
+
+`@Primary` - can be useful when handling excatly 2 beans, once you have 3 or more you will get `org.springframework.beans.factory.NoUniqueBeanDefinitionException`, so in this case use `@Qualifier("beanName")`
+
+###### PostConstruct and PreDestroy
+You have 4 options to hook to post construct event (when spring has set all properties)
+* 1. Define init method in xml config `init-method=init`
+* 2. Bean should implement `InitializingBean` interface with one method `afterPropertiesSet`, and put init logic there
+* 3. add `@PostConstruct` annotation above any method you would like to be called (in this case you can annotate as many methods as you want, in previous 2 works only with one method)
+* 4. set `@Bean(initMethod = "init")` in java config file
+In case of 1 and 3, you can add `private` to init method (spring still would be able to call it via reflection), but nobody outside will be able to call it second time.
+But in case of implementing interface, `afterPropertiesSet` - is public, and can be called directly from your bean. More over in this case you are coupling your logic with spring.
+If you set all 4 the order is this: 
+`@PostConstruct` (registred with `CommonAnnotationBeanPostProcessor`)'=>`afterPropertiesSet`=>`xml config init` => `Bean config init`
+
+The same way you can hook up to destroy event
+* `destroy-method=destory` in xml config
+* Implement `DisposableBean` interface with `destroy` method
+* Add `@PreDestroy` annotation
+* Add `@Bead(destoryMethod=destroy)` to java config
+Destroy events are not fired automatically, you have to call `((AbstractApplicationContext)context).close();`. 
+Method `destroy` in context is deprecated, and inside just make a call to `close`.
+
+
+###### BeanNameAware and ApplicationContextAware
+If you want to have bean name or app context to be injected into your bean you can implement this interfaces
+```java
+package com.example.logic.ann;
+
+import org.springframework.beans.factory.BeanNameAware;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AwareBean implements BeanNameAware, ApplicationContextAware {
+    private String beanName;
+    private ApplicationContext context;
+
+    @Override
+    public void setBeanName(String beanName) {
+        this.beanName = beanName;
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext context) {
+        this.context = context;
+    }
+
+    public void doWork(){
+        System.out.println("beanName => " + beanName + ", context => " + context);
+    }
+}
+```
+If you call from your main `context.getBean(AwareBean.class).doWork();` you will get `beanName => awareBean, context => org.springframework.context.annotation.AnnotationConfigApplicationContext@66d33a, started on Fri Mar 27 15:50:43 HKT 2020`.
+You should use this interfaces, when you bean is not business logic, but some spring specific event.
+
+
+###### BeanFactory and FactoryBean<?>
+Don't confuse the 2 interfaces
+* `BeanFactory` - basic di interface, `ApplicationContext` is inhereted from it
+* `FactoryBean<?>` - helper interface to create factory objects (used when you need to implement factory pattern)
+```java
+package com.example.logic.ann.factorybean;
+
+import org.springframework.beans.factory.FactoryBean;
+
+public class UserFactory implements FactoryBean<User> {
+    @Override
+    public User getObject() {
+        return new User();
+    }
+
+    @Override
+    public Class<User> getObjectType() {
+        return User.class;
+    }
+    
+    public User createInstance(){
+        return new User();
+    }
+}
+```
+In case you don't want to use `FactoryBean`, and you have custom factory with method name `createInstance`, you can configure your factory in xml like `<bean id="myUser" factory-bean="UserFactory" factory-method="createInstance"/>`.
+
+
+###### Spring i18n
+Internationalization based on `MessageSource` interface. Since `ApplicationContext` extends this interface you can get i18n directly from context.
+To be able to read messages, app context use bean with name `messageSource` and type `MessageSource`.
+Suppose we have 2 bundles
+```
+resources/i18n/msg_en.properties
+    name=English Resource
+resources/i18n/msg_fr.properties
+    name=French Resource
+```
+You need to inject `MessageSource` bean into context
+```java
+@Bean
+public MessageSource messageSource(){
+    ResourceBundleMessageSource bundle = new ResourceBundleMessageSource();
+    bundle.setBasename("i18n/msg");
+    return bundle;
+}
+```
+And then you can just call
+```java
+System.out.println(context.getMessage("name", null, Locale.ENGLISH));
+System.out.println(context.getMessage("name", null, Locale.FRENCH));
+```
+```
+English Resource
+French Resource
+```
+
 
 #### Miscellaneous
 
