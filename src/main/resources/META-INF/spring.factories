@@ -1,0 +1,2 @@
+org.springframework.boot.env.EnvironmentPostProcessor=com.example.logic.ann.postprocessors.MyEPP
+org.springframework.context.ApplicationContextInitializer=com.example.logic.ann.postprocessors.MyACI

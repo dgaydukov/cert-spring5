@@ -18,10 +18,3 @@ There are 2 main reasons to get it.
 * [SpringCertification5.0](https://github.com/MrR0807/SpringCertification5.0)
 * [mock](http://itestjava.com/java-certification-practice-tests/product/enter.do?product=SPRING-CORE50)
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
-
-
-
-### TODO
-1. `@Order(int n)` - allow to set order when you use `@Autowired` on list, in which they would be injected into this list
-2. create custom spring boot starter (spring.factories) with app.yml (autocomplete values)
-3. EnvironmentPostProcessor & ApplicationContextInitializer in spring boot

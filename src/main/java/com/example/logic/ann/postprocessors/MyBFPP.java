@@ -1,8 +1,5 @@
 package com.example.logic.ann.postprocessors;
 
-import java.util.List;
-
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -11,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class MyBFPP implements BeanFactoryPostProcessor {
     @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory factory) throws BeansException {
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory factory) {
         System.out.println("__MyBFPP");
         for(String name: factory.getBeanDefinitionNames()){
             // change primary

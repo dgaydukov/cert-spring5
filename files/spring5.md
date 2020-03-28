@@ -10,11 +10,16 @@
 * 1.7 [BeanFactory and FactoryBean<?>](#beanfactory-and-factorybean)
 * 1.8 [Spring i18n](#spring-i18n)
 * 1.9 [Resource interface](#resource-interface)
-* 1.9 [Environment and PropertySource](#environment-and-propertysource)
-* 2 [AOP](#aop)
-3. [Miscellaneous](#miscellaneous)
-* 3.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
-* 3.2 [Get param names](#get-param-names)
+* 1.10 [Environment and PropertySource](#environment-and-propertysource)
+* 1.11 [Profile, Primary, Qualifier, Order](#profile-primary-qualifier-order)
+2 [AOP](#aop)
+3.[Spring MVC](#spring-mvc)
+* 3.1 [DispatcherServlet](#dispatcherservlet)
+* 3.2 [Spring Boot](#spring-boot)
+10. [Miscellaneous](#miscellaneous)
+* 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
+* 10.2 [Get param names](#get-param-names)
+
 
 #### DI and IoC
 ###### Dependency injection
@@ -450,7 +455,7 @@ BeanFactoryPostProcessor-returning @Bean methods
 Special consideration must be taken for @Bean methods that return Spring BeanFactoryPostProcessor (BFPP) types. 
 Because BFPP objects must be instantiated very early in the container lifecycle, they can interfere with processing of annotations such as @Autowired, @Value, and @PostConstruct within @Configuration classes. To avoid these lifecycle issues, mark BFPP-returning @Bean methods as static. 
 
-`@Primary` - can be useful when handling excatly 2 beans, once you have 3 or more you will get `org.springframework.beans.factory.NoUniqueBeanDefinitionException`, so in this case use `@Qualifier("beanName")`
+
 If you want to use both annotation and xml config you can do
 * In case of `AnnotationConfigApplicationContext`, add `@ImportResource("app.xml")` to your `@Configuration` class
 * In case of `GenericXmlApplicationContext`, add `<context:annotation-config/>` to your xml file
@@ -592,6 +597,18 @@ myValue
 ```
 
 
+###### Profile, Primary, Qualifier, Order
+`@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean
+`@Qualifier("beanName")` - you can inject any bean you want. It's stronger than primary, so it autowired bean by name.
+
+If you inject list of interfaces, spring will try to find all beans that implement this interface, and will inject them in default order (sorted by names).
+If you need custom order you can add `@Order(1)` on beans, and by this you will create custom order of injection.
+If you have many beans, and some have this annotation, other not, those with annotation goes first. 
+Those without it goes last with default sort.
+
+If you have list of implementation and bean that return also list of implementations, when injected spring will collect list of impl, not your bean.
+To use your bean, you have to add `Qualifier`
+
 
 
 ### AOP
@@ -658,7 +675,18 @@ Spring supports 6 types of advices
 
 
 
+### Spring MVC
+###### DispatcherServlet
+It's entry point of every web app, it's main purpose to handle http requests.
+When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`,
+and has a method `getServletContext`, to get `ServletContext`.
 
+###### Spring Boot
+In spring boot you have 2 new events. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
+```
+org.springframework.boot.env.EnvironmentPostProcessor=com.example.logic.ann.postprocessors.MyEPP
+org.springframework.context.ApplicationContextInitializer=com.example.logic.ann.postprocessors.MyACI
+```
 
 #### Miscellaneous
 ###### mvnw and mvnw.cmd
