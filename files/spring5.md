@@ -16,6 +16,7 @@
 3.[Spring MVC](#spring-mvc)
 * 3.1 [DispatcherServlet](#dispatcherservlet)
 * 3.2 [Spring Boot](#spring-boot)
+* 3.3 [Custom Filters](#custom-filters)
 10. [Miscellaneous](#miscellaneous)
 * 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 10.2 [Get param names](#get-param-names)
@@ -686,6 +687,50 @@ In spring boot you have 2 new events. You can register them in `resources/META-I
 ```
 org.springframework.boot.env.EnvironmentPostProcessor=com.example.logic.ann.postprocessors.MyEPP
 org.springframework.context.ApplicationContextInitializer=com.example.logic.ann.postprocessors.MyACI
+```
+
+###### Custom Filters
+You can add many filter to filter your http request.
+```java
+package com.example.logic.ann.web.filters;
+
+import org.springframework.stereotype.Component;
+
+import javax.servlet.*;
+import java.io.IOException;
+
+
+@Component
+public class MyFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        System.out.println("doFilter");
+        chain.doFilter(req, res);
+    }
+}
+```
+You should call in the end `chain.doFilter(req, res);`, otherwise filter will not proceed, and your query won't be executed.
+By default this filter works for all urls. If you want to set filter for particular url you should remove `@Component` and create config bean.
+```java
+package com.example.logic.ann.web.filters;
+
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import javax.servlet.Filter;
+
+@Configuration
+public class FilterJavaConfig {
+    @Bean
+    public FilterRegistrationBean<Filter> myFilter(){
+        var filter = new FilterRegistrationBean<>();
+        filter.setFilter(new MyFilter());
+        filter.addUrlPatterns("/my");
+        return filter;
+    }
+}
+
 ```
 
 #### Miscellaneous

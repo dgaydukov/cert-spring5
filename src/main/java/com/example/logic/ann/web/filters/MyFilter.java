@@ -1,12 +1,8 @@
-package com.example.logic.ann.filters;
-
-import org.springframework.stereotype.Component;
+package com.example.logic.ann.web.filters;
 
 import javax.servlet.*;
 import java.io.IOException;
 
-
-@Component
 public class MyFilter implements Filter {
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
