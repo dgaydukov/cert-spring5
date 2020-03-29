@@ -17,6 +17,7 @@
 * 3.1 [DispatcherServlet](#dispatcherservlet)
 * 3.2 [Spring Boot](#spring-boot)
 * 3.3 [Custom Filters](#custom-filters)
+* 3.4 [Spring Security](#spring-security)
 10. [Miscellaneous](#miscellaneous)
 * 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 10.2 [Get param names](#get-param-names)
@@ -682,6 +683,10 @@ It's entry point of every web app, it's main purpose to handle http requests.
 When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`,
 and has a method `getServletContext`, to get `ServletContext`.
 
+Before the advent of spring boot for building web app we were using `.war` files (web archive).
+Inside we had web.xml were all configs are stores, then we put this file into `tomcat` directory, and when tomcat 
+starts, it takes with file and run it. That's why we didn't have any `main` method inside web app for spring.
+
 ###### Spring Boot
 In spring boot you have 2 new events. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
 ```
@@ -730,8 +735,25 @@ public class FilterJavaConfig {
         return filter;
     }
 }
-
 ```
+
+###### Spring Security
+It creates `javax.servlet.Filter` with name `springSecurityFilterChain`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #### Miscellaneous
 ###### mvnw and mvnw.cmd
