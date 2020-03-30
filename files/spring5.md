@@ -135,7 +135,7 @@ import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import com.example.logic.xml.SimpleBean;
 
 
-public class DemoApplication {
+public class App {
 	enum Type {XML, GROOVY, PROPERTIES}
 
 	public static void main(String[] args) {
@@ -201,7 +201,7 @@ import org.springframework.context.support.GenericApplicationContext;
 import com.example.logic.xml.SimpleBean;
 
 
-public class DemoApplication {
+public class App {
 	enum Type {XML, GROOVY, PROPERTIES}
 
 	public static void main(String[] args) {
@@ -285,7 +285,7 @@ import com.example.logic.xml.JavaConfig;
 import com.example.logic.xml.SimpleBean;
 
 
-public class DemoApplication {
+public class App {
 	enum Type {XML, GROOVY, PROPERTIES, JAVA}
 
 	public static void main(String[] args) {
@@ -385,7 +385,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import com.example.logic.ann.SimpleBean;
 
 
-public class DemoApplication {
+public class App {
 	public static void main(String[] args) {
 		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann");
 		SimpleBean simpleBean = context.getBean("anSimpleBean", SimpleBean.class);
@@ -430,7 +430,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 
-public class DemoApplication {
+public class App {
 	public static void main(String[] args) {
 		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann");
 		System.out.println();
@@ -623,49 +623,6 @@ Spring aop keywords
 * Target - object whose flow is modified by aspect
 * Introduction - modification of code on the fly (e.g. add interface to a class)
 
-Simple example without app context
-```java
-import org.aopalliance.intercept.MethodInterceptor;
-import org.aopalliance.intercept.MethodInvocation;
-import org.springframework.aop.framework.ProxyFactory;
-
-
-public class DemoApplication {
-	public static void main(String[] args) {
-		Person target = new Person();
-
-		ProxyFactory pf = new ProxyFactory();
-		pf.setTarget(target);
-		pf.addAdvice(new PersonDecorator());
-
-		Person proxy = (Person) pf.getProxy();
-		System.out.println(target.getClass());
-		System.out.println(proxy.getClass());
-		proxy.sayHello();
-	}
-}
-
-class Person{
-	public void sayHello(){
-		System.out.print("I'm");
-	}
-}
-
-class PersonDecorator implements MethodInterceptor{
-	@Override
-	public Object invoke(MethodInvocation invocation) throws Throwable{
-		System.out.print("Hello, ");
-		Object retVal = invocation.proceed();
-		System.out.print(" person!");
-		return retVal;
-	}
-}
-```
-```
-class com.example.spring5.Person
-class com.example.spring5.Person$$EnhancerBySpringCGLIB$$3dce3128
-Hello, I'm person!
-```
 
 Spring supports 6 types of advices
 * `org.springframework.aop.MethodBeforeAdvice` - before method execution. has access to params. In case of exception, jointpoint is not called
@@ -675,7 +632,143 @@ Spring supports 6 types of advices
 * `org.springframework.aop.ThrowsAdvice` - run if execution method throws exception
 * `org.springframework.aop.IntroductionAdvisor` - add special logic to class
 
+3 advices example (before, after, around). Notice that proxy is changed object, not original
+```java
+import java.lang.reflect.Method;
+import java.util.Arrays;
 
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.AfterReturningAdvice;
+import org.springframework.aop.MethodBeforeAdvice;
+import org.springframework.aop.framework.ProxyFactory;
+
+public class App {
+	public static void main(String[] args) {
+		Person person = new Person();
+
+		ProxyFactory pf = new ProxyFactory();
+		pf.setTarget(person);
+
+		/**
+		 * void before
+		 * We can change params, call method on target, & throw exception(in this case method won't proceed)
+		 * Possible application: validate user access before execution
+		 */
+		pf.addAdvice((MethodBeforeAdvice)(Method method, Object[] params, Object target)->{
+			System.out.println("beforeAdvice => " + method.getName() + ", " + Arrays.toString(params) + ", " + target);
+			params[0] = "Mike";
+		});
+
+		/**
+		 * void afterReturning
+		 * You can't modify return value, all you can do is add some after-processing or throw exception
+		 * Possible application: validate correct return value and throw ex if it's invalid
+		 */
+		pf.addAdvice((AfterReturningAdvice)(Object retVal, Method method, Object[] params, Object target)->{
+			System.out.println("afterAdvice => " + retVal + ", " + method.getName() + ", " + Arrays.toString(params) + ", " + target);
+		});
+
+		/**
+		 * Object invoke
+		 * You can modify return value, prevent execution, and completely overwrite the method
+		 */
+		pf.addAdvice((MethodInterceptor)((MethodInvocation inv)->{
+			System.out.println("aroundAdvice => " + inv.getMethod().getName() + ", " + Arrays.toString(inv.getArguments()) + ", " + inv.getThis());
+			Object retVal = inv.proceed();
+			System.out.println("aroundAdvice, retVal => " + retVal);
+			return "NewName";
+		}));
+
+		Person proxy = (Person) pf.getProxy();
+		System.out.println("target => " + person.getClass().getName());
+		System.out.println("proxy => " + proxy.getClass().getName());
+		String name = proxy.sayHello("Jack");
+		System.out.println("name => " + name);
+	}
+}
+
+class Person{
+	public String sayHello(String name){
+		System.out.println("I'm " + name);
+		return name;
+	}
+}
+```
+```
+target => com.example.spring5.Person
+proxy => com.example.spring5.Person$$EnhancerBySpringCGLIB$$bb8bf2f6
+beforeAdvice => sayHello, [Jack], com.example.spring5.Person@491cc5c9
+aroundAdvice => sayHello, [Mike], com.example.spring5.Person@491cc5c9
+I'm Mike
+aroundAdvice, retVal => Mike
+afterAdvice => NewName, sayHello, [Mike], com.example.spring5.Person@491cc5c9
+name => NewName
+```
+
+With `ThrowsAdvice` you can do some processing and rethrow exception(if you don't rethrow, original exception would be thrown).
+It awaits method with name `afterThrowing`, that takes exception. You can specify more exact exception to have more control
+```java
+import org.springframework.aop.ThrowsAdvice;
+import org.springframework.aop.framework.ProxyFactory;
+
+public class App {
+	/**
+	 * if we just put class outside, it's modifier won't be public and we got error:
+	 * IllegalAccessException: class org.springframework.aop.framework.adapter.ThrowsAdviceInterceptor cannot access a member of class com.example.spring5.MyThrowsAdvice with modifiers "public"
+	 * So we should either make it public like this, or put it into separate file
+	 */
+	public static class MyThrowsAdvice implements ThrowsAdvice {
+		public void afterThrowing(Exception ex){
+			System.out.println("throwAdvice => " + ex);
+			throw new SecurityException(ex);
+		}
+
+		public void afterThrowing(RuntimeException ex){
+			System.out.println("throwAdvice => " + ex);
+			throw new SecurityException(ex);
+		}
+	}
+
+	public static void main(String[] args){
+		Person person = new Person();
+
+		ProxyFactory pf = new ProxyFactory();
+		pf.setTarget(person);
+		pf.addAdvice(new MyThrowsAdvice());
+
+		Person proxy = (Person) pf.getProxy();
+		try {
+			proxy.m1();
+		} catch (Exception ex){
+			ex.printStackTrace();
+		}
+		try {
+			proxy.m2();
+		} catch (Exception ex){
+			ex.printStackTrace();
+		}
+	}
+}
+class Person{
+	public void m1() throws Exception{
+		throw new Exception("m1 failed");
+	}
+
+	public void m2() throws RuntimeException{
+		throw new RuntimeException("m2 failed");
+	}
+}
+```
+```
+throwAdvice => java.lang.Exception: m1 failed
+java.lang.SecurityException: java.lang.Exception: m1 failed
+Caused by: java.lang.Exception: m1 failed
+
+throwAdvice => java.lang.RuntimeException: m2 failed
+java.lang.SecurityException: java.lang.RuntimeException: m2 failed
+Caused by: java.lang.RuntimeException: m2 failed
+```
 
 ### Spring MVC
 ###### DispatcherServlet
@@ -737,6 +830,388 @@ public class FilterJavaConfig {
 }
 ```
 
+
+
+By default `addAdvice` add advice to all methods and all possible classes of `ProxyFactory`. If you want to limit classes as well as method you should use `Advisor` (aspect in spring aop terminology => advice+pointcut).
+For method matching you can use 2 classes `StaticMethodMatcherPointcut` & `DynamicMethodMatcherPointcut`, the difference is that with dynamic you can also filter by a list of method arguments (like only apply advice if first argument is "Jack").
+In both cases you have to implement method `matches`. It also recommended (yet not forced) to override method `getClassFilter` for better control.
+```java
+import java.lang.reflect.Method;
+
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.Advisor;
+import org.springframework.aop.ClassFilter;
+import org.springframework.aop.Pointcut;
+import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.aop.support.DefaultPointcutAdvisor;
+import org.springframework.aop.support.DynamicMethodMatcherPointcut;
+import org.springframework.aop.support.StaticMethodMatcherPointcut;
+
+public class App{
+	public static void main(String[] args) {
+		MethodInterceptor advice = (MethodInvocation inv)->{
+			System.out.println("calling => " + inv.getMethod().getName());
+			Object retVal = inv.proceed();
+			System.out.println("done");
+			return retVal;
+		};
+		Pointcut pc = new MyStaticPointCut();
+
+		Advisor advisor = new DefaultPointcutAdvisor(pc, advice);
+
+		Person person = new Person();
+		ProxyFactory pf = new ProxyFactory();
+		pf.setTarget(person);
+		pf.addAdvisor(advisor);
+		pf.addAdvisor(new DefaultPointcutAdvisor(new MyDynamicPointCut(), advice));
+
+		((Person) pf.getProxy()).sayHello("Jack");
+	}
+}
+
+class Person{
+	public String sayHello(String name){
+		System.out.println("I'm " + name);
+		return name;
+	}
+}
+
+class MyStaticPointCut extends StaticMethodMatcherPointcut{
+	@Override
+	public boolean matches(Method method, Class<?> cls) {
+		return "sayHello".equals(method.getName());
+	}
+	@Override
+	public ClassFilter getClassFilter(){
+		return cls -> cls == Person.class;
+	}
+}
+
+class MyDynamicPointCut extends DynamicMethodMatcherPointcut{
+	/**
+	 * Although you are free not to implement this method and use both check in second matches
+	 * like "sayHello".equals(method.getName()) && "Jack".equals(params[0])
+	 * It's better to filter method names with static match, in this case this check run once,
+	 * and all methods, that not satisfy it, never go to second match
+	 */
+	@Override
+	public boolean matches(Method method, Class<?> cls) {
+		return "sayHello".equals(method.getName());
+	}
+	@Override
+	public boolean matches(Method method, Class<?> aClass, Object[] params) {
+		return "Jack".equals(params[0]);
+	}
+	@Override
+	public ClassFilter getClassFilter(){
+		return cls -> cls == Person.class;
+	}
+}
+```
+```
+calling => sayHello
+calling => sayHello
+I'm Jack
+done
+done
+```
+
+
+
+If we want filter only by method name (without signature), we can use `NameMatchMethodPointcut` or `JdkRegexpMethodPointcut`.
+We can also use `AspectJExpressionPointcut` for native aspectJ patterns.
+If we want to use specific aspectJ pointcuts we have to add to `pom.xml`
+```
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjrt</artifactId>
+    <version>1.9.5</version>
+</dependency>
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjweaver</artifactId>
+    <version>1.9.5</version>
+</dependency>
+```
+Java code
+```java
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.aspectj.AspectJExpressionPointcut;
+import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.aop.support.DefaultPointcutAdvisor;
+import org.springframework.aop.support.JdkRegexpMethodPointcut;
+import org.springframework.aop.support.NameMatchMethodPointcut;
+
+public class App{
+    public static void main(String[] args) {
+        NameMatchMethodPointcut pc = new NameMatchMethodPointcut();
+        pc.addMethodName("sayHello");
+
+        JdkRegexpMethodPointcut regexPc = new JdkRegexpMethodPointcut();
+        regexPc.setPattern(".*say.*");
+
+        AspectJExpressionPointcut aspectJPc = new AspectJExpressionPointcut();
+        aspectJPc.setExpression("execution(* sayHello*(..))");
+
+        MethodInterceptor advice = (MethodInvocation inv)->{
+            System.out.println("calling => " + inv.getMethod().getName());
+            Object retVal = inv.proceed();
+            System.out.println("done");
+            return retVal;
+        };
+
+        ProxyFactory pf = new ProxyFactory();
+        pf.setTarget(new Person());
+        pf.addAdvisor(new DefaultPointcutAdvisor(pc, advice));
+        pf.addAdvisor(new DefaultPointcutAdvisor(regexPc, advice));
+        pf.addAdvisor(new DefaultPointcutAdvisor(aspectJPc, advice));
+
+        ((Person) pf.getProxy()).sayHello("Jack");
+
+    }
+}
+
+class Person{
+    public String sayHello(String name){
+        System.out.println("I'm " + name);
+        return name;
+    }
+}
+```
+```
+calling => sayHello
+calling => sayHello
+calling => sayHello
+I'm Jack
+done
+done
+done
+```
+
+If we need advisor based on annotations we can use `AnnotationMatchingPointcut`
+```java
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.aop.support.DefaultPointcutAdvisor;
+import org.springframework.aop.support.annotation.AnnotationMatchingPointcut;
+
+public class App{
+    public static void main(String[] args) {
+        AnnotationMatchingPointcut pc = AnnotationMatchingPointcut.forMethodAnnotation(AddAroundAdvice.class);
+
+        MethodInterceptor advice = (MethodInvocation inv)->{
+            System.out.println("calling => " + inv.getMethod().getName());
+            Object retVal = inv.proceed();
+            System.out.println("done");
+            return retVal;
+        };
+
+        ProxyFactory pf = new ProxyFactory();
+        pf.setTarget(new Person());
+        pf.addAdvisor(new DefaultPointcutAdvisor(pc, advice));
+
+        ((Person) pf.getProxy()).sayHello("Jack");
+
+    }
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@interface AddAroundAdvice{
+
+}
+
+class Person{
+    @AddAroundAdvice
+    public String sayHello(String name){
+        System.out.println("I'm " + name);
+        return name;
+    }
+}
+```
+```
+calling => sayHello
+I'm Jack
+done
+```
+
+Convenience classes like `NameMatchMethodPointcutAdvisor` to handle all logic there.
+```java
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.aop.support.NameMatchMethodPointcutAdvisor;
+
+public class App{
+    public static void main(String[] args) {
+
+        MethodInterceptor advice = (MethodInvocation inv)->{
+            System.out.println("calling => " + inv.getMethod().getName());
+            Object retVal = inv.proceed();
+            System.out.println("done");
+            return retVal;
+        };
+
+
+        NameMatchMethodPointcutAdvisor advisor = new NameMatchMethodPointcutAdvisor(advice);
+        advisor.setMappedName("sayHello");
+        advisor.setClassFilter(cls -> cls == Person.class);
+
+        ProxyFactory pf = new ProxyFactory();
+        pf.setTarget(new Person());
+        pf.addAdvisor(advisor);
+
+        ((Person) pf.getProxy()).sayHello("Jack");
+    }
+}
+
+class Person{
+    public String sayHello(String name){
+        System.out.println("I'm " + name);
+        return name;
+    }
+}
+```
+```
+calling => sayHello
+I'm Jack
+done
+```
+
+For more fine-grained control we can use `ControlFlowPointcut`.
+```java
+import java.lang.reflect.Method;
+import java.util.Arrays;
+
+import org.springframework.aop.MethodBeforeAdvice;
+import org.springframework.aop.Pointcut;
+import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.aop.support.ControlFlowPointcut;
+import org.springframework.aop.support.DefaultPointcutAdvisor;
+
+public class App{
+    public static void main(String[] args) {
+        MethodBeforeAdvice advice = (Method method, Object[] params, Object target)->{
+            System.out.println("before => " + method.getName() + ", " + Arrays.toString(params) + ", " + target);
+        };
+        Pointcut pc = new ControlFlowPointcut(App.class, "print");
+
+        ProxyFactory pf = new ProxyFactory();
+        pf.setTarget(new Person());
+        pf.addAdvisor(new DefaultPointcutAdvisor(pc, advice));
+
+        Person proxy = (Person) pf.getProxy();
+        proxy.sayHello();
+        System.out.println();
+        print(proxy);
+    }
+    public static void print(Person p){
+        p.sayHello();
+    }
+}
+
+class Person{
+    public void sayHello(){
+        System.out.println("Hello, I'm Person");
+    }
+}
+```
+```
+Hello, I'm Person
+
+before => sayHello, [], com.example.spring5.Person@3ecd23d9
+Hello, I'm Person
+```
+As you see, first time aspect didin't apply, but second time it applied (cause our flow pointct will apply aspect only when called from specific class and method).
+You can also use `ComposablePointcut` with 2 methods `union` and `intersection` if you want to pass several `methodMatchers`.
+If you need to combine only pointcuts you can use `PointCut` class, but if you want to combine pointcut/methodmatcher/classfilter you should use `ComposablePointcut`.
+
+We also have `IntroductionAdvisor` by which we can add dynamically new implementations to object.
+One possible application is to check if object data chaned, and call save to db only in this case.
+Below is simplified example, that determined is method with specific name has been called
+```java
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.IntroductionAdvisor;
+import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.aop.support.DefaultIntroductionAdvisor;
+import org.springframework.aop.support.DelegatingIntroductionInterceptor;
+
+public class App{
+    public static void main(String[] args) {
+        IntroductionAdvisor advisor = new IsMethodCalledAdvisor();
+
+        ProxyFactory pf = new ProxyFactory();
+        pf.setTarget(new Person());
+        pf.addAdvisor(advisor);
+        /**
+        * force pf to use cglib, otherwise, when you try to cast object to Person you will got ClassCastException
+        */
+        pf.setOptimize(true);
+
+        var proxy = (Person & IsMethodCalled) pf.getProxy();
+        proxy.setName("sayHello");
+        System.out.println(proxy.isCalled());
+        proxy.sayHello();
+        System.out.println(proxy.isCalled());
+
+    }
+    public static void print(Person p){
+        p.sayHello();
+    }
+}
+
+class Person{
+    public void sayHello(){
+        System.out.println("Hello, I'm Person");
+    }
+}
+
+interface IsMethodCalled{
+    void setName(String name);
+    boolean isCalled();
+}
+
+class IsMethodCalledAdvisor extends DefaultIntroductionAdvisor {
+    public IsMethodCalledAdvisor() {
+        super(new IsMethodCalledMixin());
+    }
+}
+
+class IsMethodCalledMixin extends DelegatingIntroductionInterceptor implements IsMethodCalled {
+    private String name;
+    private boolean isCalled;
+
+    @Override
+    public boolean isCalled() {
+        return isCalled;
+    }
+
+    @Override
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public Object invoke(MethodInvocation inv) throws Throwable {
+        String name = inv.getMethod().getName();
+        if (name.equals(this.name)) {
+            isCalled = true;
+        }
+        return super.invoke(inv);
+    }
+}
+```
+```
+false
+Hello, I'm Person
+true
+```
+
 ###### Spring Security
 It creates `javax.servlet.Filter` with name `springSecurityFilterChain`.
 
@@ -770,7 +1245,7 @@ import org.springframework.core.ParameterNameDiscoverer;
 import java.util.Arrays;
 
 
-public class DemoApplication {
+public class App {
 	public static void main(String[] args) {
 		ParameterNameDiscoverer nameDiscoverer = new LocalVariableTableParameterNameDiscoverer();
 		String[] names = nameDiscoverer.getParameterNames(Person.class.getDeclaredConstructors()[0]);

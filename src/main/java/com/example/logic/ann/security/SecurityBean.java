@@ -25,7 +25,6 @@ public class SecurityBean {
 
     public void printFilters() {
         System.out.println(user.loadUserByUsername("user").getPassword());
-        System.out.println(user.loadUserByUsername("admin").getPassword());
         System.out.println();
         List<String> securityFilters =
                 filterChain.getFilterChains().stream()
