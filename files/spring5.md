@@ -12,6 +12,7 @@
 * 1.9 [Resource interface](#resource-interface)
 * 1.10 [Environment and PropertySource](#environment-and-propertysource)
 * 1.11 [Profile, Primary, Qualifier, Order](#profile-primary-qualifier-order)
+* 1.12 [PropertySource and ConfigurationProperties](#propertysource-and-configurationproperties)
 2 [AOP](#aop)
 * 2.1 [Aop basics](#aop-basics)
 * 2.2 [Aop framework](#aop-framework)
@@ -27,7 +28,6 @@
 10. [Miscellaneous](#miscellaneous)
 * 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 10.2 [Get param names](#get-param-names)
-
 
 
 
@@ -620,6 +620,92 @@ If you have list of implementation and bean that return also list of implementat
 To use your bean, you have to add `Qualifier`
 
 
+###### PropertySource and ConfigurationProperties
+We can load properties from `.properties/.yml` files.
+`Person1.java`
+```java
+package com.example.logic.ann.props;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import lombok.ToString;
+
+@Component
+@ToString
+public class Person1 {
+    @Value("1")
+    private int id;
+
+    @Value("${name}")
+    private String name;
+
+    @Value("${age}")
+    private int age;
+}
+
+```
+`Person2.java`
+```java
+package com.example.logic.ann.props;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+import lombok.Setter;
+import lombok.ToString;
+
+/**
+ * You need to add setters methods, cause they are binded with setters
+ */
+@Component
+@ToString
+@ConfigurationProperties
+@Setter
+public class Person2 {
+    @Value("2")
+    private int id;
+    private String name;
+    private int age;
+}
+```
+`PropsJavaConfig.java`
+```java
+package com.example.logic.ann.props;
+
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+
+/**
+ * ConfigurationProperties - enables by default in spring boot, but if you use other appContext you should enable them explicitly\
+ */
+@Configuration
+@PropertySource("props/person.properties")
+@EnableConfigurationProperties
+public class PropsJavaConfig {
+}
+```
+```java
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import com.example.logic.ann.props.Person1;
+import com.example.logic.ann.props.Person2;
+
+public class App {
+    public static void main(String[] args) {
+        ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann.props");
+        System.out.println(context.getBean(Person1.class));
+        System.out.println(context.getBean(Person2.class));
+    }
+}
+```
+```
+Person1(id=1, name=John, age=20)
+Person2(id=2, name=John, age=20)
+```
 
 ### AOP
 
@@ -1457,6 +1543,15 @@ getAll => [DepartmentModel(id=1, name=Exchange, type=IT), DepartmentModel(id=2, 
 getById(1) => DepartmentModel(id=1, name=Exchange, type=IT)
 save => DepartmentModel(id=16, name=New dep, type=cool)
 deleteById(16) => true
+```
+
+If you take a look into package `com.example.logic.ann.jdbc.jdk` you will see a lot of boilerplate, so it's better to use spring jdbc to handle this
+For spring jdbc you should add to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-jdbc</artifactId>
+</dependency>
 ```
 
 ###### Hibernate

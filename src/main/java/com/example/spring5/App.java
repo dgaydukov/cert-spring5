@@ -1,25 +1,15 @@
 package com.example.spring5;
 
-import com.example.logic.ann.jdbc.jdk.DepartmentDao;
-import com.example.logic.ann.jdbc.jdk.DepartmentModel;
-import com.example.logic.ann.jdbc.jdk.MyConnection;
-import com.example.logic.ann.jdbc.jdk.MyDao;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import com.example.logic.ann.props.Person1;
+import com.example.logic.ann.props.Person2;
 
 public class App {
     public static void main(String[] args) {
-        String url = "jdbc:mysql://localhost:3306/spring5?user=root&password=";
-        MyConnection conn = new MyConnection(url);
-        MyDao<DepartmentModel> dao = new DepartmentDao(conn.getConnection());
-
-        System.out.println("getAll => " + dao.getAll());
-        System.out.println("getById(1) => " + dao.getById(1));
-
-        DepartmentModel model = new DepartmentModel();
-        model.setName("New dep");
-        model.setType("cool");
-        var saved = dao.save(model);
-        int id = saved.getId();
-        System.out.println("save => " + saved);
-        System.out.println("deleteById(" + id + ") => " + dao.deleteById(id));
+        ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann.props");
+        System.out.println(context.getBean(Person1.class));
+        System.out.println(context.getBean(Person2.class));
     }
 }
