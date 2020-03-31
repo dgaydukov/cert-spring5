@@ -622,6 +622,8 @@ To use your bean, you have to add `Qualifier`
 
 ###### PropertySource and ConfigurationProperties
 We can load properties from `.properties/.yml` files.
+`@PropertySource` - repetable, so we can load several files. If keys are the same => those declared after will overwrite those declared before.
+You can use `@Value("${propName}")` on every field, or use `ConfigurationProperties` with public setter methods for every field.
 `Person1.java`
 ```java
 package com.example.logic.ann.props;
