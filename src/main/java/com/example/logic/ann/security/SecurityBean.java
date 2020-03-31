@@ -12,7 +12,7 @@ import javax.servlet.FilterChain;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Component
+//@Component
 public class SecurityBean {
     @Autowired
     private List<Filter> filters;

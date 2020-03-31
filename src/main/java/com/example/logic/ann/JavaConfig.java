@@ -1,6 +1,5 @@
 package com.example.logic.ann;
 
-import com.example.logic.ann.postprocessors.MyBFPP;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
