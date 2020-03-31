@@ -776,70 +776,6 @@ Caused by: java.lang.RuntimeException: m2 failed
 ```
 
 
-###### Aop framework
-
-### Spring MVC
-###### DispatcherServlet
-It's entry point of every web app, it's main purpose to handle http requests.
-When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`,
-and has a method `getServletContext`, to get `ServletContext`.
-
-Before the advent of spring boot for building web app we were using `.war` files (web archive).
-Inside we had web.xml were all configs are stores, then we put this file into `tomcat` directory, and when tomcat 
-starts, it takes with file and run it. That's why we didn't have any `main` method inside web app for spring.
-
-###### Spring Boot
-In spring boot you have 2 new events. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
-```
-org.springframework.boot.env.EnvironmentPostProcessor=com.example.logic.ann.postprocessors.MyEPP
-org.springframework.context.ApplicationContextInitializer=com.example.logic.ann.postprocessors.MyACI
-```
-
-###### Custom Filters
-You can add many filter to filter your http request.
-```java
-package com.example.logic.ann.web.filters;
-
-import org.springframework.stereotype.Component;
-
-import javax.servlet.*;
-import java.io.IOException;
-
-
-@Component
-public class MyFilter implements Filter {
-    @Override
-    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
-        System.out.println("doFilter");
-        chain.doFilter(req, res);
-    }
-}
-```
-You should call in the end `chain.doFilter(req, res);`, otherwise filter will not proceed, and your query won't be executed.
-By default this filter works for all urls. If you want to set filter for particular url you should remove `@Component` and create config bean.
-```java
-package com.example.logic.ann.web.filters;
-
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-import javax.servlet.Filter;
-
-@Configuration
-public class FilterJavaConfig {
-    @Bean
-    public FilterRegistrationBean<Filter> myFilter(){
-        var filter = new FilterRegistrationBean<>();
-        filter.setFilter(new MyFilter());
-        filter.addUrlPatterns("/my");
-        return filter;
-    }
-}
-```
-
-
-
 By default `addAdvice` add advice to all methods and all possible classes of `ProxyFactory`. If you want to limit classes as well as method you should use `Advisor` (aspect in spring aop terminology => advice+pointcut).
 For method matching you can use 2 classes `StaticMethodMatcherPointcut` & `DynamicMethodMatcherPointcut`, the difference is that with dynamic you can also filter by a list of method arguments (like only apply advice if first argument is "Jack").
 In both cases you have to implement method `matches`. It also recommended (yet not forced) to override method `getClassFilter` for better control.
@@ -1219,6 +1155,213 @@ false
 Hello, I'm Person
 true
 ```
+
+
+
+###### Aop framework
+To grasp the full power of aop you can use spring framework support to use it in declarative way (compare to imperative where we inserted our proxy into code directly).
+We have 3 files
+`AopSimpleBean.java`
+```java
+package com.example.logic.ann.aop;
+
+public class AopSimpleBean {
+    public void sayHello(){
+        System.out.println("I'm AopSimpleBean");
+    }
+}
+```
+
+`AopAroundAdvice.java`
+```java
+package com.example.logic.ann.aop;
+
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+
+public class AopAroundAdvice implements MethodInterceptor {
+    @Override
+    public Object invoke(MethodInvocation inv) throws Throwable {
+        System.out.println("aroundAdvice => " + inv.getMethod().getName());
+        Object retVal = inv.proceed();
+        System.out.println("aroundAdvice => " + retVal);
+        return retVal;
+    }
+}
+```
+
+`AopJavaConfig.java`
+```java
+package com.example.logic.ann.aop;
+
+import org.springframework.aop.framework.ProxyFactoryBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class AopJavaConfig {
+    @Bean
+    public AopSimpleBean originalAopSimpleBean(){
+        return new AopSimpleBean();
+    }
+
+    @Bean
+    public AopAroundAdvice aopBeforeAdvice(){
+        return new AopAroundAdvice();
+    }
+
+    @Bean
+    public ProxyFactoryBean aopSimpleBean(){
+        ProxyFactoryBean pfb = new ProxyFactoryBean();
+        pfb.setTarget(originalAopSimpleBean());
+        pfb.setProxyTargetClass(true);
+        pfb.addAdvice(aopBeforeAdvice());
+        return pfb;
+    }
+}
+```
+
+And here run example
+```java
+package com.example.spring5;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import com.example.logic.ann.aop.AopSimpleBean;
+
+public class App{
+    public static void main(String[] args) {
+        ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann");
+        System.out.println();
+        context.getBean("aopSimpleBean", AopSimpleBean.class).sayHello();
+        System.out.println();
+        context.getBean("originalAopSimpleBean", AopSimpleBean.class).sayHello();
+    }
+}
+```
+```
+aroundAdvice => sayHello
+I'm AopSimpleBean
+aroundAdvice => null
+
+I'm AopSimpleBean
+```
+As you see we have 2 beans of the same type, original - not adviced and adviced.
+If you want to have one bean, and you never need original you can remove it from javaconfig, and inject it directly into `ProxyFactoryBean`
+
+You can also use aspecj annotations, you should first enable them `@EnableAspectJAutoProxy(proxyTargetClass = true)`;
+`AopAnnotatedAdvice.java`
+```java
+package com.example.logic.ann.aop;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.stereotype.Component;
+
+@Component
+@Aspect
+public class AopAnnotatedAdvice {
+    @Pointcut("bean(original*)")
+    public void isOriginalBean(){}
+
+    @Pointcut("execution(* sayHello(..))")
+    public void isSayHelloMethod(){}
+
+    @Before("isOriginalBean() && isSayHelloMethod()")
+    public void beforeAdvice(JoinPoint jp){
+        System.out.println("beforeAdvice => " + jp.getSignature().getName());
+    }
+}
+```
+As you see we apply before advice only if bean name starts with `original` and methodname is `sayHello`.
+```java
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import com.example.logic.ann.aop.AopSimpleBean;
+
+public class App{
+    public static void main(String[] args) {
+        ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann");
+        System.out.println();
+        context.getBean("originalAopSimpleBean", AopSimpleBean.class).sayHello();
+        System.out.println();
+        context.getBean("originalAopSimpleBean", AopSimpleBean.class).print();
+    }
+}
+```
+```
+beforeAdvice => sayHello
+I'm AopSimpleBean
+
+printing...
+```
+
+### Spring MVC
+###### DispatcherServlet
+It's entry point of every web app, it's main purpose to handle http requests.
+When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`,
+and has a method `getServletContext`, to get `ServletContext`.
+
+Before the advent of spring boot for building web app we were using `.war` files (web archive).
+Inside we had web.xml were all configs are stores, then we put this file into `tomcat` directory, and when tomcat 
+starts, it takes with file and run it. That's why we didn't have any `main` method inside web app for spring.
+
+###### Spring Boot
+In spring boot you have 2 new events. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
+```
+org.springframework.boot.env.EnvironmentPostProcessor=com.example.logic.ann.postprocessors.MyEPP
+org.springframework.context.ApplicationContextInitializer=com.example.logic.ann.postprocessors.MyACI
+```
+
+###### Custom Filters
+You can add many filter to filter your http request.
+```java
+package com.example.logic.ann.web.filters;
+
+import org.springframework.stereotype.Component;
+
+import javax.servlet.*;
+import java.io.IOException;
+
+
+@Component
+public class MyFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        System.out.println("doFilter");
+        chain.doFilter(req, res);
+    }
+}
+```
+You should call in the end `chain.doFilter(req, res);`, otherwise filter will not proceed, and your query won't be executed.
+By default this filter works for all urls. If you want to set filter for particular url you should remove `@Component` and create config bean.
+```java
+package com.example.logic.ann.web.filters;
+
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import javax.servlet.Filter;
+
+@Configuration
+public class FilterJavaConfig {
+    @Bean
+    public FilterRegistrationBean<Filter> myFilter(){
+        var filter = new FilterRegistrationBean<>();
+        filter.setFilter(new MyFilter());
+        filter.addUrlPatterns("/my");
+        return filter;
+    }
+}
+```
+
+
+
 
 ###### Spring Security
 It creates `javax.servlet.Filter` with name `springSecurityFilterChain`.
