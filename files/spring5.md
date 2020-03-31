@@ -20,9 +20,15 @@
 * 3.2 [Spring Boot](#spring-boot)
 * 3.3 [Custom Filters](#custom-filters)
 * 3.4 [Spring Security](#spring-security)
+4. [DB](#db)
+* 4.1 [Spring JDBC](#spring-jdbc)
+* 4.2 [Hibernate](#hibernate)
+* 4.3 [Spring Data](#spring-data)
 10. [Miscellaneous](#miscellaneous)
 * 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 10.2 [Get param names](#get-param-names)
+
+
 
 
 #### DI and IoC
@@ -1376,6 +1382,85 @@ It creates `javax.servlet.Filter` with name `springSecurityFilterChain`.
 
 
 
+
+
+#### DB
+###### Spring JDBC
+Before using spring jdbc, we can use standarc jdk jdbc.
+Add this to your `pom.xml`
+```
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>8.0.18</version>
+</dependency>
+```
+Print all departments
+```java
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+public class App {
+    public static void main(String[] args) {
+        String url = "jdbc:mysql://localhost:3306/spring5?user=root&password=";
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("select * from department");
+        ) {
+            while (rs.next()) {
+                System.out.print(rs.getString(1) + " " + rs.getString(2) + " " + rs.getString(3));
+                System.out.println();
+            }
+        } catch (SQLException ex) {
+            System.out.println(ex);
+        }
+    }
+}
+```
+```
+1 Exchange IT
+2 Solution IT
+3 Markets CP
+```
+
+But of course we don't want to work with raw data, we would like to work with models. So here example of custom model & dao based on jdk jdbc
+```java
+import com.example.logic.ann.jdbc.jdk.DepartmentDao;
+import com.example.logic.ann.jdbc.jdk.DepartmentModel;
+import com.example.logic.ann.jdbc.jdk.MyConnection;
+import com.example.logic.ann.jdbc.jdk.MyDao;
+
+public class App {
+    public static void main(String[] args) {
+        String url = "jdbc:mysql://localhost:3306/spring5?user=root&password=";
+        MyConnection conn = new MyConnection(url);
+        MyDao<DepartmentModel> dao = new DepartmentDao(conn.getConnection());
+
+        System.out.println("getAll => " + dao.getAll());
+        System.out.println("getById(1) => " + dao.getById(1));
+
+        DepartmentModel model = new DepartmentModel();
+        model.setName("New dep");
+        model.setType("cool");
+        var saved = dao.save(model);
+        int id = saved.getId();
+        System.out.println("save => " + saved);
+        System.out.println("deleteById(" + id + ") => " + dao.deleteById(id));
+    }
+}
+```
+```
+getAll => [DepartmentModel(id=1, name=Exchange, type=IT), DepartmentModel(id=2, name=Solution, type=IT), DepartmentModel(id=3, name=Markets, type=CP), DepartmentModel(id=4, name=New dep, type=cool)]
+getById(1) => DepartmentModel(id=1, name=Exchange, type=IT)
+save => DepartmentModel(id=16, name=New dep, type=cool)
+deleteById(16) => true
+```
+
+###### Hibernate
+###### Spring Data
 
 
 

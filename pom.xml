@@ -11,11 +11,12 @@
 	<groupId>com.example</groupId>
 	<artifactId>spring5</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>demo</name>
-	<description>Demo project for Spring Boot</description>
+	<name>spring5</name>
+	<description>Spring Boot App</description>
 
 	<properties>
 		<java.version>11</java.version>
+		<aspectj.version>1.9.5</aspectj.version>
 	</properties>
 
 	<dependencies>
@@ -43,18 +44,26 @@
 			<artifactId>groovy-all</artifactId>
 			<version>2.4.12</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.aspectj</groupId>
 			<artifactId>aspectjrt</artifactId>
-			<version>1.9.5</version>
+			<version>${aspectj.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.aspectj</groupId>
 			<artifactId>aspectjweaver</artifactId>
-			<version>1.9.5</version>
+			<version>${aspectj.version}</version>
 		</dependency>
-
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>8.0.18</version>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.12</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -65,5 +74,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
