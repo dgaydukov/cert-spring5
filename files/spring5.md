@@ -1548,13 +1548,200 @@ deleteById(16) => true
 ```
 
 If you take a look into package `com.example.logic.ann.jdbc.jdk` you will see a lot of boilerplate, so it's better to use spring jdbc to handle this
-For spring jdbc you should add to your `pom.xml`
+For spring jdbc you should add to your `pom.xml`. You also would like embedded db like `h2` for your testing, so it's better to add it too.
 ```
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-jdbc</artifactId>
 </dependency>
+<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <version>1.4.200</version>
+</dependency>
 ```
+
+Spring nicely translate all checked sql exeptions into runtime execptions with clear names.
+But you can also add logic there, by creating your own translator
+```java
+package com.example.logic.ann.jdbc.spring;
+
+import java.sql.SQLException;
+
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+
+public class MySqlExTranslator extends SQLErrorCodeSQLExceptionTranslator {
+    static class SqlDeadException extends DataAccessException{
+        public SqlDeadException(String msg, Exception ex) {
+            super(msg, ex);
+        }
+    }
+    @Override
+    protected DataAccessException customTranslate(String task, String sql, SQLException ex){
+        if(ex.getErrorCode() == 123456){
+            return new SqlDeadException(task, ex);
+        }
+        return null;
+    }
+}
+```
+Before use it, you should register it in your jdbc template
+```java
+@Bean
+public JdbcTemplate jdbcTemplate(){
+    DataSource ds = sql();
+    JdbcTemplate template = new JdbcTemplate();
+    MySqlExTranslator translator = new MySqlExTranslator();
+    translator.setDataSource(ds);
+    template.setDataSource(ds);
+    template.setExceptionTranslator(translator);
+    return template;
+}
+```
+
+We can pass params in 2 ways: `Object[]` or `Map`. If you want to use map you should use `NamedParameterJdbcTemplate` and put all params into hashmap.
+```java
+var r1 = jdbcTemplate.queryForObject("select * from department where id=?", new Object[]{id}, new DepartmentModelMapper());
+NamedParameterJdbcTemplate template = new NamedParameterJdbcTemplate(jdbcTemplate);
+Map<String, Object> params = new HashMap<>();
+params.put("id", id);
+var r2 = template.queryForObject("select * from department where id=:id", params, new DepartmentModelMapper());
+System.out.println("r1 => " + r1);
+System.out.println("r2 => " + r2);
+```
+```
+r1 => DepartmentModel(id=1, name=Exchange, type=IT)
+r2 => DepartmentModel(id=1, name=Exchange, type=IT)
+```
+
+Here is example how to query data with `JdbcTemplate`
+`DepartmentDao.java`
+```java
+package com.example.logic.ann.jdbc.spring;
+
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.stereotype.Component;
+
+@Component
+public class DepartmentDao implements MyDao<DepartmentModel> {
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Override
+    public List<DepartmentModel> getAll() {
+        return jdbcTemplate.query("select * from department", new DepartmentModelMapper());
+    }
+
+    @Override
+    public DepartmentModel getById(int id) {
+        return jdbcTemplate.queryForObject("select * from department where id=?", new Object[]{id}, new DepartmentModelMapper());
+    }
+
+    @Override
+    public boolean deleteById(int id) {
+        return jdbcTemplate.update("delete from department where id=?", id) == 1;
+    }
+
+    @Override
+    public DepartmentModel save(DepartmentModel model) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(conn-> {
+                PreparedStatement ps = conn.prepareStatement("insert into department(name, type) values(?, ?)", Statement.RETURN_GENERATED_KEYS);
+                ps.setString(1, model.getName());
+                ps.setString(2, model.getType());
+                return ps;
+            },
+            keyHolder
+        );
+        model.setId(keyHolder.getKey().intValue());
+        return model;
+    }
+
+    private static class DepartmentModelMapper implements RowMapper<DepartmentModel> {
+        @Override
+        public DepartmentModel mapRow(ResultSet rs, int rowNumber) throws SQLException {
+            DepartmentModel model = new DepartmentModel();
+            model.setId(rs.getInt("id"));
+            model.setName(rs.getString("name"));
+            model.setType(rs.getString("type"));
+            return model;
+        }
+    }
+}
+```
+Dao example
+```java
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import com.example.logic.ann.jdbc.spring.DepartmentDao;
+import com.example.logic.ann.jdbc.spring.DepartmentModel;
+
+
+public class App {
+    public static void main(String[] args) {
+        ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann.jdbc.spring");
+        var dao = context.getBean(DepartmentDao.class);
+        System.out.println("getAll => " + dao.getAll());
+        var model = new DepartmentModel();
+        model.setName("finance");
+        model.setType("my");
+        model = dao.save(model);
+        System.out.println("save => " + model);
+        int id = model.getId();
+        System.out.println("getById("+id+") =>" + dao.getById(id));
+        System.out.println("deleteById("+id+") => " + dao.deleteById(id));
+    }
+}
+```
+```
+14:38:54.020 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing SQL query [select * from department]
+14:38:54.020 [main] DEBUG org.springframework.jdbc.datasource.DataSourceUtils - Fetching JDBC Connection from DataSource
+14:38:54.020 [main] DEBUG org.springframework.jdbc.datasource.SimpleDriverDataSource - Creating new JDBC Driver Connection to [jdbc:mysql://localhost:3306/spring5]
+getAll => [DepartmentModel(id=1, name=Exchange, type=IT), DepartmentModel(id=2, name=Solution, type=IT), DepartmentModel(id=3, name=Markets, type=CP)]
+14:38:54.061 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing SQL update and returning generated keys
+14:38:54.062 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing prepared SQL statement
+14:38:54.062 [main] DEBUG org.springframework.jdbc.datasource.DataSourceUtils - Fetching JDBC Connection from DataSource
+14:38:54.062 [main] DEBUG org.springframework.jdbc.datasource.SimpleDriverDataSource - Creating new JDBC Driver Connection to [jdbc:mysql://localhost:3306/spring5]
+save => DepartmentModel(id=28, name=finance, type=my)
+14:38:54.086 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing prepared SQL query
+14:38:54.087 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing prepared SQL statement [select * from department where id=?]
+14:38:54.087 [main] DEBUG org.springframework.jdbc.datasource.DataSourceUtils - Fetching JDBC Connection from DataSource
+14:38:54.087 [main] DEBUG org.springframework.jdbc.datasource.SimpleDriverDataSource - Creating new JDBC Driver Connection to [jdbc:mysql://localhost:3306/spring5]
+getById(28) =>DepartmentModel(id=28, name=finance, type=my)
+14:38:54.103 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing prepared SQL update
+14:38:54.103 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing prepared SQL statement [delete from department where id=?]
+14:38:54.103 [main] DEBUG org.springframework.jdbc.datasource.DataSourceUtils - Fetching JDBC Connection from DataSource
+14:38:54.103 [main] DEBUG org.springframework.jdbc.datasource.SimpleDriverDataSource - Creating new JDBC Driver Connection to [jdbc:mysql://localhost:3306/spring5]
+deleteById(28) => true
+```
+
+`SimpleDriverDataSource` - is not pooled, so you can use it only for testing purpose. 
+
+By default spring boot searches for `schema.sql` and `data.sql` under `src/resources` and run these files on start to recreate db.
+You can change file location with this configs.
+```
+spring.datasource.schema=db/schema.sql
+spring.datasource.data=db/test-data.sql
+```
+
+spring jdbc also provides several classes
+`MappingSqlQuery<T>` - allows you to create query+rowmapper into single class
+`SqlUpdate` - to execute insert/update/delete
+`BatchSqlUpdate` - execute batch insert/update/delete (multiple inserts in one db query)
+`SqlFunction<T>` - work with functions and stored procedure
+You usually create your class by extending one of these and implement one abstract method.
 
 ###### Hibernate
 ###### Spring Data
