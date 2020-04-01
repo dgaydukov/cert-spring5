@@ -8,6 +8,9 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.example.logic.ann.jdbc.DepartmentModel;
+import com.example.logic.ann.jdbc.MyDao;
+
 public class DepartmentDao implements MyDao<DepartmentModel> {
     private Connection conn;
 

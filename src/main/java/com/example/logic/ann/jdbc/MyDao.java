@@ -1,4 +1,4 @@
-package com.example.logic.ann.jdbc.jdk;
+package com.example.logic.ann.jdbc;
 
 import java.util.List;
 

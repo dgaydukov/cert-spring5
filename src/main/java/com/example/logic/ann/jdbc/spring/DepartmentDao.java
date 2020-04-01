@@ -13,6 +13,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import com.example.logic.ann.jdbc.DepartmentModel;
+import com.example.logic.ann.jdbc.MyDao;
+
 @Repository
 public class DepartmentDao implements MyDao<DepartmentModel> {
     @Autowired

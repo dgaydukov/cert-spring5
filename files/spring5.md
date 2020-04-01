@@ -1517,9 +1517,9 @@ public class App {
 But of course we don't want to work with raw data, we would like to work with models. So here example of custom model & dao based on jdk jdbc
 ```java
 import com.example.logic.ann.jdbc.jdk.DepartmentDao;
-import com.example.logic.ann.jdbc.jdk.DepartmentModel;
+import com.example.logic.ann.jdbc.DepartmentModel;
 import com.example.logic.ann.jdbc.jdk.MyConnection;
-import com.example.logic.ann.jdbc.jdk.MyDao;
+import com.example.logic.ann.jdbc.MyDao;
 
 public class App {
     public static void main(String[] args) {
@@ -1631,9 +1631,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
-@Component
+import com.example.logic.ann.jdbc.DepartmentModel;
+import com.example.logic.ann.jdbc.MyDao;
+
+@Repository
 public class DepartmentDao implements MyDao<DepartmentModel> {
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -1679,14 +1682,15 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
         }
     }
 }
+
 ```
 Dao example
 ```java
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
+import com.example.logic.ann.jdbc.DepartmentModel;
 import com.example.logic.ann.jdbc.spring.DepartmentDao;
-import com.example.logic.ann.jdbc.spring.DepartmentModel;
 
 
 public class App {
@@ -1744,6 +1748,34 @@ spring jdbc also provides several classes
 You usually create your class by extending one of these and implement one abstract method.
 
 ###### Hibernate
+`JPA` (java persistence API) - specification how to write orm. `Hibernate` - concrete example of such orm based on JPA.
+Jpa specification is inside `javax.persistence` package.
+To use hibernate you need to add these into your `pom.xml`
+```
+<dependency>
+    <groupId>org.hibernate</groupId>
+    <artifactId>hibernate-entitymanager</artifactId>
+    <version>5.4.12.Final</version>
+</dependency>
+<dependency>
+    <groupId>org.hibernate</groupId>
+    <artifactId>hibernate-validator</artifactId>
+    <version>6.1.2.Final</version>
+</dependency>
+<dependency>
+    <groupId>org.hibernate</groupId>
+    <artifactId>hibernate-core</artifactId>
+    <version>5.4.12.Final</version>
+</dependency>
+```
+To use `org.springframework.orm` package add this too 
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+```
+
 ###### Spring Data
 
 
