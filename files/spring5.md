@@ -13,6 +13,8 @@
 * 1.10 [Environment and PropertySource](#environment-and-propertysource)
 * 1.11 [Profile, Primary, Qualifier, Order](#profile-primary-qualifier-order)
 * 1.12 [PropertySource and ConfigurationProperties](#propertysource-and-configurationproperties)
+* 1.13 [Task scheduling](#task-scheduling)
+* 1.14 [Remoting](#remoting)
 2 [AOP](#aop)
 * 2.1 [Aop basics](#aop-basics)
 * 2.2 [Aop framework](#aop-framework)
@@ -26,9 +28,13 @@
 * 4.2 [Hibernate](#hibernate)
 * 4.3 [Spring Data](#spring-data)
 * 4.4 [JTA - java transaction API](#jta---java-transaction-api)
+5. [Spring Testing](#spring-testing)
+6. [Spring Boot Actuator](#spring-boot-actuator)
+* 6.1 [Jmx monitoring](#jmx-monitoring)
 10. [Miscellaneous](#miscellaneous)
 * 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 10.2 [Get param names](#get-param-names)
+
 
 
 
@@ -709,6 +715,133 @@ public class App {
 Person1(id=1, name=John, age=20)
 Person2(id=2, name=John, age=20)
 ```
+
+
+
+###### Task scheduling
+`java.util.concurrent` Provides a lot of standard classes to manage concurrent execution. Although you can use spring default classes (they are just wrappers around jdk classes) you either can use jdk classes directly.
+In spring there are 2 useful annotations `@Scheduled` and `@Async`
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+
+@Configuration
+@EnableScheduling
+@EnableAsync
+public class App {
+    @Bean
+    public TaskScheduler scheduler() {
+        return new ThreadPoolTaskScheduler();
+    }
+
+    @Scheduled(fixedDelay = 10000)
+    public void run(){
+        System.out.println("run job...");
+    }
+
+    @Async
+    public void doWork(){
+        sleep(3);
+        System.out.println("doWork");
+    }
+
+    private void sleep(int s){
+        try {
+            Thread.sleep(s * 1000);
+        } catch (InterruptedException ex){
+            throw new RuntimeException(ex);
+        }
+    }
+
+
+
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        var app = context.getBean(App.class);
+        app.doWork();
+        System.out.println("done");
+    }
+}
+```
+```
+run job...
+done
+doWork
+doWork
+run job...
+run job...
+run job...
+run job...
+run job...
+....
+```
+
+
+###### Remoting
+There are a few options you can set up remote communication between 2 spring projects
+Suppose you have 
+```java
+interface MyService{
+    List<String> getNames();
+}
+```
+On the web app side you create bean
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.remoting.httpinvoker.HttpInvokerServiceExporter;
+
+@Configuration
+public class WebAppConfig {
+    @Autowired
+    MyService myService;
+
+    @Bean(name = "/httpInvoker/myService")
+    public HttpInvokerServiceExporter httpInvokerServiceExporter() {
+        var invokerService = new HttpInvokerServiceExporter();
+        invokerService.setService(myService);
+        invokerService.setServiceInterface(MyService.class);
+        return invokerService;
+    }
+}
+```
+On the caller you create bean
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.remoting.httpinvoker.HttpInvokerProxyFactoryBean;
+
+@Configuration
+public class CallerConfig {
+    @Bean
+    public MyService myService() {
+        var factoryBean = new HttpInvokerProxyFactoryBean();
+        factoryBean.setServiceInterface(MyService.class);
+        factoryBean.setServiceUrl("http://localhost:8080/invoker/httpInvoker/myService");
+        factoryBean.afterPropertiesSet();
+        return (MyService) factoryBean.getObject();
+    }
+}
+```
+With this settings you can call logic from caller app that will fetch all data from remote web app.
+Of course you should share code for `MyService` between 2 apps.
+
+
+Using  JMS (java message system)
+
+
+
+
+
+
 
 ### AOP
 
@@ -2093,6 +2226,9 @@ public class AuditorAwareBean implements AuditorAware<String>  {
 We can also add `Entity Versioning`, so whenever update/delete happens, old versions would be stored in history table.
 To enable versioning on entity just add `@Audited`.
 
+Generally you should prefer `EntityManager` over `Session`, cause it jpa standard while `Session` is hibernate. Under the hood `EntityManager` using `Session`, and if you need some specific features
+you can always get session like `Session current = (Session) entityManager.getDelegate();`;
+
 ###### JTA - java transaction API
 There are 2 types of transactions:
 * Local - work with single resource (single db) and either commit or rollback
@@ -2104,6 +2240,84 @@ To work with global tx you should add to your `pom.xml`
     <artifactId>spring-boot-starter-jta-atomikos</artifactId>
 </dependency>
 ```
+
+
+
+
+#### Spring Testing
+First let's add junit to `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+Scope - test, means that junit types would be available only in testing scope, not inside main app.
+
+There are a few useful annotations you can use inside your test framework
+`@Before/@After` - run some logic before all tests starts
+`@ActiveProfiles("")"` - set up profiles for which tests would run
+
+
+
+#### Spring Boot Actuator
+###### Jmx monitoring
+If we want to import spring beans to jmx we would need to add. Spring will try to find running `MBeanServer`, and in case of web app it would be tomcat.
+```java
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jmx.export.MBeanExporter;
+
+@Configuration
+public class MyWebConfig {
+    @Bean
+    public MyService myService() {
+        return new MyService() {
+            @Override
+            public void print() {
+                System.out.println("hello");
+            }
+        };
+    }
+    @Bean
+    public MBeanExporter jmxExporter() {
+        MBeanExporter exporter = new MBeanExporter();
+        Map<String, Object> beans = new HashMap<>();
+        beans.put("bean:name=myService", myService());
+        exporter.setBeans(beans);
+        return exporter;
+    }
+}
+
+interface MyService{
+    void print();
+}
+```
+
+You can add `@EnableMBeanExport` to config bean to enable support for registering mbeans with annotations.
+You can also add `@ManagedResource(description = "JMX managed resource", objectName = "jmxDemo:name=myService")` to your bean directly.
+And add `@ManagedOperation` to any method you want to be able to call from jmx console. If you want to expose property add `@ManagedAttribute(description = "myProp")`
+
+
+You can also add hibernate to jmx console by adding following props
+```java
+props.put("hibernate.jmx.enabled", true);
+props.put("hibernate.generate_statistics", true);
+props.put("hibernate.session_factory_name", "sessionFactory");
+```
+
+
+
+
+
+
+
+
+
 
 #### Miscellaneous
 ###### mvnw and mvnw.cmd
