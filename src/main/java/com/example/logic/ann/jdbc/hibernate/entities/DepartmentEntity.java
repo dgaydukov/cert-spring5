@@ -1,27 +1,23 @@
 package com.example.logic.ann.jdbc.hibernate.entities;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Version;
 
 import java.util.List;
 
-import org.hibernate.annotations.Fetch;
-import org.hibernate.annotations.FetchMode;
-
 import lombok.Data;
 
 @Data
 @Entity
 @Table(name = "department")
-@NamedQuery(name="DepartmentEntity.GET_BY_ID_EAGER", query="SELECT d FROM DepartmentEntity d JOIN FETCH  d.employees WHERE d.id=:id")
-@NamedQuery(name="DepartmentEntity.GET_BY_ID_LAZY", query="SELECT d FROM DepartmentEntity d JOIN d.employees WHERE d.id=:id")
 public class DepartmentEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,8 +33,10 @@ public class DepartmentEntity {
     @Version
     private int version;
 
-    //@OneToMany(mappedBy = "department", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
-    @OneToMany(mappedBy = "department")
-    @Fetch(FetchMode.JOIN)
+    /**
+     * We are using FetchType.EAGER to fetch join queries eagerly, generally it's not a good practice
+     * and you should use lazy loading in prod
+     */
+    @OneToMany(mappedBy = "department", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EmployeeEntity> employees;
 }

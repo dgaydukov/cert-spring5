@@ -7,7 +7,6 @@ import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import com.example.logic.ann.jdbc.MyDao;
 import com.example.logic.ann.jdbc.hibernate.entities.DepartmentEntity;
 
 @Transactional
@@ -23,13 +22,12 @@ public class DepartmentDao implements MyDao<DepartmentEntity> {
 
     @Override
     public DepartmentEntity getById(int id) {
-        //return (DepartmentEntity) sessionFactory.getCurrentSession().getNamedQuery("DepartmentEntity.GET_BY_ID_EAGER").setParameter("id", id).uniqueResult();
         return (DepartmentEntity) sessionFactory.getCurrentSession().createQuery("from DepartmentEntity d where d.id=:id").setParameter("id", id).uniqueResult();
     }
 
     @Override
-    public boolean deleteById(int id) {
-        return sessionFactory.getCurrentSession().createQuery("delete from DepartmentEntity d where d.id=:id").setParameter("id", id).executeUpdate() == 1;
+    public void delete(DepartmentEntity model) {
+        sessionFactory.getCurrentSession().delete(model);
     }
 
     @Override

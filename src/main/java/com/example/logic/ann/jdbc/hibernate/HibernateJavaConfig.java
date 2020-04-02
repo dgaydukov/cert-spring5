@@ -50,15 +50,16 @@ public class HibernateJavaConfig {
 
     private Properties propserties() {
         Properties props = new Properties();
-        //uncomment this line for lazy to work
+        /**
+         * this config allows to lazy access after session is closed
+         * but you shouldn't use it cause it's antipattern
+         */
         //props.put("hibernate.enable_lazy_load_no_trans", true);
-//        props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
-//        props.put("hibernate.format_sql", true);
-//        props.put("hibernate.use_sql_comments", true);
-//        props.put("hibernate.show_sql", true);
-//        props.put("hibernate.max_fetch_depth", 3);
-//        props.put("hibernate.jdbc.batch_size", 10);
-//        props.put("hibernate.jdbc.fetch_size", 50);
+
+        props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
+        props.put("hibernate.format_sql", true);
+        props.put("hibernate.use_sql_comments", true);
+        props.put("hibernate.show_sql", true);
         return props;
     }
 

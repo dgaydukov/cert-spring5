@@ -1776,6 +1776,272 @@ To use `org.springframework.orm` package add this too
 </dependency>
 ```
 
+In hibernate we will show how to work with persistance objects
+`DepartmentEntity.java`
+```java
+package com.example.logic.ann.jdbc.hibernate.entities;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+import javax.persistence.Version;
+
+import java.util.List;
+
+import lombok.Data;
+
+@Data
+@Entity
+@Table(name = "department")
+public class DepartmentEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private int id;
+
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "type")
+    private String type;
+
+    @Version
+    private int version;
+
+    /**
+     * We are using FetchType.EAGER to fetch join queries eagerly, generally it's not a good practice
+     * and you should use lazy loading in prod
+     */
+    @OneToMany(mappedBy = "department", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<EmployeeEntity> employees;
+}
+```
+
+`EmployeeEntity.java`
+```java
+package com.example.logic.ann.jdbc.hibernate.entities;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Version;
+
+import lombok.Data;
+import lombok.ToString;
+
+@Data
+@Entity
+@Table(name = "employee")
+public class EmployeeEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private int id;
+
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "salary")
+    private int salary;
+
+    @Version
+    private int version;
+
+    /**
+     * We use ToString.Exclude to exclude this field from toString
+     * otherwise, when we called department.toString for each department it will call employee.toString, which again will call department.toString
+     * so we will end up with stackOverFlowError
+     */
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    @ToString.Exclude
+    private DepartmentEntity department;
+}
+```
+
+`DepartmentDao.java`
+```java
+package com.example.logic.ann.jdbc.hibernate;
+
+import javax.transaction.Transactional;
+import java.util.List;
+
+import org.hibernate.SessionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import com.example.logic.ann.jdbc.hibernate.entities.DepartmentEntity;
+
+@Transactional
+@Repository
+public class DepartmentDao implements MyDao<DepartmentEntity> {
+    @Autowired
+    private SessionFactory sessionFactory;
+
+    @Override
+    public List<DepartmentEntity> getAll() {
+        return sessionFactory.getCurrentSession().createQuery("from DepartmentEntity d").list();
+    }
+
+    @Override
+    public DepartmentEntity getById(int id) {
+        return (DepartmentEntity) sessionFactory.getCurrentSession().createQuery("from DepartmentEntity d where d.id=:id").setParameter("id", id).uniqueResult();
+    }
+
+    @Override
+    public void delete(DepartmentEntity model) {
+        sessionFactory.getCurrentSession().delete(model);
+    }
+
+    @Override
+    public DepartmentEntity save(DepartmentEntity model) {
+        sessionFactory.getCurrentSession().saveOrUpdate(model);
+        return model;
+    }
+}
+```
+
+`HibernateJavaConfig.java`
+```java
+package com.example.logic.ann.jdbc.hibernate;
+
+import javax.sql.DataSource;
+
+import java.io.IOException;
+import java.sql.Driver;
+import java.util.Properties;
+
+import org.hibernate.SessionFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.jdbc.datasource.SimpleDriverDataSource;
+import org.springframework.orm.hibernate5.HibernateTransactionManager;
+import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+@Configuration
+@EnableTransactionManagement
+@PropertySource("jdbc.properties")
+public class HibernateJavaConfig {
+    @Value("${driverClassName}")
+    private String driverClassName;
+    @Value("${url}")
+    private String url;
+    /**
+     * If you use `user/username` it would be the name of your machine (diman),
+     * cause in spring env variables overwrite configs
+     */
+    @Value("${dbUser}")
+    private String username;
+    @Value("${password}")
+    private String password;
+
+    @Bean
+    public DataSource simpleDs() {
+        try{
+            SimpleDriverDataSource ds = new SimpleDriverDataSource();
+            ds.setDriverClass((Class<? extends Driver>) Class.forName(driverClassName));
+            ds.setUrl(url);
+            ds.setUsername(username);
+            ds.setPassword(password);
+            return ds;
+        } catch (ClassNotFoundException ex){
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private Properties propserties() {
+        Properties props = new Properties();
+        /**
+         * this config allows to lazy access after session is closed
+         * but you shouldn't use it cause it's antipattern
+         */
+        //props.put("hibernate.enable_lazy_load_no_trans", true);
+
+        props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
+        props.put("hibernate.format_sql", true);
+        props.put("hibernate.use_sql_comments", true);
+        props.put("hibernate.show_sql", true);
+        return props;
+    }
+
+    @Bean
+    public SessionFactory sessionFactory() {
+        try{
+            LocalSessionFactoryBean sessionBean = new LocalSessionFactoryBean();
+            sessionBean.setDataSource(simpleDs());
+            sessionBean.setHibernateProperties(propserties());
+            sessionBean.setPackagesToScan("com.example.logic.ann.jdbc.hibernate.entities");
+            sessionBean.afterPropertiesSet();
+            return sessionBean.getObject();
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Bean
+    public PlatformTransactionManager platformTransactionManager(){
+        return new HibernateTransactionManager(sessionFactory());
+    }
+}
+```
+
+`App.java`
+```java
+import java.util.List;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import com.example.logic.ann.jdbc.hibernate.MyDao;
+import com.example.logic.ann.jdbc.hibernate.entities.DepartmentEntity;
+import com.example.logic.ann.jdbc.hibernate.entities.EmployeeEntity;
+
+public class App{
+    public static void main(String[] args) {
+        ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann.jdbc.hibernate");
+        /**
+         * If you try to run `context.getBean(DepartmentDao.class);`, you will get
+         * NoSuchBeanDefinitionException: No qualifying bean of type 'com.example.logic.ann.jdbc.hibernate.DepartmentDao' available
+         * the reason, is since we are using @Transactional, our object is changed with proxy, that's why we should use interfaces
+         */
+        MyDao<DepartmentEntity> dao = context.getBean(MyDao.class);
+        System.out.println(dao.getAll());
+
+        var dep = new DepartmentEntity();
+        dep.setName("cool");
+        dep.setType("my");
+
+        var emp = new EmployeeEntity();
+        emp.setName("Jack");
+        emp.setSalary(200);
+        emp.setDepartment(dep);
+
+        dep.setEmployees(List.of(emp));
+
+        dep = dao.save(dep);
+        System.out.println("saved => " + dep);
+        System.out.println("getById("+dep.getId()+") => " + dao.getById(dep.getId()));
+        dao.delete(dep);
+    }
+}
+```
+
+
 ###### Spring Data
 
 
