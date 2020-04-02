@@ -1,26 +1,26 @@
-package com.example.logic.ann.jdbc.hibernate;
+package com.example.logic.ann.jdbc.jpa;
 
+import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
-
-import java.io.IOException;
 import java.sql.Driver;
 import java.util.Properties;
 
-import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
-import org.springframework.orm.hibernate5.HibernateTransactionManager;
-import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.JpaVendorAdapter;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @Configuration
 @EnableTransactionManagement
 @PropertySource("jdbc.properties")
-public class HibernateJavaConfig {
+public class JpaJavaConfig {
     @Value("${driverClassName}")
     private String driverClassName;
     @Value("${url}")
@@ -64,21 +64,24 @@ public class HibernateJavaConfig {
     }
 
     @Bean
-    public SessionFactory sessionFactory() {
-        try{
-            LocalSessionFactoryBean sessionBean = new LocalSessionFactoryBean();
-            sessionBean.setDataSource(dataSource());
-            sessionBean.setHibernateProperties(properties());
-            sessionBean.setPackagesToScan("com.example.logic.ann.jdbc.hibernate.entities");
-            sessionBean.afterPropertiesSet();
-            return sessionBean.getObject();
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
-        }
+    public JpaVendorAdapter jpaVendorAdapter(){
+        return new HibernateJpaVendorAdapter();
+    }
+
+    @Bean
+    public EntityManagerFactory entityManagerFactory() {
+        var bean = new LocalContainerEntityManagerFactoryBean();
+        bean.setPackagesToScan("com.example.logic.ann.jdbc.jpa");
+        bean.setDataSource(dataSource());
+        bean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
+        bean.setJpaProperties(properties());
+        bean.setJpaVendorAdapter(jpaVendorAdapter());
+        bean.afterPropertiesSet();
+        return bean.getNativeEntityManagerFactory();
     }
 
     @Bean
     public PlatformTransactionManager platformTransactionManager(){
-        return new HibernateTransactionManager(sessionFactory());
+        return new JpaTransactionManager(entityManagerFactory());
     }
 }

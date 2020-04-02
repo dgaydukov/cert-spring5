@@ -2041,10 +2041,55 @@ public class App{
 }
 ```
 
+Lazy loading example
+```java
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import com.example.logic.ann.jdbc.hibernate.MyDao;
+import com.example.logic.ann.jdbc.hibernate.entities.DepartmentEntity;
+
+public class App {
+    public static void main(String[] args) throws Exception {
+        ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann.jdbc.hibernate");
+        /**
+         * If you try to run `context.getBean(DepartmentDao.class);`, you will get
+         * NoSuchBeanDefinitionException: No qualifying bean of type 'com.example.logic.ann.jdbc.hibernate.DepartmentDao' available
+         * the reason, is since we are using @Transactional, our object is changed with proxy, that's why we should use interfaces
+         */
+        MyDao<DepartmentEntity> dao = context.getBean(MyDao.class);
+        System.out.println("__RUN__");
+        var e1 = (DepartmentEntity) dao.getById(1);
+        System.out.println(e1.getName());
+        Thread.sleep(1000);
+        System.out.println(e1.getType());
+        Thread.sleep(1000);
+        System.out.println(e1.getEmployees());
+    }
+}
+```
 
 ###### Spring Data
+Jpa `EntityManagerFactory` resembles `SessionFactory`. You can call `entityManagerFactory.createEntityManager()` to get current `EntityManager` on which you can run queries like `update/remove/save`
+Although you can use `EntityManager` to manually create queries, it's better to use spring data repository pattern, that wrap entity manager inside and provide many default queries out of the box.
+There are 2 interfaces `CrudRepository` & `JpaRepository` from which you can extend your repository interface (spring will create class automatically) and have many default queries already implemented.
+But if you want some custom query (like fine user by first and last name) you just need to add abstract method `findByFirstNameAndLastName(String firstName, String lastName)` and it would work (spring automatically build query based on it's name).
+In case you want to have your own query for the method, just add `@Query("your query")`.
 
+You can easily add auditing to any entity by adding `@EntityListeners(AuditingEntityListener.class)`
+And then have 4 columns with following annotations `@CreatedDate/@CreatedBy/@LastModifiedBy/@LastModifiedDate`
+You should add to your config `@EnableJpaAuditing(auditorAwareRef =  "auditorAwareBean")` and finally
+```java
+@Component
+public class AuditorAwareBean implements AuditorAware<String>  {
+    public Optional<String> getCurrentAuditor() {
+        return Optional.of("admin");
+    }
+}
+```
 
+We can also add `Entity Versioning`, so whenever update/delete happens, old versions would be stored in history table.
+To enable versioning on entity just add `@Audited`.
 
 
 

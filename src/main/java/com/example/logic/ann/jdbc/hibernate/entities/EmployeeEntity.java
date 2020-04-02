@@ -2,6 +2,7 @@ package com.example.logic.ann.jdbc.hibernate.entities;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -36,7 +37,7 @@ public class EmployeeEntity {
      * otherwise, when we called department.toString for each department it will call employee.toString, which again will call department.toString
      * so we will end up with stackOverFlowError
      */
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     @ToString.Exclude
     private DepartmentEntity department;
