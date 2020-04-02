@@ -15,5 +15,11 @@ There are 2 main reasons to get it.
 ### TODO
 * [spring-certification-5.0](https://github.com/vshemyako/spring-certification-5.0)
 * [SpringCertification5.0](https://github.com/MrR0807/SpringCertification5.0)
-* [mock](http://itestjava.com/java-certification-practice-tests/product/enter.do?product=SPRING-CORE50)
+* [tutorial point 20 questions](https://www.tutorialspoint.com/spring/spring_online_test.htm)
+* [free 4.2, 50 questions](http://javaetmoi.com/wp-content/uploads/2016/01/spring-certification-4_2-mock-exam-antoine.pdf)
+* [free 4.2, 200 questions](https://github.com/vojtechruz/spring-core-cert-notes-4.2)
+* [mock1](http://itestjava.com/java-certification-practice-tests/product/enter.do?product=SPRING-CORE50)
+* [mock2](https://www.certification-questions.com/spring-exam/professional-dumps.html)
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
+
+* download https://github.com/ppatil9096/books/blob/master/Spring%20in%20Action%2C%205th%20Edition.pdf
