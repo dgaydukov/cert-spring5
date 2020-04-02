@@ -22,7 +22,7 @@ public class DepartmentDao implements MyDao<DepartmentEntity> {
 
     @Override
     public DepartmentEntity getById(int id) {
-        //return (DepartmentEntity) sessionFactory.getCurrentSession().getNamedQuery("DepartmentEntity.GET_BY_ID").setParameter("id", id).uniqueResult();
+        //return (DepartmentEntity) sessionFactory.getCurrentSession().getNamedQuery(DepartmentEntity.GET_BY_ID).setParameter("id", id).uniqueResult();
         String sqlQuery = "FROM DepartmentEntity d JOIN FETCH d.employees WHERE d.id=:id";
         return (DepartmentEntity) sessionFactory.getCurrentSession().createQuery(sqlQuery).setParameter("id", id).uniqueResult();
     }

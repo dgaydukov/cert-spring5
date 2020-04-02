@@ -25,6 +25,7 @@
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
 * 4.3 [Spring Data](#spring-data)
+* 4.4 [JTA - java transaction API](#jta---java-transaction-api)
 10. [Miscellaneous](#miscellaneous)
 * 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 10.2 [Get param names](#get-param-names)
@@ -2073,6 +2074,7 @@ public class App {
 Jpa `EntityManagerFactory` resembles `SessionFactory`. You can call `entityManagerFactory.createEntityManager()` to get current `EntityManager` on which you can run queries like `update/remove/save`
 Although you can use `EntityManager` to manually create queries, it's better to use spring data repository pattern, that wrap entity manager inside and provide many default queries out of the box.
 There are 2 interfaces `CrudRepository` & `JpaRepository` from which you can extend your repository interface (spring will create class automatically) and have many default queries already implemented.
+To enable work with repository add this to your config `@EnableJpaRepositories("com.example.logic.ann.jdbc.jpa.repository")`.
 But if you want some custom query (like fine user by first and last name) you just need to add abstract method `findByFirstNameAndLastName(String firstName, String lastName)` and it would work (spring automatically build query based on it's name).
 In case you want to have your own query for the method, just add `@Query("your query")`.
 
@@ -2091,7 +2093,17 @@ public class AuditorAwareBean implements AuditorAware<String>  {
 We can also add `Entity Versioning`, so whenever update/delete happens, old versions would be stored in history table.
 To enable versioning on entity just add `@Audited`.
 
-
+###### JTA - java transaction API
+There are 2 types of transactions:
+* Local - work with single resource (single db) and either commit or rollback
+* Global - work with many resources (like one mysql and one oracle db), and either all changes to all db commiter or rollbacked. Using `XA` protocol.
+To work with global tx you should add to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-jta-atomikos</artifactId>
+</dependency>
+```
 
 #### Miscellaneous
 ###### mvnw and mvnw.cmd

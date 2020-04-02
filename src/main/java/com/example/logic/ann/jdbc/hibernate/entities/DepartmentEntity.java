@@ -19,6 +19,8 @@ import lombok.Data;
 @Table(name = "department")
 @NamedQuery(name = "DepartmentEntity.GET_BY_ID", query = "SELECT d FROM DepartmentEntity d JOIN FETCH d.employees WHERE d.id=:id")
 public class DepartmentEntity {
+    public final static String GET_BY_ID = "DepartmentEntity.GET_BY_ID";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
