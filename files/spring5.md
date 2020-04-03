@@ -34,6 +34,7 @@
 10. [Miscellaneous](#miscellaneous)
 * 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 10.2 [Get param names](#get-param-names)
+* 10.3 [Pom vs Bom](#pom-vs-bom)
 
 
 
@@ -50,6 +51,10 @@ Use Interfaces for every class, at least for every Service class. The naming con
 - Interface clear defines contract. Who knows why developer made the method public (maybe he just forget to rename it to private). Classes generally unclear and cluttered to define public contract.
 - interfaces allow di and mocking without use of reflection (don’t need to parse class implementation)
 - JDK dynamic proxy can work only with interfaces (if class implement any it use it), otherwise java switch to CGLIB to create proxies
+
+You must use interface for every class. The reason is that later somebody can add aspect or custom BPP to some methods of your class
+and if you are using injection by class, in this case you got exception, cause there is no such class anymore (it was replaced by proxy)
+so that's why it's better to use interface.
 
 ```
 <bean id="" type="MyService">
@@ -129,6 +134,7 @@ If we want to init one bean only after other we can use `<bean id="" class="" de
 `@Autowired + @Qualifier("myName")` => `@Resource("myName")` (resource - only on fiedls and setters)
 
 ###### Xml, Groovy, Properties example
+If we have same bean in xml, java config, and @Component => xml wins
 Here is quick example to demonstrate how to use di in practice.
 Notice, that `BeanDefinitionReader` takes `BeanDefinitionRegistry` instance, so our factory should be both `BeanFactory & BeanDefinitionRegistry`.
 There are 3 ways to externalize your configs with `BeanDefinitionRegistry` interface
@@ -334,7 +340,8 @@ If we want to add annotation support to xml file we should add `<context:compone
 
 By default there is no `BeanDefinitionReader` implementation for annotations. But we can use 2 other classes
 `AnnotatedBeanDefinitionReader` (you can register config class with it) and
-`ClassPathBeanDefinitionScanner` - you don't even need config, just scan package with annotations
+`ClassPathBeanDefinitionScanner` - you don't even need config, just scan package with annotations like `@Component`.
+If you register only config file and it has annotation `@ComponentScan("yourPackage")`, internally it uses `ClassPathBeanDefinitionScanner`
 here is example
 ```java
 import com.example.logic.ann.beans.JavaConfig;
@@ -539,6 +546,18 @@ If you want to implement some custom logic during app lifecycle you should have 
     * `postProcessAfterInitialization` - fires after init, usually here we can substitute our bean with dynamic proxy
 * `ApplicationListener<E extends ApplicationEvent>` - fires after bfpp and bpp, when we got some events
 
+When working with `BeanPostProcessor` or aspects the common problem is nested calls.
+If you have logging through custom annotation @TimeLogging (that handles by custom BPP), and you have 2 methods annotated with it
+if you call them separately both would be wrapped into time-logging
+But if you call one from another, only one logging would be displayed
+To fix this you can do self-injection like
+```
+@Resouce
+private MyService proxy;
+```
+And call one method from another, not with `this`, but with `proxy`.
+Or you can also create your own annotation `@SelfAutowired` and custom BPP to inject proxy.
+
 ###### Prototype into Singleton
 You can use following code to get scope of any class in your app context
 ```java
@@ -651,6 +670,33 @@ The same way you can hook up to destroy event
 Destroy events are not fired automatically, you have to call `((AbstractApplicationContext)context).close();`. 
 Method `destroy` in context is deprecated, and inside just make a call to `close`.
 
+
+Since parent init is private, and child-public, it's not overriding. So when we create child bean parent init also called.
+If it was public, it wouldn't be called.
+```java
+import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+
+public class Parent {
+    @PostConstruct
+    private void init(){
+        System.out.println("Parent");
+    }
+}
+
+@Component
+class Child extends Parent {
+    @PostConstruct
+    public void init(){
+        System.out.println("Child");
+    }
+}
+```
+```
+Parent
+Child
+```
 
 ###### BeanNameAware and ApplicationContextAware
 If you want to have bean name or app context to be injected into your bean you can implement this interfaces
@@ -999,6 +1045,9 @@ Using  JMS (java message system)
 
 
 ### AOP
+
+* spring aspects fire before custom BPP
+* if class implements at least 1 interface with 1 method, aspect will create dynamic proxy, otherwise will use cglib
 
 ###### Aop basics
 
@@ -1693,6 +1742,8 @@ Before the advent of spring boot for building web app we were using `.war` files
 Inside we had web.xml were all configs are stores, then we put this file into `tomcat` directory, and when tomcat 
 starts, it takes with file and run it. That's why we didn't have any `main` method inside web app for spring.
 
+If you work without spring boot, you should implement `WebApplicationInitializer` and build war and put war into tomcat.
+
 ###### Spring Boot
 In spring boot you have 2 new events. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
 ```
@@ -2385,6 +2436,11 @@ Generally you should prefer `EntityManager` over `Session`, cause it jpa standar
 you can always get session like `Session current = (Session) entityManager.getDelegate();`;
 
 ###### JTA - java transaction API
+`@Transactional` - has propagation param, that instruct spring what to do when you call one transactional method from another.
+default param - required - in this case nothing happens.
+mandatory - throw exception if method was called from non-transactioanl method
+require_new - open new transaction (so we have nested tx)
+
 There are 2 types of transactions:
 * Local - work with single resource (single db) and either commit or rollback
 * Global - work with many resources (like one mysql and one oracle db), and either all changes to all db commiter or rollbacked. Using `XA` protocol.
@@ -2504,3 +2560,32 @@ class Person{
 ```
 [name, age]
 ```
+
+
+###### Pom vs Bom
+POM - project object model. BOM - bill of materials.
+Bom - special kind of pom, that helps control versions, and provide a central place to update these versions,
+it usually incude block `<dependencyManagement/>` where all dependencies are stored. When maven try to build project
+it first look for dependency in pom, and if can't find it goes to bom. 
+There are 2 ways to use bom
+1. Inheret is as parent.
+```
+<parent>
+    <groupId>bomGroup</groupId>
+    <artifactId>bomArtifact</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+</parent>
+```
+
+In case you already have a parent, you can just import it
+```
+<dependency>
+    <groupId>bomGroup</groupId>
+    <artifactId>bomArtifact</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <type>pom</type>
+    <scope>import</scope>
+</dependency>
+```
+
+So bom allows you to not include version in your pom, cause it can be already in bom.

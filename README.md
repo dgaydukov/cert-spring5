@@ -22,7 +22,15 @@ There are 2 main reasons to get it.
 * [mock2](https://www.certification-questions.com/spring-exam/professional-dumps.html)
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
 
-* download https://github.com/ppatil9096/books/blob/master/Spring%20in%20Action%2C%205th%20Edition.pdf
-
+0. download https://github.com/ppatil9096/books/blob/master/Spring%20in%20Action%2C%205th%20Edition.pdf
 1. add jms example from book
 2. jdbc template without rowmapper (some other class that does mapping)
+3. create .war web app with WebApplicationInitializer and run on tomcat (webapplicationinitializer vs servletcontextinitializer)
+4. pom executable jar
+5. aop example in native aspectj language
+6. all examples of spring aop aspect events (before, after, around, afterthrows...)
+7. spring-boot-configuration-processor (чтобы в главном файле конфига был автокомплит из стартера через configurationproperties)
+8. spring.factories enableautoconfiguration=yourConfFile
+9. @Conditional/conditionalonclass/conditionalonmissingbean how does it work
+10. add @Order to BPP, or implement ordered
+11. BFPP java config beans, no class name => fix with custom bpp
