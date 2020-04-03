@@ -51,6 +51,83 @@ Use Interfaces for every class, at least for every Service class. The naming con
 - interfaces allow di and mocking without use of reflection (don’t need to parse class implementation)
 - JDK dynamic proxy can work only with interfaces (if class implement any it use it), otherwise java switch to CGLIB to create proxies
 
+```
+<bean id="" type="MyService">
+<constructor-arg type="java.lang.String" name="arg1" index="0" value="1"/>
+<constructor-arg type="java.lang.String" name="arg1" index="1" ref="myNewClass"/>
+</bean>
+```
+* for name debug-mode should be enabled
+* constructor modifier can be any (private/protected) spring will create it anyway
+If we have a bean with private constructor and static method creation we can use
+```
+<bean id="" class="" factory-method=""/>
+```
+Since `@Component` doesn't have a property for factory method, if you do just this
+```java
+package com.example.logic.ann.di;
+
+import org.springframework.stereotype.Component;
+
+@Component
+public class MyStaticBean {
+    private MyStaticBean(){
+        System.out.println("private constructor");
+    }
+
+    public static MyStaticBean getInstance(){
+        System.out.println("getInstance");
+        return new MyStaticBean();
+    }
+
+    public void sayHello(){
+        System.out.println("hello");
+    }
+}
+```
+Spring will call private constructor, cause it's not aware about factory method. If you want to use it, you need to add it with config
+```java
+package com.example.logic.ann.di;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class DiJavaConfig {
+    @Bean
+    public MyStaticBean myStaticBean(){
+        return MyStaticBean.getInstance();
+    }
+}
+```
+Pay attention that java config `@Bean` overwrite `@Component`.
+Fo if you run
+```java
+import com.example.logic.ann.di.MyStaticBean;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.di");
+        context.getBean(MyStaticBean.class).sayHello();
+    }
+}
+```
+```
+getInstance
+private constructor
+hello
+```
+
+If we have 1 class extends other, and we want to call all it's props (init, destory, constructor-arg) we can add
+`<bean id="" class="" parent=""`
+Parent - doesn't mean that they should be java classes parent-child. They can be unrelated beans, just have same constror signature
+
+If we want to init one bean only after other we can use `<bean id="" class="" depends-on="bean1, bean2"/>`
+
+`@Autowired` => `@Inject`
+`@Autowired + @Qualifier("myName")` => `@Resource("myName")` (resource - only on fiedls and setters)
+
 ###### Xml, Groovy, Properties example
 Here is quick example to demonstrate how to use di in practice.
 Notice, that `BeanDefinitionReader` takes `BeanDefinitionRegistry` instance, so our factory should be both `BeanFactory & BeanDefinitionRegistry`.
@@ -255,6 +332,43 @@ public class App {
 
 If we want to add annotation support to xml file we should add `<context:component-scan base-package="your.package"/>`. This will scan package `your.package` for all annotated with `@Component` and related to it.
 
+By default there is no `BeanDefinitionReader` implementation for annotations. But we can use 2 other classes
+`AnnotatedBeanDefinitionReader` (you can register config class with it) and
+`ClassPathBeanDefinitionScanner` - you don't even need config, just scan package with annotations
+here is example
+```java
+import com.example.logic.ann.beans.JavaConfig;
+import com.example.logic.ann.beans.SimpleBean;
+import org.springframework.context.annotation.AnnotatedBeanDefinitionReader;
+import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
+import org.springframework.context.support.GenericApplicationContext;
+
+public class App {
+    public static void main(String[] args) {
+        var context = new GenericApplicationContext();
+        var scanner = new ClassPathBeanDefinitionScanner(context);
+        scanner.scan("com.example.logic.ann.beans");
+        context.refresh();
+        context.getBean(SimpleBean.class).sayHello();
+
+        /**
+         * recreate new context
+         */
+        context = new GenericApplicationContext();
+        var reader = new AnnotatedBeanDefinitionReader(context);
+        reader.register(JavaConfig.class);
+        context.refresh();
+        context.getBean(SimpleBean.class).sayHello();
+    }
+}
+```
+Notice that `AnnotationConfigApplicationContext` use these 2 classes inside, and you can call them like
+```java
+var ctx = new AnnotationConfigApplicationContext();
+ctx.register();
+ctx.scan();
+```
+
 We can also use `GenericApplicationContext` to load data, cause it's both `ApplicationContext and BeanDefinitionRegistry`.
 Notice that for xml and groovy we have specialized generic contexts with `load` method, where `reader.loadBeanDefinitions` logic is hidden.
 Here we can also use fourth type with java config file.
@@ -350,7 +464,7 @@ package com.example.logic.ann;
 
 import javax.annotation.PostConstruct;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.logic.ann.beans.SimplePrinter;import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -397,7 +511,7 @@ package com.example.spring5;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import com.example.logic.ann.SimpleBean;
+import com.example.logic.ann.beans.SimpleBean;
 
 
 public class App {
@@ -458,6 +572,47 @@ public class App {
 ```
 1 => I'm SingletonBean
 5 => I'm SingletonBean
+```
+
+Alternatively you can declare your singleton as abstract class with 1 abstract method to get printer (just like `@Lookup`)
+and override this method in config
+```java
+package com.example.logic.ann.prototypeintosingleton.oldwaay;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class PsJavaConfig {
+    @Bean
+    public SingletonBean singletonBean(){
+        return new SingletonBean() {
+            @Override
+            public PrototypePrinter getPrinter() {
+                var printer = new PrototypePrinter();
+                printer.init();
+                return printer;
+            }
+        };
+    }
+}
+```
+And then
+```java
+import com.example.logic.ann.prototypeintosingleton.oldwaay.SingletonBean;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.prototypeintosingleton.oldwaay");
+        context.getBean(SingletonBean.class).sayHello();
+        context.getBean(SingletonBean.class).sayHello();
+    }
+}
+```
+```
+963 => I'm SingletonBean
+752 => I'm SingletonBean
 ```
 
 If you declare BFPP with `@Bean`, you should make your method static

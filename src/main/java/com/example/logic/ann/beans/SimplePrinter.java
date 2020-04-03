@@ -1,6 +1,4 @@
-package com.example.logic.ann;
-
-import javax.annotation.PostConstruct;
+package com.example.logic.ann.beans;
 
 import com.example.logic.ann.postprocessors.annotation.TransactionWrapper;
 import com.example.logic.ann.postprocessors.annotation.LoggingWrapper;

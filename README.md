@@ -23,3 +23,6 @@ There are 2 main reasons to get it.
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
 
 * download https://github.com/ppatil9096/books/blob/master/Spring%20in%20Action%2C%205th%20Edition.pdf
+
+1. add jms example from book
+2. jdbc template without rowmapper (some other class that does mapping)

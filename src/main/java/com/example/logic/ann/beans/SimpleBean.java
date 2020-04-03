@@ -1,4 +1,4 @@
-package com.example.logic.ann;
+package com.example.logic.ann.beans;
 
 import javax.annotation.PostConstruct;
 
