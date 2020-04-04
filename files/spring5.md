@@ -129,9 +129,41 @@ If we have 1 class extends other, and we want to call all it's props (init, dest
 Parent - doesn't mean that they should be java classes parent-child. They can be unrelated beans, just have same constror signature
 
 If we want to init one bean only after other we can use `<bean id="" class="" depends-on="bean1, bean2"/>`
+We can do the same with `@DependsOn("yourBeanId")`
 
 `@Autowired` => `@Inject`
-`@Autowired + @Qualifier("myName")` => `@Resource("myName")` (resource - only on fiedls and setters)
+`@Autowired + @Qualifier("myName")` => `@Resource("myName")` (resource - only on fields and setters)
+
+If you put annotation into interface or it's abstract methods => those annotations are stripped
+But if you add to default methods, they are executed
+```java
+package com.example.logic.ann.misc;
+
+import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+
+public interface Printer {
+    @PostConstruct
+    void print();
+
+    @PostConstruct
+    default void print2(){
+        System.out.println("print2");
+    }
+}
+
+@ComponentQualifier
+class MyPrinter implements Printer {
+    @Override
+    public void print() {
+        System.out.println("print");
+    }
+}
+```
+```
+print2
+```
 
 ###### Xml, Groovy, Properties example
 If we have same bean in xml, java config, and @Component => xml wins
@@ -570,7 +602,16 @@ private static String getScope(ApplicationContext context, Class<?> cls){
 }
 ```
 To add ability for singleton to get every time new prototype we should add `@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE, proxyMode = ScopedProxyMode.TARGET_CLASS)`
+In this case proxy (not actual bean) is created and injected and every time you request it, proxy inside create new bean. 
+TARGET_CLASS - use cglib proxy, INTERFACES - use jdk proxy
 In case of xml configuration, we would need to make singleton abstract, and add abstract method to get prototype instance, and add it to xml like `<lookup-method name="getPrinter" bean="prototypePrinter"/>`
+Thrird way is to use 
+```java
+@Bean
+public Supplier<MyService> getMyService(){
+return this::myService;
+}
+```
 ```java
 import com.example.logic.ann.prototypeintosingleton.SingletonBean;
 
@@ -827,6 +868,81 @@ Those without it goes last with default sort.
 If you have list of implementation and bean that return also list of implementations, when injected spring will collect list of impl, not your bean.
 To use your bean, you have to add `Qualifier`
 
+`@Qualifier` -work as and. So if we have bean with multiple qualifiers only those that are include both would be autowired
+```java
+package com.example.logic.ann.misc;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.util.List;
+
+
+@Component
+public class MyQualifierTest{
+    @Autowired
+    @Suv
+    @Sport
+    private List<Car> cars;
+
+    public void print(){
+        System.out.println(cars);
+    }
+}
+
+class Car {
+    @Override
+    public String toString(){
+        return this.getClass().getSimpleName();
+    }
+}
+
+@Suv
+@Component
+class SuvCar extends Car{
+}
+
+@Sport
+@Component
+class SportCar extends Car{}
+
+@Sport
+@Suv
+@Component
+class SportSuvCar extends Car{}
+
+@Component
+class AnyCar extends Car{}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Qualifier
+@interface Suv{}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Qualifier
+@interface Sport{}
+```
+Main code
+```java
+import com.example.logic.ann.misc.MyQualifierTest;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.misc");
+        context.getBean(MyQualifierTest.class).print();
+    }
+}
+```
+```
+[SportSuvCar]
+```
+First since qualifier - not repetable it's better to create custom qualifiers and add them
+Second - as you see only bean that satisfy both qualifier got injected.
+If you need `or` qualifier - you have to write your custom BPP~~~~
 
 ###### PropertySource and ConfigurationProperties
 We can load properties from `.properties/.yml` files.
@@ -2470,7 +2586,19 @@ There are a few useful annotations you can use inside your test framework
 `@Before/@After` - run some logic before all tests starts
 `@ActiveProfiles("")"` - set up profiles for which tests would run
 
+If we are using spring boot without profile it by default loads `application.properties/yml` files
+If we set profile, it loads `application{you_profile}.properties/yaml`.
 
+`@SpringBootTest` - if we don't pass anything it will create full web context. If we pass custom configuration
+it will run only small part of total context. It also caching contexts for config.
+So if you have one config for 10 tests, spring boot won't recreate context for all tests 10 time, instead it will create context
+once and then will just use cached version. If we have several config file we should use `@ContextHierarchy`
+* If you don't pass anything spring boot test will search for `@SpringBootConfiguration`
+* If we want to clear context for some test or after it, we should use `@DirtiesContext`
+* If we want to have custom configuration that won't be used by spring boot test we should annotate it with `@TestConfiguration`
+* If you want to test db you should use `@DataJpaTest` (loads all beans, but throw away everything except `@Repository`)
+* If you want to test controllers you should use `@WebMvcTest` (loads all beans, but throw away everything except `@Controller`)
+* If you need mock inside your test you should add `@MockBean` to property and use it later. But if you need mock only to build other objects, you can add them to classs level like `@MockBean(MyService.class)`, it works since it repetable.
 
 #### Spring Boot Actuator
 ###### Jmx monitoring

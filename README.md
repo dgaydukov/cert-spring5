@@ -34,3 +34,4 @@ There are 2 main reasons to get it.
 9. @Conditional/conditionalonclass/conditionalonmissingbean how does it work
 10. add @Order to BPP, or implement ordered
 11. BFPP java config beans, no class name => fix with custom bpp
+12. java-config beanclassname null in bfpp (cause no way to get class name from method, before calling method)
