@@ -1914,6 +1914,11 @@ public class FilterJavaConfig {
 
 
 ###### Spring Security
+Servlet has a concept of filters, where each request first goes through a list of filters
+One of the filter is `DelegatingFilterProxy` - it build a link between servlet lifecycly and app context, by including filters from context to servlet
+Internally it uses `FilterChainProxy` that internally has a list of `SecurityFilterChain`.
+The idea is that `FilterChainProxy` can have a list of `SecurityFilterChain` each applied to unique url and each consisting fo unique filters
+thus you can divide your logic to multiply layer security
 It creates `javax.servlet.Filter` with name `springSecurityFilterChain`.
 
 

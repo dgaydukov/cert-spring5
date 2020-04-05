@@ -1,13 +1,16 @@
 package com.example.spring5;
 
 
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import com.example.logic.ann.security.SecurityBean;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 
-import java.util.concurrent.ThreadPoolExecutor;
-
+@SpringBootApplication
+@ComponentScan("com.example.logic.ann.security")
 public class App {
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.misc");
-        var executor = new ThreadPoolExecutor()
+        var context = SpringApplication.run(App.class, args);
+        context.getBean(SecurityBean.class).printFilters();
     }
 }
