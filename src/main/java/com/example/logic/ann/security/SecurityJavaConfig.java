@@ -6,10 +6,12 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.web.access.ExceptionTranslationFilter;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 
 @Configuration
+@EnableWebSecurity
 public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     private AuthenticationProvider provider;
@@ -19,8 +21,13 @@ public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
      */
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.addFilterAfter(new MySecurityFilter(), ExceptionTranslationFilter.class);
-        http.antMatcher("/api/*").authorizeRequests().anyRequest().authenticated();
+        //http.addFilterAfter(new MySecurityFilter(), ExceptionTranslationFilter.class);
+        //http.antMatcher("/api/*").authorizeRequests().anyRequest().authenticated();
+        /**
+         * just add filter for all `api` requests, and then decide what to do inside filter
+         */
+        http.antMatcher("/api/*").addFilterBefore(new MySecurityFilter(), BasicAuthenticationFilter.class);
+
     }
 
     /**
@@ -28,11 +35,11 @@ public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
      */
     @Override
     public void configure(WebSecurity web) throws Exception {
-        web.ignoring().antMatchers("/api/**");
+        web.ignoring().antMatchers("/");
     }
 
     @Override
-    public void configure(AuthenticationManagerBuilder builder) throws Exception {
-        builder.authenticationProvider(provider);
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.authenticationProvider(provider);
     }
 }

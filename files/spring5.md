@@ -37,6 +37,7 @@
 * 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 10.2 [Get param names](#get-param-names)
 * 10.3 [Pom vs Bom](#pom-vs-bom)
+* 10.4 [Spring Batch](#spring-batch)
 
 
 
@@ -2032,7 +2033,8 @@ import org.springframework.context.annotation.ComponentScan;
 
 /**
  * Since we have one pom.xml for all examples we exclude security so our socket
- * is open
+ * is open, and no security filter blocking us
+ * otherwise we won't be able to open localhost:8080/ws.html (would be redirected to login page)
  */
 @SpringBootApplication(exclude = SecurityAutoConfiguration.class)
 @ComponentScan("com.example.logic.ann.ws")
@@ -2042,6 +2044,9 @@ public class App {
     }
 }
 ```
+
+If `WebSocket` is not supported by browser we call fallback to SockJs. For client take a [sockjs](#https://github.com/sockjs/sockjs-client#getting-started).
+For server add this `withSockJS()` to `registry.addHandler().`
 
 
 
@@ -2838,3 +2843,15 @@ In case you already have a parent, you can just import it
 ```
 
 So bom allows you to not include version in your pom, cause it can be already in bom.
+
+
+###### Spring Batch
+Batch processing is using when you need to process a batch of data
+First let's add starter to `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-batch</artifactId>
+</dependency>
+```
+By default all jobs starts automatically, but you can turn off them in `application.properties`, just add `spring.batch.job.enabled=false`.

@@ -10,14 +10,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class MyController {
 
     @GetMapping("/")
-    public ResponseEntity<String> handleGet(){
-        System.out.println("handleGet => " + SecurityContextHolder.getContext().getAuthentication());
+    public ResponseEntity<String> handleGet() {
         return new ResponseEntity<>("it works!", HttpStatus.OK);
     }
 
-    @GetMapping("/api/test")
-    public ResponseEntity<String> handleApiTest(){
-        System.out.println("handleApiTest => " + SecurityContextHolder.getContext().getAuthentication());
+    @GetMapping("/api/profile")
+    public ResponseEntity<String> handleApi(){
+        System.out.println("auth => " + SecurityContextHolder.getContext().getAuthentication());
         return new ResponseEntity<>("it works!", HttpStatus.OK);
     }
 }

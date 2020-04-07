@@ -1,19 +1,28 @@
 package com.example.spring5;
 
+import java.time.LocalDateTime;
 
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 
-/**
- * Since we have one pom.xml for all examples we exclude security so our socket
- * is open
- */
-@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
-@ComponentScan("com.example.logic.ann.ws")
+
+@SpringBootApplication
+@ComponentScan("com.example.logic.ann.batch")
 public class App {
-    public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
+    public static void main(String[] args) throws Exception {
+        var context = SpringApplication.run(App.class, args);
+        System.out.println("context => " + context.getClass().getName());
+
+        Job job = context.getBean(Job.class);
+        JobLauncher jobLauncher = context.getBean(JobLauncher.class);
+        JobParameters jobParameters = new JobParametersBuilder()
+            .addString("date", LocalDateTime.now().toString())
+            .toJobParameters();
+        jobLauncher.run(job,  jobParameters);
     }
 }
