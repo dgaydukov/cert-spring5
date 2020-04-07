@@ -1949,8 +1949,99 @@ To work with spring websocket we should add to `pom.xml`. Since we most likely t
     <version>2.2.6.RELEASE</version>
 </dependency>
 ```
+Working example
+This file should be places in `main/resources/static/ws.html` and it would be accessible on `http://localhost:8080/ws.html`
+`ws.html`
+```
+<html>
+    <body>
+        <h1>WebSocket Client</h1>
+        <input id="server" size="40" value="ws://localhost:8080/socket"/>
+        <br/>
+        <button id="connect">Connect</button>
+        <button id="disconnect">Disconnect</button>
+        <br/>
+        <br/>Message:
+        <input id="message" value=""/>
+        <button id="send">Send</button>
+        <br/>
+        <textarea id="chat" rows="10" cols="50"></textarea>
+    </body>
+</html>
+<script type="text/javascript">
+var socket;
+document.getElementById("connect").addEventListener("click", (event) => {
+    var url = document.getElementById("server").value;
+    console.log(`connecting to ${url}...`);
+    socket = new WebSocket(url);
+    socket.onopen = event => {
+        document.getElementById("chat").value = "CONNECTED";
+        socket.onmessage = event => {
+              console.log(event);
+              document.getElementById("chat").value=document.getElementById("chat").value + "\n" + event.data;
+            }
+        };
+});
+document.getElementById("disconnect").addEventListener("click", (event) => {
+    console.log("closing socket");
+    socket.close();
+});
+document.getElementById("send").addEventListener("click", (event) => {
+    socket.send(document.getElementById("message").value);
+    document.getElementById("message").value="";
+});
+</script>
+```
+`WsJavaConfig.java`
+```java
+package com.example.logic.ann.ws;
 
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+@Configuration
+@EnableWebSocket
+public class WsJavaConfig implements WebSocketConfigurer {
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        /**
+         * By default only same url can access socket, if you want disable this add
+         * setAllowedOrigins("*") to addHandler
+         */
+        registry.addHandler(new TextWebSocketHandler(){
+            @Override
+            protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+                System.out.println("handleTextMessage => " + message);
+                session.sendMessage(new TextMessage("response => " + message.getPayload()));
+            }
+        }, "/socket");
+    }
+}
+```
+`App.java`
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+
+/**
+ * Since we have one pom.xml for all examples we exclude security so our socket
+ * is open
+ */
+@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
+@ComponentScan("com.example.logic.ann.ws")
+public class App {
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+```
 
 
 

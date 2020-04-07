@@ -13,12 +13,16 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 public class WsJavaConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        /**
+         * By default only same url can access socket, if you want disable this add
+         * setAllowedOrigins("*") to addHandler
+         */
         registry.addHandler(new TextWebSocketHandler(){
             @Override
             protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
                 System.out.println("handleTextMessage => " + message);
                 session.sendMessage(new TextMessage("response => " + message.getPayload()));
             }
-        }, "/echoServer").setAllowedOrigins("*");;
+        }, "/socket");
     }
 }
