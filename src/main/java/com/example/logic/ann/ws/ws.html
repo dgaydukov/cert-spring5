@@ -1,0 +1,38 @@
+<html>
+    <body>
+        <h1>WebSocket Client</h1>
+        <input id="server" size="40" value="ws://localhost:8080/echoServer"/>
+        <br/>
+        <button id="connect">Connect</button>
+        <button id="disconnect">Disconnect</button>
+        <br/>
+        <br/>Message:
+        <input id="message" value=""/>
+        <button id="send">Send</button>
+        <br/>
+        <textarea id="chat" rows="10" cols="50"></textarea>
+    </body>
+</html>
+<script type="text/javascript">
+var socket;
+document.getElementById("connect").addEventListener("click", (event) => {
+    var url = document.getElementById("server").value;
+    console.log(`connecting to ${url}...`);
+    socket = new WebSocket(url);
+    socket.onopen = event => {
+        document.getElementById("chat").value = "CONNECTED";
+        socket.onmessage = event => {
+              console.log(event);
+              document.getElementById("chat").value=document.getElementById("chat").value + "\n" + event.data;
+            }
+        };
+});
+document.getElementById("disconnect").addEventListener("click", (event) => {
+    console.log("closing socket");
+    socket.close();
+});
+document.getElementById("send").addEventListener("click", (event) => {
+    socket.send(document.getElementById("message").value);
+    document.getElementById("message").value="";
+});
+</script>

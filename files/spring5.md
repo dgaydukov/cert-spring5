@@ -22,7 +22,9 @@
 * 3.1 [DispatcherServlet](#dispatcherservlet)
 * 3.2 [Spring Boot](#spring-boot)
 * 3.3 [Custom Filters](#custom-filters)
-* 3.4 [Spring Security](#spring-security)
+* 3.4 [Http security](#http-security)
+* 3.5 [Aop security](#aop-security)
+* 3.6 [WebSocket API](#websocket-api)
 4. [DB](#db)
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
@@ -1913,7 +1915,7 @@ public class FilterJavaConfig {
 
 
 
-###### Spring Security
+###### Http security
 Servlet has a concept of filters, where each request first goes through a list of filters
 One of the filter is `DelegatingFilterProxy` - it build a link between servlet lifecycly and app context, by including filters from context to servlet
 Internally it uses `FilterChainProxy` that internally has a list of `SecurityFilterChain`.
@@ -1922,11 +1924,31 @@ thus you can divide your logic to multiply layer security
 It creates `javax.servlet.Filter` with name `springSecurityFilterChain`.
 
 
+###### Aop security
+To work with aop security add following annotation to your config `@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)`
+* prePostEnabled => pre/post annotations
+* securedEnabled => determines if the @Secured annotation should be enabled
+* jsr250Enabled =>  allows us to use the @RoleAllowed annotation
+If we want to allow only certain roles to access some method, add this to any method `@Secured({"ROLE_USER", "ROLE_ADMIN"})` or `@RolesAllowed({"ROLE_USER", "ROLE_ADMIN"})` from jsr250
+`@PreAuthorize/@PostAuthorize` - can take spel expressions
+`@PreAuthorize("isAuthenticated()")` - check if user authenticated
+`@PreFilter/@PostFilter` - can be used to filter requests
 
 
 
-
-
+###### WebSocket API
+To work with spring websocket we should add to `pom.xml`. Since we most likely to work with json it's better to add jackson library too
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-websocket</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-json</artifactId>
+    <version>2.2.6.RELEASE</version>
+</dependency>
+```
 
 
 
