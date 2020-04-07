@@ -637,7 +637,7 @@ public class App {
 Alternatively you can declare your singleton as abstract class with 1 abstract method to get printer (just like `@Lookup`)
 and override this method in config
 ```java
-package com.example.logic.ann.prototypeintosingleton.oldwaay;
+package com.example.logic.ann.prototypeintosingleton.oldway;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -659,12 +659,12 @@ public class PsJavaConfig {
 ```
 And then
 ```java
-import com.example.logic.ann.prototypeintosingleton.oldwaay.SingletonBean;
+import com.example.logic.ann.prototypeintosingleton.oldway.SingletonBean;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 public class App {
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.prototypeintosingleton.oldwaay");
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.prototypeintosingleton.oldway");
         context.getBean(SingletonBean.class).sayHello();
         context.getBean(SingletonBean.class).sayHello();
     }
@@ -2236,6 +2236,9 @@ To use `org.springframework.orm` package add this too
     <artifactId>spring-boot-starter-data-jpa</artifactId>
 </dependency>
 ```
+
+If you don't want to persist field into db, but to have it in entity, you should add `@Transient`
+If you have a image in db with big size and want to get it lazy (load from db only when you request it), you should add `@Basic(fetch=  FetchType.LAZY)` to your column
 
 In hibernate we will show how to work with persistance objects
 `DepartmentEntity.java`

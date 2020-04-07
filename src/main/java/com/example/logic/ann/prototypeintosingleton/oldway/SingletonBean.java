@@ -1,4 +1,4 @@
-package com.example.logic.ann.prototypeintosingleton.oldwaay;
+package com.example.logic.ann.prototypeintosingleton.oldway;
 
 public abstract class SingletonBean {
     public abstract PrototypePrinter getPrinter();

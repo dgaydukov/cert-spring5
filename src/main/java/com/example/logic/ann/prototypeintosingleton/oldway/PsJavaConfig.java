@@ -1,4 +1,4 @@
-package com.example.logic.ann.prototypeintosingleton.oldwaay;
+package com.example.logic.ann.prototypeintosingleton.oldway;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

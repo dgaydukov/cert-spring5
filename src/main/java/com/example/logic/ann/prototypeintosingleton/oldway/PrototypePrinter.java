@@ -1,4 +1,4 @@
-package com.example.logic.ann.prototypeintosingleton.oldwaay;
+package com.example.logic.ann.prototypeintosingleton.oldway;
 
 import java.util.concurrent.ThreadLocalRandom;
 
