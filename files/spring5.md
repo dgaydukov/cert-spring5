@@ -25,6 +25,7 @@
 * 3.4 [Http security](#http-security)
 * 3.5 [Aop security](#aop-security)
 * 3.6 [WebSocket API](#websocket-api)
+* 3.7 [Reactive WebFlux](#reactive-webflux)
 4. [DB](#db)
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
@@ -38,6 +39,7 @@
 * 10.2 [Get param names](#get-param-names)
 * 10.3 [Pom vs Bom](#pom-vs-bom)
 * 10.4 [Spring Batch](#spring-batch)
+
 
 
 
@@ -1852,6 +1854,8 @@ printing...
 ```
 
 ### Spring MVC
+`@RestController` -convenience annotation => `@Controller` + `@ResponseBody`
+
 ###### DispatcherServlet
 It's entry point of every web app, it's main purpose to handle http requests.
 When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`,
@@ -2047,6 +2051,37 @@ public class App {
 
 If `WebSocket` is not supported by browser we call fallback to SockJs. For client take a [sockjs](#https://github.com/sockjs/sockjs-client#getting-started).
 For server add this `withSockJS()` to `registry.addHandler().`
+
+###### Reactive WebFlux
+To use project Reactor you should add to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-webflux</artifactId>
+</dependency>
+```
+Basic syntax
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+
+public class App {
+    public static void main(String[] args) {
+        List<Integer> list = new ArrayList<>(List.of(1,2,3));
+        Flux<Integer> flux = Flux.just(1,2,3);
+        Flux<Integer> flux2 = Flux.fromIterable(list);
+
+        Mono<Integer> mono = Mono.just(1);
+    }
+}
+```
+
+First we need to build reactive repository. It's done very simple, just add new layer above your crud repository, and wrap all calls to Flux/Mono.
+Controller stay the same, but it returns not values but also Flux/Mono, and media type should be `MediaType.TEXT_EVENT_STREAM_VALUE` (server will create a response with `Content-Type: text/event-stream`)
 
 
 
@@ -2855,3 +2890,41 @@ First let's add starter to `pom.xml`
 </dependency>
 ```
 By default all jobs starts automatically, but you can turn off them in `application.properties`, just add `spring.batch.job.enabled=false`.
+```java
+import java.time.LocalDateTime;
+
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+
+
+@SpringBootApplication
+@ComponentScan("com.example.logic.ann.batch")
+public class App {
+    public static void main(String[] args) throws Exception {
+        var context = SpringApplication.run(App.class, args);
+        System.out.println("context => " + context.getClass().getName());
+
+        Job job = context.getBean(Job.class);
+        JobLauncher jobLauncher = context.getBean(JobLauncher.class);
+        JobParameters jobParameters = new JobParametersBuilder()
+            .addString("date", LocalDateTime.now().toString())
+            .toJobParameters();
+        jobLauncher.run(job,  jobParameters);
+    }
+}
+```
+```
+before => StepExecution: id=1, version=1, name=myStep, status=STARTED, exitStatus=EXECUTING, readCount=0, filterCount=0, writeCount=0 readSkipCount=0, writeSkipCount=0, processSkipCount=0, commitCount=0, rollbackCount=0, exitDescription=
+processing => a
+processing => bb
+processing => ccc
+write => [1, 2, 3]
+after => StepExecution: id=1, version=2, name=myStep, status=COMPLETED, exitStatus=COMPLETED, readCount=3, filterCount=0, writeCount=3 readSkipCount=0, writeSkipCount=0, processSkipCount=0, commitCount=1, rollbackCount=0, exitDescription=
+2020-04-07 20:13:45.730  INFO 5685 --- [           main] o.s.batch.core.step.AbstractStep         : Step: [myStep] executed in 3s31ms
+2020-04-07 20:13:45.736  INFO 5685 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : Job: [SimpleJob: [name=myJob]] completed with the following parameters: [{date=2020-04-07T20:13:42.503241}] and the following status: [COMPLETED] in 3s59ms
+```
