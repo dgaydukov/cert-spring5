@@ -15,7 +15,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 //@SpringBootTest
 //@SpringBootConfiguration
 @RunWith(SpringRunner.class)
-class MyApplicationTests {
+class AppTest {
 
 	@BeforeEach
 	void setup(){

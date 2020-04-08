@@ -26,6 +26,7 @@
 * 3.5 [Aop security](#aop-security)
 * 3.6 [WebSocket API](#websocket-api)
 * 3.7 [Reactive WebFlux](#reactive-webflux)
+* 3.8 [Data Validation](#data-validation)
 4. [DB](#db)
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
@@ -39,6 +40,7 @@
 * 10.2 [Get param names](#get-param-names)
 * 10.3 [Pom vs Bom](#pom-vs-bom)
 * 10.4 [Spring Batch](#spring-batch)
+* 10.5 [Spring DevTools](#spring-devtools)
 
 
 
@@ -1854,7 +1856,8 @@ printing...
 ```
 
 ### Spring MVC
-`@RestController` -convenience annotation => `@Controller` + `@ResponseBody`
+`@RestController` - convenience annotation => `@Controller` + `@ResponseBody` (convert response into json)
+`@RequestMapping(path = "/api")` - can add it to controller, so all methods would have this url as base
 
 ###### DispatcherServlet
 It's entry point of every web app, it's main purpose to handle http requests.
@@ -2085,6 +2088,169 @@ Controller stay the same, but it returns not values but also Flux/Mono, and medi
 
 
 
+###### Data Validation
+`@Valid` vs. `@Validated`. They work the same, but `@Validated` can be useful when you have multiple step validation and in each step you want to validate some of fields of your model
+```java
+import javax.validation.constraints.Email;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Controller
+@RequestMapping("/account")
+public class MyController {
+    @PostMapping("/step1")
+    public void stepOne(@Validated(Account.Step1.class) Account account) {}
+
+    @PostMapping("/step2")
+    public void stepTwo(@Validated(Account.Step2.class) Account account) {}
+}
+
+class Account {
+    public static class Step1{}
+    public static class Step2{}
+
+    @NotBlank(groups = {Step1.class})
+    private String username;
+
+    @Email(groups = {Step1.class})
+    @NotBlank(groups = {Step1.class})
+    private String email;
+
+    @NotBlank(groups = {Step2.class})
+    @Min(value = 8, groups = {Step2.class})
+    private String password;
+
+    @NotBlank(groups = {Step2.class})
+    private String confirmedPassword;
+}
+```
+
+Example with controller, model and validator
+`Employee.java`
+```java
+package com.example.logic.ann.validation;
+
+import javax.validation.constraints.Digits;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+import org.hibernate.validator.constraints.CreditCardNumber;
+
+import lombok.Data;
+
+@Data
+public class Employee {
+    // NotNull - only for objects
+    @NotNull(message = "Id can't be null")
+    private String id;
+
+    @NotBlank(message = "Name can't be empty")
+    @Size(min = 3, max = 5, message = "Name should be between 3 and 5 letters")
+    private String name;
+
+    @CreditCardNumber(message = "Credit card should be correct")
+    private String cardNumber;
+
+    @Digits(integer = 3, fraction = 0, message = "Ccv should be exactly 3 digits")
+    private String ccv;
+}
+```
+`EmployeeValidator.java`
+```java
+package com.example.logic.ann.validation;
+
+import org.springframework.stereotype.Component;
+import org.springframework.validation.Errors;
+import org.springframework.validation.Validator;
+
+@Component
+public class EmployeeValidator implements Validator {
+    @Override
+    public boolean supports(Class<?> cls) {
+        return cls == Employee.class;
+    }
+
+    @Override
+    public void validate(Object obj, Errors err) {
+        Employee emp = (Employee) obj;
+        if ("Jack".equals(emp.getName())) {
+            err.reject("name", "`Jack` is a bad choice");
+        }
+    }
+}
+```
+`MyController.java`
+```java
+package com.example.logic.ann.validation;
+
+import javax.validation.Valid;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.validation.Errors;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import lombok.RequiredArgsConstructor;
+
+@Controller
+@RequestMapping("/employee")
+@RequiredArgsConstructor
+public class MyController {
+    private final EmployeeValidator employeeValidator;
+
+    /**
+     * If we don't specify model to which apply validation, it would be applied to all methods in controller
+     */
+    @InitBinder("employee")
+    public void addValidation(WebDataBinder binder) {
+        binder.addValidators(employeeValidator);
+    }
+
+
+    /**
+     * If we don't put errors as second param - exception would be thrown in case validation failed
+     */
+    @PostMapping
+    public ResponseEntity save(@RequestBody @Valid Employee emp, Errors err){
+        System.out.println(err);
+        if(err.hasErrors()) {
+            List<String> errors = err.getAllErrors().stream().map(e->e.getDefaultMessage()).collect(Collectors.toList());
+            return new ResponseEntity<>(Map.of("object", emp, "errors", errors), HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(emp, HttpStatus.OK);
+    }
+}
+```
+Run
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
+@ComponentScan("com.example.logic.ann.validation")
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+```
 
 #### DB
 ###### Spring JDBC
@@ -2759,7 +2925,35 @@ once and then will just use cached version. If we have several config file we sh
 * If we want to have custom configuration that won't be used by spring boot test we should annotate it with `@TestConfiguration`
 * If you want to test db you should use `@DataJpaTest` (loads all beans, but throw away everything except `@Repository`)
 * If you want to test controllers you should use `@WebMvcTest` (loads all beans, but throw away everything except `@Controller`)
-* If you need mock inside your test you should add `@MockBean` to property and use it later. But if you need mock only to build other objects, you can add them to classs level like `@MockBean(MyService.class)`, it works since it repetable.
+* If you need mock inside your test you should add `@MockBean` to property and use it later. But if you need mock only to build other objects, you can add them to classs level like `@MockBean(MyService.class)`, it works since it repeatable.
+
+Simple example to test mvc
+```java
+import org.hamcrest.Matchers;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;import com.example.logic.ann.security.MyController;
+
+@RunWith(SpringRunner.class)
+@WebMvcTest(MyController.class)
+public class ControllerTest {
+    @Autowired
+    private MockMvc mvc;
+
+    @Test
+    public void test() throws Exception {
+        mvc.perform(MockMvcRequestBuilders.get("/"))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(MockMvcResultMatchers.view().name("myView"))
+            .andExpect(MockMvcResultMatchers.content().string(Matchers.containsString("hello")));
+    }
+}
+```
 
 #### Spring Boot Actuator
 ###### Jmx monitoring
@@ -2927,4 +3121,18 @@ write => [1, 2, 3]
 after => StepExecution: id=1, version=2, name=myStep, status=COMPLETED, exitStatus=COMPLETED, readCount=3, filterCount=0, writeCount=3 readSkipCount=0, writeSkipCount=0, processSkipCount=0, commitCount=1, rollbackCount=0, exitDescription=
 2020-04-07 20:13:45.730  INFO 5685 --- [           main] o.s.batch.core.step.AbstractStep         : Step: [myStep] executed in 3s31ms
 2020-04-07 20:13:45.736  INFO 5685 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : Job: [SimpleJob: [name=myJob]] completed with the following parameters: [{date=2020-04-07T20:13:42.503241}] and the following status: [COMPLETED] in 3s59ms
+```
+
+
+###### Spring DevTools
+They allowed
+* hot reloading - when you change your code, app would restart. DevTools - has 2 classloaders, one with your classes, other with dependencies. When you change your code, only one classloader is reloaded and spring context is restarted. This helps to speed up reloading. 
+Downside - if you change your dependencies, hot reloading won't help, you will need to manually reload your app. 
+* browser refresh - if using template, browser would refresh once you reload your code
+To use devtools add this to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-devtools</artifactId>
+</dependency>
 ```
