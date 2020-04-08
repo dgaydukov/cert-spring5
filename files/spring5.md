@@ -1858,6 +1858,7 @@ printing...
 ### Spring MVC
 `@RestController` - convenience annotation => `@Controller` + `@ResponseBody` (convert response into json)
 `@RequestMapping(path = "/api")` - can add it to controller, so all methods would have this url as base
+`@SessionAttributes` - post request gets the same instance of the model attribute object that was placed into the get request.
 
 ###### DispatcherServlet
 It's entry point of every web app, it's main purpose to handle http requests.
@@ -2405,16 +2406,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import com.example.logic.ann.jdbc.DepartmentModel;
 import com.example.logic.ann.jdbc.MyDao;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Repository
 public class DepartmentDao implements MyDao<DepartmentModel> {
@@ -2430,6 +2434,18 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
     public DepartmentModel getById(int id) {
         return jdbcTemplate.queryForObject("select * from department where id=?", new Object[]{id}, new DepartmentModelMapper());
     }
+
+
+    /**
+     * Example how we can pass mappers
+     */
+    public DepartmentModel getByIdSimpleMapper(int id) {
+        return jdbcTemplate.queryForObject("select * from department where id=?", new Object[]{id}, this::mapRowToModel);
+    }
+    public DepartmentModel getByIdSimpleMapperReordered(int id) {
+        return jdbcTemplate.queryForObject("select * from department where id=?", this::mapRowToModel, id);
+    }
+
 
     @Override
     public boolean deleteById(int id) {
@@ -2451,6 +2467,20 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
         return model;
     }
 
+    /**
+     * Example of simple save, no need to use PreparedStatementCreator and keyHolder
+     */
+    public DepartmentModel simpleSave(DepartmentModel model) {
+        SimpleJdbcInsert insert = new SimpleJdbcInsert(jdbcTemplate)
+            .withTableName("department")
+            .usingGeneratedKeyColumns("id");
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, Object> values = mapper.convertValue(model, Map.class);
+        int id = insert.executeAndReturnKey(values).intValue();
+        model.setId(id);
+        return model;
+    }
+
     private static class DepartmentModelMapper implements RowMapper<DepartmentModel> {
         @Override
         public DepartmentModel mapRow(ResultSet rs, int rowNumber) throws SQLException {
@@ -2461,8 +2491,18 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
             return model;
         }
     }
-}
 
+    /**
+     * We can define mapper like this
+     */
+    private DepartmentModel mapRowToModel(ResultSet rs, int rowNumber) throws SQLException {
+        DepartmentModel model = new DepartmentModel();
+        model.setId(rs.getInt("id"));
+        model.setName(rs.getString("name"));
+        model.setType(rs.getString("type"));
+        return model;
+    }
+}
 ```
 Dao example
 ```java
@@ -3129,6 +3169,7 @@ They allowed
 * hot reloading - when you change your code, app would restart. DevTools - has 2 classloaders, one with your classes, other with dependencies. When you change your code, only one classloader is reloaded and spring context is restarted. This helps to speed up reloading. 
 Downside - if you change your dependencies, hot reloading won't help, you will need to manually reload your app. 
 * browser refresh - if using template, browser would refresh once you reload your code
+* out-of-the box work with h2 - you can go to `http://localhost:8080/h2-console` and play with your db while app is running
 To use devtools add this to your `pom.xml`
 ```
 <dependency>
