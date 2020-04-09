@@ -28,6 +28,7 @@
 * 3.7 [Reactive WebFlux](#reactive-webflux)
 * 3.8 [Data Validation](#data-validation)
 * 3.9 [HATEOAS - Hypermedia as the Engine of Application State](#hateoas---hypermedia-as-the-engine-of-application-state)
+* 3.10 [RestTemplate and WebClient](#resttemplate-and-webclient)
 4. [DB](#db)
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
@@ -42,6 +43,7 @@
 * 10.3 [Pom vs Bom](#pom-vs-bom)
 * 10.4 [Spring Batch](#spring-batch)
 * 10.5 [Spring DevTools](#spring-devtools)
+* 10.6 [JMS, AMQP, Kafka](#jms-amqp-kafka)
 
 
 
@@ -1157,11 +1159,6 @@ public class CallerConfig {
 ```
 With this settings you can call logic from caller app that will fetch all data from remote web app.
 Of course you should share code for `MyService` between 2 apps.
-
-
-Using  JMS (java message system)
-
-
 
 
 
@@ -2567,6 +2564,44 @@ Response
 ```
 
 
+###### RestTemplate and WebClient
+`org.springframework.web.client.RestTemplate` - synchronous web client to interact with REST API
+`org.springframework.web.reactive.function.client.WebClient` - reactive asynchronous web client to interact with REST API
+
+`RestTemplate` just like `JdbcTemplate` frees you from low level http boiler-place (create client, send request, handle response ...).
+3 examples to get object. 
+```java
+package com.example.logic.ann.hateoas;
+
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+
+public class RestApiCall {
+    public void getForObject(){
+        RestTemplate rt = new RestTemplate();
+        int id = 1;
+        Person p1 = rt.getForObject("http://localhost:8080/person/{id}", Person.class, id);
+        Person p2 = rt.getForObject("http://localhost:8080/person/{id}", Person.class, Map.of("id", id));
+        Person p3 = rt.getForObject("http://localhost:8080/person/1", Person.class);
+    }
+    
+    public void getForEntity(){
+        RestTemplate rt = new RestTemplate();
+        int id = 1;
+        ResponseEntity<Person> p1 = rt.getForEntity("http://localhost:8080/person/{id}", Person.class, id);
+        ResponseEntity<Person> p2 = rt.getForEntity("http://localhost:8080/person/{id}", Person.class, Map.of("id", id));
+        ResponseEntity<Person> p3 = rt.getForEntity("http://localhost:8080/person/1", Person.class);
+    }
+}
+```
+
+If you have api with hypermedia (hateoas) you can use traverson library
+```java
+Traverson traverson = new Traverson(URI.create("http://localhost:8080/api"), MediaTypes.HAL_JSON);
+```
+
 #### DB
 ###### Spring JDBC
 Before using spring jdbc, we can use standarc jdk jdbc.
@@ -3215,6 +3250,16 @@ To enable work with repository add this to your config `@EnableJpaRepositories("
 But if you want some custom query (like fine user by first and last name) you just need to add abstract method `findByFirstNameAndLastName(String firstName, String lastName)` and it would work (spring automatically build query based on it's name).
 In case you want to have your own query for the method, just add `@Query("your query")`.
 
+Also spring data can build all api endpoint for your repos. For this just add following to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-rest</artifactId>
+</dependency>
+```
+Internally it create new controller with `@RepositoryRestController` for every repository. So if you need some customization you can create new controller with this annotation.
+You can go `curl localhost:8080/api` and see all endpoints created. By default it will pluralize all names, so person would be persons. But if you want custom names you should add to your repository `@RestResource(rel="person", path="people")`
+
 You can easily add auditing to any entity by adding `@EntityListeners(AuditingEntityListener.class)`
 And then have 4 columns with following annotations `@CreatedDate/@CreatedBy/@LastModifiedBy/@LastModifiedDate`
 You should add to your config `@EnableJpaAuditing(auditorAwareRef =  "auditorAwareBean")` and finally
@@ -3507,3 +3552,22 @@ To use devtools add this to your `pom.xml`
     <artifactId>spring-boot-devtools</artifactId>
 </dependency>
 ```
+
+
+###### JMS, AMQP, Kafka
+To work with jms you should add to `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-artemis</artifactId>
+</dependency>
+```
+artemis is next generation of activemq. By default artemis use port 61616. But you can configure it
+```
+spring.artemis.host=localhost
+spring.artemis.port=61616
+spring.artemis.user=user
+spring.artemis.password=password
+```
+First you need to download [artemis](https://activemq.apache.org/components/artemis/download/)
+After downloading you can create broker `./apache-artemis-2.11.0/bin/artemis create mybroker`. It will create mybroker folder, and you can run it `./mybroker/bin/artemis run`.
