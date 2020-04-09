@@ -27,6 +27,7 @@
 * 3.6 [WebSocket API](#websocket-api)
 * 3.7 [Reactive WebFlux](#reactive-webflux)
 * 3.8 [Data Validation](#data-validation)
+* 3.9 [HATEOAS - Hypermedia as the Engine of Application State](#hateoas---hypermedia-as-the-engine-of-application-state)
 4. [DB](#db)
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
@@ -41,7 +42,6 @@
 * 10.3 [Pom vs Bom](#pom-vs-bom)
 * 10.4 [Spring Batch](#spring-batch)
 * 10.5 [Spring DevTools](#spring-devtools)
-
 
 
 
@@ -1859,6 +1859,10 @@ printing...
 `@RestController` - convenience annotation => `@Controller` + `@ResponseBody` (convert response into json)
 `@RequestMapping(path = "/api")` - can add it to controller, so all methods would have this url as base
 `@SessionAttributes` - post request gets the same instance of the model attribute object that was placed into the get request.
+`@CrossOrigin(origins="*")` - set origin to anybody, by default it same-host
+`PUT` vs. `PATCH`. put - opposite to get, so it to replace whole object for url. Patch - is to replace some fields within the object.
+
+
 
 ###### DispatcherServlet
 It's entry point of every web app, it's main purpose to handle http requests.
@@ -2418,6 +2422,150 @@ public class App{
     }
 }
 ```
+
+
+###### HATEOAS - Hypermedia as the Engine of Application State
+HATEOAS (Hypermedia as the Engine of Application State) - when response return also other possible resources, and you don't need to hardcode them in client side. Add this to `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifact`Id>spring-boot-starter-hateoas</artifactId>
+</dependency>
+```
+Data model should be extended from `RepresentationModel`
+```java
+package com.example.logic.ann.hateoas;
+
+import org.springframework.hateoas.RepresentationModel;
+import org.springframework.hateoas.server.core.Relation;
+
+import lombok.Data;
+
+@Data
+@Relation(value="person", collectionRelation="people")
+public class Person extends RepresentationModel<Person> {
+    private int id;
+    private String name;
+    private String email;
+    private String phone;
+}
+```
+Controller
+```java
+package com.example.logic.ann.hateoas;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+
+import javax.annotation.PostConstruct;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/person")
+public class MyController {
+    private List<Person> persons = new ArrayList<>();
+
+    @PostConstruct
+    public void init(){
+        Person p = new Person();
+        p.setId(1);
+        p.setName("John");
+        p.setEmail("john@mail.com");
+        p.setPhone("+123456789");
+        persons.add(p);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Person>> getPersons(){
+        persons.forEach(this::addLinks);
+        return new ResponseEntity<>(persons, HttpStatus.OK);
+    }
+
+    @PostMapping
+    public ResponseEntity<Person> addPerson(@RequestBody Person person){
+        persons.add(person);
+        return new ResponseEntity<>(person, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Person> getPerson(@PathVariable int id) {
+        Optional<Person> person = persons.stream().filter(p->p.getId()==id).findFirst();
+        person.ifPresent(this::addLinks);
+        return new ResponseEntity<>(person.orElse(null), HttpStatus.OK);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Person> updatePerson(@PathVariable int id, @RequestBody Person person) {
+        Optional<Person> current = persons.stream().filter(p->p.getId()==id).findFirst();
+        if (current.isEmpty()) {
+            return new ResponseEntity<>(person, HttpStatus.NOT_FOUND);
+        }
+        persons.removeIf(p->p.getId()==id);
+        persons.add(person);
+        return new ResponseEntity<>(person, HttpStatus.ACCEPTED);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity deletePerson(@PathVariable int id) {
+        persons.removeIf(p->p.getId()==id);
+        return new ResponseEntity<>(null, HttpStatus.NO_CONTENT);
+    }
+
+    private void addLinks(Person p){
+        p.add(linkTo(MyController.class).withRel("persons"));
+        p.add(linkTo(MyController.class).withRel("addPerson"));
+        p.add(linkTo(MyController.class).slash(p.getId()).withRel("getPerson"));
+        p.add(linkTo(MyController.class).slash(p.getId()).withRel("updatePerson"));
+        p.add(linkTo(MyController.class).slash(p.getId()).withRel("deletePerson"));
+    }
+}
+```
+Response 
+```
+[
+    {
+        "id": 1,
+        "name": "John",
+        "email": "john@mail.com",
+        "phone": "+123456789",
+        "links": [
+            {
+                "rel": "persons",
+                "href": "http://localhost:8080/person"
+            },
+            {
+                "rel": "addPerson",
+                "href": "http://localhost:8080/person"
+            },
+            {
+                "rel": "getPerson",
+                "href": "http://localhost:8080/person/1"
+            },
+            {
+                "rel": "updatePerson",
+                "href": "http://localhost:8080/person/1"
+            },
+            {
+                "rel": "deletePerson",
+                "href": "http://localhost:8080/person/1"
+            }
+        ]
+    }
+]
+```
+
 
 #### DB
 ###### Spring JDBC
@@ -3058,6 +3206,7 @@ public class App {
 }
 ```
 
+
 ###### Spring Data
 Jpa `EntityManagerFactory` resembles `SessionFactory`. You can call `entityManagerFactory.createEntityManager()` to get current `EntityManager` on which you can run queries like `update/remove/save`
 Although you can use `EntityManager` to manually create queries, it's better to use spring data repository pattern, that wrap entity manager inside and provide many default queries out of the box.
@@ -3083,6 +3232,8 @@ To enable versioning on entity just add `@Audited`.
 
 Generally you should prefer `EntityManager` over `Session`, cause it jpa standard while `Session` is hibernate. Under the hood `EntityManager` using `Session`, and if you need some specific features
 you can always get session like `Session current = (Session) entityManager.getDelegate();`;
+
+By default delete return void, but you still can verify that row was deleted. If row didn't exist `EmptyResultDataAccessException` would be thrown. So you can catch it and do something.
 
 ###### JTA - java transaction API
 `@Transactional` - has propagation param, that instruct spring what to do when you call one transactional method from another.

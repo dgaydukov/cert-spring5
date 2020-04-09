@@ -24,7 +24,7 @@ There are 2 main reasons to get it.
 
 
 1. add jms example from book
-2. jdbc template without rowmapper (some other class that does mapping)
+2. jdbc template without rowmapper (some other class that does mapping, like BeanPropertyRowMapper)
 3. create .war web app with WebApplicationInitializer and run on tomcat (webapplicationinitializer vs servletcontextinitializer)
 4. pom executable jar
 5. aop example in native aspectj language

@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfi
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication(exclude = SecurityAutoConfiguration.class)
-@ComponentScan("com.example.logic.ann.validation")
+@ComponentScan("com.example.logic.ann.hateoas")
 public class App{
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
