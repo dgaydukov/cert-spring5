@@ -1932,6 +1932,172 @@ The idea is that `FilterChainProxy` can have a list of `SecurityFilterChain` eac
 thus you can divide your logic to multiply layer security
 It creates `javax.servlet.Filter` with name `springSecurityFilterChain`.
 
+There are 4 ways to specify user storage. For all of them you must create configuration class that implements `WebSecurityConfigurerAdapter`
+1. In-memory storage
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
+    @Override
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.inMemoryAuthentication()
+            .withUser("user")
+            .password("user")
+            .authorities("ROLE_USER")
+        .and()
+            .withUser("admin")
+            .password("admin")
+            .authorities("ROLE_USER", "ROLE_ADMIN");
+    }
+}
+```
+2. Database storage
+```java
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
+    @Autowired
+    private DataSource ds;
+
+    @Override
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        /**
+         * If you don't want to store plain-text password in db you would better to
+         * use password encoder
+         */
+        PasswordEncoder encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+
+        /**
+         * This expects you have table like this
+         * users
+         * username: string
+         * password: string
+         * enabled: boolean
+         *
+         * authorities
+         * username
+         * authority
+         */
+        auth.jdbcAuthentication().dataSource(ds).passwordEncoder(encoder);
+
+        /**
+         * You can also set your tables for this
+         */
+        auth.jdbcAuthentication()
+            .dataSource(ds)
+            .usersByUsernameQuery("select username, password, enabled from user_table where username=?")
+            .authoritiesByUsernameQuery("select username, authority from auth_table where username=?")
+            .passwordEncoder(encoder);
+
+    }
+}
+```
+
+3. LDAP server
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
+
+    @Override
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        /**
+         * If you want to compare password not in plain-text in ldap you should add password encoder
+         * By default spring assume that ldap in localhost:33389
+         * If you have custom ldap you should add .contextSource().url("your_ldap_url")
+         */
+        auth.ldapAuthentication()
+            .userSearchFilter("user_id={0}")
+            .groupSearchFilter("member_id={0}")
+            .passwordCompare();
+    }
+}
+```
+
+4. Custom user service (it should be divided on 3 files, but I just give example in one file)
+```java
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+
+import lombok.Data;
+
+@Data
+@Entity
+class UserEntity implements UserDetails {
+    @Id
+    @GeneratedValue
+    private int id;
+    private String username;
+    private String password;
+    private List<GrantedAuthority> authorities;
+    private boolean enabled;
+    private boolean accountNonExpired;
+    private boolean accountNonLocked;
+    private boolean credentialsNonExpired;
+}
+
+interface UserRepository extends CrudRepository<UserEntity, Integer>{
+    Optional<UserEntity> findByUsername(String username);
+}
+
+@Configuration
+@EnableWebSecurity
+public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(username->{
+            var user = userRepository.findByUsername(username);
+            if (user.isEmpty()) {
+                throw new UsernameNotFoundException("Username `" + username + "` doesn't exist");
+            }
+            return user.get();
+        })
+        .passwordEncoder(PasswordEncoderFactories.createDelegatingPasswordEncoder());
+    }
+}
+```
+
+For every controller you can inject current user like `@AuthenticationPrincipal UserEnityt entity`
+
+
+
 
 ###### Aop security
 To work with aop security add following annotation to your config `@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)`
@@ -2954,7 +3120,20 @@ There are a few useful annotations you can use inside your test framework
 `@ActiveProfiles("")"` - set up profiles for which tests would run
 
 If we are using spring boot without profile it by default loads `application.properties/yml` files
-If we set profile, it loads `application{you_profile}.properties/yaml`.
+If we set profile, it loads `application{you_profile}.properties/yaml`. Or you can have one config file divided by `---`, like
+```
+logging:
+    level:
+        tacos: DEBUG
+---
+spring:
+    profiles: prod
+logging:
+    level:
+    tacos: WARN
+```
+Order of property loading: `JVM system props`=>`OS env vars`=>`Command-line args`=>`application.properties`=>`application.yml`
+If you set `server.port=0` app will start on any randomly selected port.
 
 `@SpringBootTest` - if we don't pass anything it will create full web context. If we pass custom configuration
 it will run only small part of total context. It also caching contexts for config.
