@@ -45,6 +45,7 @@
 * 10.4 [Spring Batch](#spring-batch)
 * 10.5 [Spring DevTools](#spring-devtools)
 * 10.6 [JMS, AMQP, Kafka](#jms-amqp-kafka)
+* 10.7 [YML Autocompletion](#yml-autocompletion)
 
 
 
@@ -1857,7 +1858,22 @@ printing...
 You can also write your aspects in native aspectj language. For this you first need to add `AspectJ Weaver` plugin to your ide.
 You can create a class with extension `*.aj`
 
+```java
+import com.example.logic.ann.aop.AopSimpleBean;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
+public class App{
+    public static void main(String[] args) {
+        /**
+         * There are 2 ways we can add aspects
+         * create bean and add them explicitly from config with ProxyFactoryBean
+         * create them implicitly with @Aspect
+         */
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.aop");
+        context.getBean("originalBean", AopSimpleBean.class).print();
+    }
+}
+```
 
 
 
@@ -3583,3 +3599,48 @@ spring.artemis.password=password
 ```
 First you need to download [artemis](https://activemq.apache.org/components/artemis/download/)
 After downloading you can create broker `./apache-artemis-2.11.0/bin/artemis create mybroker`. It will create mybroker folder, and you can run it `./mybroker/bin/artemis run`.
+
+
+
+
+###### YML Autocompletion
+
+By default auto-completion work in ultimate ide for both `.yml` and `.properties`.
+If you are using CE (community edition) you should download plugin `Spring Assistant`, it will enable auto-completion for `.yml` files.
+
+You can also have auto-completion for your custom props, you should add this to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-configuration-processor</artifactId>
+</dependency>
+```
+This dependency will generate file `/target/classes/META-INF/spring-configuration-metadata.json` with your props
+Then have a any config file
+```java
+import lombok.Data;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        var context = SpringApplication.run(App.class, args);
+        System.out.println(context.getBean(MyConf.class));
+
+    }
+}
+
+@EnableConfigurationProperties
+@Configuration
+@ConfigurationProperties(prefix = "user")
+@Data
+class MyConf{
+    int age;
+    String name;
+}
+```
+And if you go to `application.yml` and start to type you will see that user.name and user.age are auto-completed.

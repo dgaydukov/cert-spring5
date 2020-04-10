@@ -26,7 +26,6 @@ There are 2 main reasons to get it.
 
 
 
-7. spring-boot-configuration-processor (чтобы в главном файле конфига был автокомплит из стартера через configurationproperties)
 8. spring.factories enableautoconfiguration=yourConfFile
 9. @Conditional/conditionalonclass/conditionalonmissingbean how does it work
 10. add @Order to BPP, or implement ordered
