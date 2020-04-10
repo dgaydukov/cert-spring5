@@ -18,6 +18,7 @@
 2 [AOP](#aop)
 * 2.1 [Aop basics](#aop-basics)
 * 2.2 [Aop framework](#aop-framework)
+* 2.3 [Native AspectJ](#native-aspectj)
 3.[Spring MVC](#spring-mvc)
 * 3.1 [DispatcherServlet](#dispatcherservlet)
 * 3.2 [Spring Boot](#spring-boot)
@@ -44,7 +45,6 @@
 * 10.4 [Spring Batch](#spring-batch)
 * 10.5 [Spring DevTools](#spring-devtools)
 * 10.6 [JMS, AMQP, Kafka](#jms-amqp-kafka)
-
 
 
 
@@ -1852,6 +1852,15 @@ I'm AopSimpleBean
 printing...
 ```
 
+
+###### Native AspectJ
+You can also write your aspects in native aspectj language. For this you first need to add `AspectJ Weaver` plugin to your ide.
+You can create a class with extension `*.aj`
+
+
+
+
+
 ### Spring MVC
 `@RestController` - convenience annotation => `@Controller` + `@ResponseBody` (convert response into json)
 `@RequestMapping(path = "/api")` - can add it to controller, so all methods would have this url as base
@@ -2900,7 +2909,10 @@ getById(28) =>DepartmentModel(id=28, name=finance, type=my)
 deleteById(28) => true
 ```
 
-`SimpleDriverDataSource` - is not pooled, so you can use it only for testing purpose. 
+`SimpleDriverDataSource` - is not pooled, so you can use it only for testing purpose.
+Although you can write your own implementation of `RowMapper` for each entity, if you db columns correspond to your model, you can
+use one of default impl like `BeanPropertyRowMapper`, or if you need to get a map (key - columns, value- values)
+you can use `ColumnMapRowMapper`.
 
 By default spring boot searches for `schema.sql` and `data.sql` under `src/resources` and run these files on start to recreate db.
 You can change file location with this configs.

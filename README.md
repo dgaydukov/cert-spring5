@@ -23,12 +23,9 @@ There are 2 main reasons to get it.
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
 
 
-1. add jms example from book
-2. jdbc template without rowmapper (some other class that does mapping, like BeanPropertyRowMapper)
-3. create .war web app with WebApplicationInitializer and run on tomcat (webapplicationinitializer vs servletcontextinitializer)
-4. pom executable jar
-5. aop example in native aspectj language
-6. all examples of spring aop aspect events (before, after, around, afterthrows...)
+
+
+
 7. spring-boot-configuration-processor (чтобы в главном файле конфига был автокомплит из стартера через configurationproperties)
 8. spring.factories enableautoconfiguration=yourConfFile
 9. @Conditional/conditionalonclass/conditionalonmissingbean how does it work
@@ -37,3 +34,6 @@ There are 2 main reasons to get it.
 12. java-config beanclassname null in bfpp (cause no way to get class name from method, before calling method)
 13. spring integration real example
 14. spring xd real example
+
+1. add jms example from book
+2. intsll tomcat7, create .war web app with WebApplicationInitializer and run on tomcat (webapplicationinitializer vs servletcontextinitializer)

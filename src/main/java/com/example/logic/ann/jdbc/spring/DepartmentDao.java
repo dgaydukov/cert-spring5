@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
@@ -43,6 +44,13 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
     }
     public DepartmentModel getByIdSimpleMapperReordered(int id) {
         return jdbcTemplate.queryForObject("select * from department where id=?", this::mapRowToModel, id);
+    }
+
+    /**
+     * we can also use default mapper
+     */
+    public DepartmentModel getByIdSpringMapper(int id) {
+        return jdbcTemplate.queryForObject("select * from department where id=?", new BeanPropertyRowMapper<>(DepartmentModel.class), id);
     }
 
 

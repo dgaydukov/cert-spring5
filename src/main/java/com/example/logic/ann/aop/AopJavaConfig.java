@@ -1,5 +1,6 @@
 package com.example.logic.ann.aop;
 
+import org.aopalliance.intercept.MethodInterceptor;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,21 +10,22 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 public class AopJavaConfig {
     @Bean
-    public AopSimpleBean originalAopSimpleBean(){
+    public AopSimpleBean originalBean(){
         return new AopSimpleBean();
     }
 
-    @Bean
-    public AopAroundAdvice aopBeforeAdvice(){
-        return new AopAroundAdvice();
-    }
 
     @Bean
-    public ProxyFactoryBean aopSimpleBean(){
+    public ProxyFactoryBean aopBean(){
         ProxyFactoryBean pfb = new ProxyFactoryBean();
-        pfb.setTarget(originalAopSimpleBean());
+        pfb.setTarget(originalBean());
         pfb.setProxyTargetClass(true);
-        pfb.addAdvice(aopBeforeAdvice());
+        pfb.addAdvice((MethodInterceptor) inv->{
+            System.out.println("aroundAdvice => " + inv.getMethod().getName());
+            Object retVal = inv.proceed();
+            System.out.println("aroundAdvice => " + retVal);
+            return retVal;
+        });
         return pfb;
     }
 }

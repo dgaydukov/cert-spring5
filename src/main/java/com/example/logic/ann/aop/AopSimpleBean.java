@@ -1,8 +1,9 @@
 package com.example.logic.ann.aop;
 
 public class AopSimpleBean {
-    public void sayHello(){
+    public String sayHello(){
         System.out.println("I'm AopSimpleBean");
+        return "hello";
     }
 
     public void print(){

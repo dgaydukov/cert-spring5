@@ -1,18 +1,17 @@
 package com.example.spring5;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
 
-import com.example.logic.ann.message.Jms;
+import com.example.logic.ann.aop.AopSimpleBean;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
-@ComponentScan("com.example.logic.ann.message")
 public class App{
     public static void main(String[] args) {
-        var context = SpringApplication.run(App.class, args);
-        System.out.println("context => " + context.getClass().getName());
-        context.getBean(Jms.class).send();
+        /**
+         * There are 2 ways we can add aspects
+         * create bean and add them explicitly from config with ProxyFactoryBean
+         * create them implicitly with @Aspect
+         */
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.aop");
+        context.getBean("originalBean", AopSimpleBean.class).print();
     }
 }
