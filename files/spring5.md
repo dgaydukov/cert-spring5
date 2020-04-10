@@ -599,6 +599,50 @@ If you want to implement some custom logic during app lifecycle you should have 
 
 `@Order` - not working for BPP, if you want them ordered, they should implement `Ordered`.
 
+When you create a bean with java config
+```java
+package com.example.logic.ann.postprocessors.beans;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class MyBeanJavaConfig {
+    @Bean
+    public MyPrinter mySecondPrinter(){
+        return new MyPrinterImpl();
+    }
+}
+```
+And later try to get classname from BFPP
+```java
+package com.example.logic.ann.postprocessors;
+
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.stereotype.Component;
+
+@Component
+public class MyBFPP implements BeanFactoryPostProcessor {
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory factory) {
+        System.out.println("__MyBFPP");
+        for(String beanName: factory.getBeanDefinitionNames()){
+            BeanDefinition beanDefinition = factory.getBeanDefinition(beanName);
+            String className = beanDefinition.getBeanClassName();
+            System.out.println(beanName + " => " + className);
+        }
+    }
+}
+```
+```
+myPrinterImpl => com.example.logic.ann.postprocessors.beans.MyPrinterImpl
+mySecondPrinter => null
+```
+As you see for bean created with `@Component` - you have name and class, but with javaconfig class is null.
+The reason, is that spring can't determine method return type before executing methods.
+
 When working with `BeanPostProcessor` or aspects the common problem is nested calls.
 If you have logging through custom annotation @TimeLogging (that handles by custom BPP), and you have 2 methods annotated with it
 if you call them separately both would be wrapped into time-logging
@@ -1940,6 +1984,13 @@ Inside we had web.xml were all configs are stores, then we put this file into `t
 starts, it takes with file and run it. That's why we didn't have any `main` method inside web app for spring.
 
 If you work without spring boot, you should implement `WebApplicationInitializer` and build war and put war into tomcat.
+
+`WebApplicationInitializer vs ServletContainerInitializer`
+Tomcat 3.0+ search for `javax.servlet.ServletContainerInitializer` through the SPI and load class.
+Spring has default implementation `org.springframework.web.SpringServletContainerInitializer` with annotation
+`@HandlesTypes({WebApplicationInitializer.class})`.
+So when you create a class from `WebApplicationInitializer` it get hooked by `SpringServletContainerInitializer` which in turn
+get hooked by tomcat and that's why you implement it, and not directly `ServletContainerInitializer`.
 
 ###### Spring Boot
 In spring boot you have 2 new events. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
