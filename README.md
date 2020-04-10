@@ -26,7 +26,6 @@ There are 2 main reasons to get it.
 
 
 
-8. spring.factories enableautoconfiguration=yourConfFile
 9. @Conditional/conditionalonclass/conditionalonmissingbean how does it work
 10. add @Order to BPP, or implement ordered
 11. BFPP java config beans, no class name => fix with custom bpp

@@ -3644,3 +3644,36 @@ class MyConf{
 }
 ```
 And if you go to `application.yml` and start to type you will see that user.name and user.age are auto-completed.
+
+The same way, when you write your custom starter you can add to `/resources/META-INF/spring.factories`
+this line `org.springframework.boot.autoconfigure.EnableAutoConfiguration=com.example.logic.ann.postprocessors.MyConfig`
+java class
+```java
+package com.example.logic.ann.postprocessors;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+
+@Setter
+@Getter
+@Configuration
+@EnableConfigurationProperties
+@ConfigurationProperties(prefix = "person")
+public class MyConfig {
+    private int age;
+    private String name;
+}
+```
+
+And then also use auto-complete to tune your starter from main project~~~~
+
+
+
+
+
+
+
+
