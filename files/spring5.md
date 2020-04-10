@@ -15,6 +15,7 @@
 * 1.12 [PropertySource and ConfigurationProperties](#propertysource-and-configurationproperties)
 * 1.13 [Task scheduling](#task-scheduling)
 * 1.14 [Remoting](#remoting)
+* 1.15 [Conditional Annotation](#conditional-annotation)
 2 [AOP](#aop)
 * 2.1 [Aop basics](#aop-basics)
 * 2.2 [Aop framework](#aop-framework)
@@ -46,6 +47,14 @@
 * 10.5 [Spring DevTools](#spring-devtools)
 * 10.6 [JMS, AMQP, Kafka](#jms-amqp-kafka)
 * 10.7 [YML Autocompletion](#yml-autocompletion)
+
+
+
+
+
+
+
+
 
 
 
@@ -587,6 +596,8 @@ If you want to implement some custom logic during app lifecycle you should have 
     * `postProcessBeforeInitialization` - fires before initialization, we can be sure that in this method we have original beans
     * `postProcessAfterInitialization` - fires after init, usually here we can substitute our bean with dynamic proxy
 * `ApplicationListener<E extends ApplicationEvent>` - fires after bfpp and bpp, when we got some events
+
+`@Order` - not working for BPP, if you want them ordered, they should implement `Ordered`.
 
 When working with `BeanPostProcessor` or aspects the common problem is nested calls.
 If you have logging through custom annotation @TimeLogging (that handles by custom BPP), and you have 2 methods annotated with it
@@ -1163,7 +1174,40 @@ Of course you should share code for `MyService` between 2 apps.
 
 
 
+###### Conditional Annotation
+There are several annotaion that can help you determine should you create a bean or not. `@Profile` - can be used to determine should bean be created for certain profile.
+But there also class of `@Conditional` annotations.
+`@ConditionalOnClass(MyService.class)` - bean would be created if MyService bean exists
+`@ConditionalOnBean(name = "myService")` - bean would be created if bean with name myService exists
+`@ConditionalOnMissingBean` - bean would be created if bean with this name doesn't exist
+`@ConditionalOnProperty(prefix = "my.starter", name = "show", matchIfMissing = true)` - bean would be created if value
+of `my.starter.show` not false, or it doesn't exist in configuration.
+`@ConditionalOnResource(resources = "classpath:my.properties")` - bean would be created only if my.properties exist
 
+We can create custom condition by extending `SpringBootCondition`
+```java
+import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
+import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.core.type.AnnotatedTypeMetadata;
+import org.springframework.stereotype.Component;
+
+
+@Component
+class MyCondition extends SpringBootCondition{
+    @Override
+    public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return null;
+    }
+}
+
+@Conditional(MyCondition.class)
+@Component
+class MyService{
+    
+}
+```
 
 ### AOP
 
@@ -3668,7 +3712,7 @@ public class MyConfig {
 }
 ```
 
-And then also use auto-complete to tune your starter from main project~~~~
+And then also use auto-complete to tune your starter from main project
 
 
 
