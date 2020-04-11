@@ -1016,6 +1016,11 @@ If you need `or` qualifier - you have to write your custom BPP~~~~
 We can load properties from `.properties/.yml` files.
 `@PropertySource` - repetable, so we can load several files. If keys are the same => those declared after will overwrite those declared before.
 You can use `@Value("${propName}")` on every field, or use `ConfigurationProperties` with public setter methods for every field.
+
+`${expr} --> Immediate Evaluation`
+`#{expr} --> Deferred Evaluation`
+Immediate evaluation means that the expression is evaluated and the result returned as soon as the page is first rendered. Deferred evaluation means that the technology using the expression language can use its own machinery to evaluate the expression sometime later during the page’s lifecycle, whenever it is appropriate to do so.
+
 `Person1.java`
 ```java
 package com.example.logic.ann.props;
@@ -3496,6 +3501,58 @@ public class ControllerTest {
 }
 ```
 
+You can use `@ContextConfiguration(locations="classpath:config.xml" ,classes=Config.class)` and pass either list of xml configs or java configs.
+If you want to scan package you should add just `@ContextConfiguration` and add inner static config class
+`@Mock` - create just proxy object and when you call methods, it doesn't execute them. Yet you can overwrite behavior with `when/then`.
+`@Spy` - create real bean, but you still can overwrite behaviour with `when/then`.
+`@InjectMocks` - create real bean, and inject all `@Mock/@Spy` beans declared within test class. If some undeclared, inject null.
+```java
+package com.example.spring5;
+
+import com.example.logic.ann.beans.SimpleBean;
+import com.example.logic.ann.beans.SimplePrinter;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.support.AnnotationConfigContextLoader;
+
+import static org.mockito.Mockito.*;
+
+@RunWith(SpringRunner.class)
+@ContextConfiguration
+public class BeansIntegrationTest {
+    /**
+     * In case you want to scan package you should add
+     * inner static class
+     */
+    @Configuration
+    @ComponentScan("com.example.logic.ann.beans")
+    public static class TestConfig{}
+
+    @Mock
+    private SimplePrinter simplePrinter;
+
+    @InjectMocks
+    private SimpleBean simpleBean;
+
+    @Test
+    public void testSayHello(){
+        doAnswer(inv->{
+            System.out.println("mock => " + inv.getArgument(0).toString());
+            return null;
+        }).when(simplePrinter).print(any(String.class));
+        simpleBean.sayHello();
+    }
+}
+```
+
+
 #### Spring Boot Actuator
 ###### Jmx monitoring
 If we want to import spring beans to jmx we would need to add. Spring will try to find running `MBeanServer`, and in case of web app it would be tomcat.
@@ -3716,7 +3773,7 @@ Here we using P2P channel, if we want to send message to many channels we should
 
 
 ###### Spring XD
-
+Spring XD (eXtreme Data) - command line tool to set up jobs and execute them on distributed system in real-time.
 
 
 ###### Spring DevTools

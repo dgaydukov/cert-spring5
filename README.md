@@ -21,12 +21,3 @@ There are 2 main reasons to get it.
 * [mock1](http://itestjava.com/java-certification-practice-tests/product/enter.do?product=SPRING-CORE50)
 * [mock2](https://www.certification-questions.com/spring-exam/professional-dumps.html)
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
-
-
-
-
-
-
-
-1. spring integration real example
-2. spring xd real example
