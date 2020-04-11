@@ -44,9 +44,12 @@
 * 10.2 [Get param names](#get-param-names)
 * 10.3 [Pom vs Bom](#pom-vs-bom)
 * 10.4 [Spring Batch](#spring-batch)
-* 10.5 [Spring DevTools](#spring-devtools)
-* 10.6 [JMS, AMQP, Kafka](#jms-amqp-kafka)
-* 10.7 [YML Autocompletion](#yml-autocompletion)
+* 10.5 [Spring Integration](#spring-integration)
+* 10.6 [Spring XD](#spring-xd)
+* 10.7 [Spring DevTools](#spring-devtools)
+* 10.8 [JMS, AMQP, Kafka](#jms-amqp-kafka)
+* 10.9 [YML Autocompletion](#yml-autocompletion)
+
 
 
 
@@ -3660,6 +3663,60 @@ after => StepExecution: id=1, version=2, name=myStep, status=COMPLETED, exitStat
 2020-04-07 20:13:45.730  INFO 5685 --- [           main] o.s.batch.core.step.AbstractStep         : Step: [myStep] executed in 3s31ms
 2020-04-07 20:13:45.736  INFO 5685 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : Job: [SimpleJob: [name=myJob]] completed with the following parameters: [{date=2020-04-07T20:13:42.503241}] and the following status: [COMPLETED] in 3s59ms
 ```
+
+
+###### Spring Integration
+
+First you need to add integration starter and message security to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-integration</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.integration</groupId>
+    <artifactId>spring-integration-security</artifactId>
+    <version>5.2.5.RELEASE</version>
+</dependency>
+```
+Here is simple example of sending message every 5 seconds through channel
+```java
+package com.example.spring5;
+
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.List;
+
+
+public class App{
+    public static void main(String[] args) {
+        /**
+         * We need to set security context first and set it to shared-thread mode
+         */
+        SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
+        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+        Authentication auth = new UsernamePasswordAuthenticationToken("user", "password", List.of(()->"ROLE_USER"));
+        securityContext.setAuthentication(auth);
+        SecurityContextHolder.setContext(securityContext);
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.integration");
+    }
+}
+```
+Here we using P2P channel, if we want to send message to many channels we should use `PublishSubscribeChannel`
+`@BridgeFrom` - can connect PubSub channel with P2P
+
+
+
+
+
+
+
+###### Spring XD
+
 
 
 ###### Spring DevTools
