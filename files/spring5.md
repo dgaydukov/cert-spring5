@@ -40,6 +40,7 @@
 5. [Spring Testing](#spring-testing)
 6. [Spring Boot Actuator](#spring-boot-actuator)
 * 6.1 [Jmx monitoring](#jmx-monitoring)
+* 6.2 [Actuator monitoring](#actuator-monitoring)
 10. [Miscellaneous](#miscellaneous)
 * 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 10.2 [Get param names](#get-param-names)
@@ -50,6 +51,9 @@
 * 10.7 [Spring DevTools](#spring-devtools)
 * 10.8 [JMS, AMQP, Kafka](#jms-amqp-kafka)
 * 10.9 [YML Autocompletion](#yml-autocompletion)
+
+
+
 
 
 
@@ -3711,10 +3715,24 @@ public class ControllerTest {
 ```
 
 You can use `@ContextConfiguration(locations="classpath:config.xml" ,classes=Config.class)` and pass either list of xml configs or java configs.
+If you use this annotation across multiple test, spring will automatically cache context, when you use the same `locations`.
+This will enable to speed up your tests.
+If you want to have separate contexts for different tests you should use
+```java
+@ContextHierarchy({
+    @ContextConfiguration("/parent-config.xml"),
+    @ContextConfiguration("/child-config.xml")
+})
+```
+If you are using `@SpringBootTest`, context automatically cached.
+
 If you want to scan package you should add just `@ContextConfiguration` and add inner static config class
 `@Mock` - create just proxy object and when you call methods, it doesn't execute them. Yet you can overwrite behavior with `when/then`.
 `@Spy` - create real bean, but you still can overwrite behaviour with `when/then`.
 `@InjectMocks` - create real bean, and inject all `@Mock/@Spy` beans declared within test class. If some undeclared, inject null.
+
+
+
 ```java
 package com.example.spring5;
 
@@ -3813,8 +3831,15 @@ props.put("hibernate.session_factory_name", "sessionFactory");
 
 
 
-
-
+###### Actuator monitoring
+First you should add this dependency 
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+Then these 2 would be avalilable `/actuator/health` and `/actuator/info
 
 
 
