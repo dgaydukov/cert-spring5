@@ -1,12 +1,14 @@
 package com.example.spring5;
 
-import com.example.logic.ann.beans.SimpleBean;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
 
-
+@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
+@ComponentScan("com.example.logic.ann.web")
 public class App{
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.beans");
-        context.getBean(SimpleBean.class).sayHello();
+        SpringApplication.run(App.class, args);
     }
 }

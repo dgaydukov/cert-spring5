@@ -31,6 +31,7 @@
 * 3.8 [Data Validation](#data-validation)
 * 3.9 [HATEOAS - Hypermedia as the Engine of Application State](#hateoas---hypermedia-as-the-engine-of-application-state)
 * 3.10 [RestTemplate and WebClient](#resttemplate-and-webclient)
+* 3.11 [Custom HttpMessageConverter](#custom-httpmessageconverter)
 4. [DB](#db)
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
@@ -49,7 +50,6 @@
 * 10.7 [Spring DevTools](#spring-devtools)
 * 10.8 [JMS, AMQP, Kafka](#jms-amqp-kafka)
 * 10.9 [YML Autocompletion](#yml-autocompletion)
-
 
 
 
@@ -1277,6 +1277,8 @@ Spring aop keywords
 * Target - object whose flow is modified by aspect
 * Introduction - modification of code on the fly (e.g. add interface to a class)
 
+Spring aop can be applied only to public methods. If you want advice protected/private or constructors you should use compile-time weaving from AspectJ.
+
 
 Spring supports 6 types of advices
 * `org.springframework.aop.MethodBeforeAdvice` - before method execution. has access to params. In case of exception, jointpoint is not called
@@ -1725,7 +1727,7 @@ You can also use `ComposablePointcut` with 2 methods `union` and `intersection` 
 If you need to combine only pointcuts you can use `PointCut` class, but if you want to combine pointcut/methodmatcher/classfilter you should use `ComposablePointcut`.
 
 We also have `IntroductionAdvisor` by which we can add dynamically new implementations to object.
-One possible application is to check if object data chaned, and call save to db only in this case.
+One possible application is to check if object data changed, and call save to db only in this case.
 Below is simplified example, that determined is method with specific name has been called
 ```java
 import org.aopalliance.intercept.MethodInvocation;
@@ -1900,6 +1902,8 @@ As you see we have 2 beans of the same type, original - not adviced and adviced.
 If you want to have one bean, and you never need original you can remove it from javaconfig, and inject it directly into `ProxyFactoryBean`
 
 You can also use aspecj annotations, you should first enable them `@EnableAspectJAutoProxy(proxyTargetClass = true)`;
+If you are using `@SpringBootApplication` you don't need to explicitly include `@EnableAspectJAutoProxy`, cause it inside include
+`@EnableAutoConfiguration` which with the help of conditional annotations enables aop.
 `AopAnnotatedAdvice.java`
 ```java
 package com.example.logic.ann.aop;
@@ -1980,10 +1984,41 @@ public class App{
 `@CrossOrigin(origins="*")` - set origin to anybody, by default it same-host
 `PUT` vs. `PATCH`. put - opposite to get, so it to replace whole object for url. Patch - is to replace some fields within the object.
 
+It's important to return correct value
+curl http://localhost:8080/m1 - javax.servlet.ServletException: Circular view path [m1]
+curl http://localhost:8080/m2 - m2
+curl http://localhost:8080/m3 - m3
+```java
+package com.example.logic.ann.web;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+@Controller
+public class MyController {
+    @GetMapping("/m1")
+    public String handleM1(){
+        return "m1";
+    }
+
+    @GetMapping("/m2")
+    @ResponseBody
+    public String handleM2(){
+        return "m2";
+    }
+
+    @GetMapping("/m3")
+    public ResponseEntity<String> handleM3(){
+        return new ResponseEntity<>("m3", HttpStatus.OK);
+    }
+}
+```
 
 ###### DispatcherServlet
-It's entry point of every web app, it's main purpose to handle http requests.
+`org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests.
 When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`,
 and has a method `getServletContext`, to get `ServletContext`.
 
@@ -2054,6 +2089,14 @@ public class FilterJavaConfig {
 
 
 ###### Http security
+
+antMatcher(String antPattern) - Allows configuring the HttpSecurity to only be invoked when matching the provided ant pattern.
+mvcMatcher(String mvcPattern) - Allows configuring the HttpSecurity to only be invoked when matching the provided Spring MVC pattern.
+
+Generally mvcMatcher is more secure than an antMatcher. As an example:
+antMatchers("/secured") matches only the exact /secured URL
+mvcMatchers("/secured") matches /secured as well as /secured/, /secured.html, /secured.xyz
+
 Servlet has a concept of filters, where each request first goes through a list of filters
 One of the filter is `DelegatingFilterProxy` - it build a link between servlet lifecycly and app context, by including filters from context to servlet
 Internally it uses `FilterChainProxy` that internally has a list of `SecurityFilterChain`.
@@ -2234,9 +2277,35 @@ To work with aop security add following annotation to your config `@EnableGlobal
 * securedEnabled => determines if the @Secured annotation should be enabled
 * jsr250Enabled =>  allows us to use the @RoleAllowed annotation
 If we want to allow only certain roles to access some method, add this to any method `@Secured({"ROLE_USER", "ROLE_ADMIN"})` or `@RolesAllowed({"ROLE_USER", "ROLE_ADMIN"})` from jsr250
-`@PreAuthorize/@PostAuthorize` - can take spel expressions
+`@PreAuthorize/@PostAuthorize` - can take spel expressions (first check before entering the method, second - check after method execution)
 `@PreAuthorize("isAuthenticated()")` - check if user authenticated
 `@PreFilter/@PostFilter` - can be used to filter requests
+
+```java
+package com.concretepage.service;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.concretepage.bean.Book;
+public interface IBookService {
+	@PreAuthorize ("hasRole('ROLE_WRITE')")
+	public void addBook(Book book);
+
+    /**
+      * Once method executed we can get it's owner type and compare it to auth name
+      * if the don't match error happen
+      */
+	@PostAuthorize ("returnObject.owner == authentication.name")
+	public Book getBook();
+
+	@PreAuthorize ("#book.owner == authentication.name")
+	public void deleteBook(Book book);
+} 
+```
+
+Basically these 3 annotations are the same
+`@RolesAllowed({"ROLE_ADMIN"})` - can be checked only against role
+`@Secured("ADMIN")` - can checked more than role, but doesn't support SPEL
+`@PreAuthorize("hasRole('ADMIN')")` - the most versatile, can use SPEL
 
 
 
@@ -2693,7 +2762,7 @@ Response
 
 
 ###### RestTemplate and WebClient
-`org.springframework.web.client.RestTemplate` - synchronous web client to interact with REST API
+`org.springframework.web.client.RestTemplate` - synchronous web client to interact with REST (Representational state transfer) API
 `org.springframework.web.reactive.function.client.WebClient` - reactive asynchronous web client to interact with REST API
 
 `RestTemplate` just like `JdbcTemplate` frees you from low level http boiler-place (create client, send request, handle response ...).
@@ -2729,6 +2798,139 @@ If you have api with hypermedia (hateoas) you can use traverson library
 ```java
 Traverson traverson = new Traverson(URI.create("http://localhost:8080/api"), MediaTypes.HAL_JSON);
 ```
+
+
+
+
+
+
+###### Custom HttpMessageConverter
+When we receive request with `Content-type` header, we must parse it according to this content-type.
+And when we send response, we should send it according to `Accept` header. 
+To convert between java objects and response/request body we must use `HttpMessageConverter`.
+Here a quick example how to implement custom converter
+Custom request body converter. We implement 2 methods - one for handle request payload, other to convert response body
+```java
+package com.example.logic.ann.web;
+
+import org.springframework.http.HttpInputMessage;
+import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.AbstractHttpMessageConverter;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.converter.HttpMessageNotWritableException;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Scanner;
+
+public class MyHMC extends AbstractHttpMessageConverter<Person> {
+    public MyHMC(){
+        super(new MediaType("text", "person"));
+    }
+
+    @Override
+    protected boolean supports(Class<?> cls) {
+        return cls == Person.class;
+    }
+
+    @Override
+    protected Person readInternal(Class<? extends Person> cls, HttpInputMessage input) throws IOException, HttpMessageNotReadableException {
+        try(Scanner scanner = new Scanner(input.getBody())) {
+            Person p = new Person();
+            String[] arr = scanner.next().split("/");
+            p.setAge(Integer.parseInt(arr[0]));
+            p.setName(arr[1]);
+            return p;
+        }
+    }
+
+    @Override
+    protected void writeInternal(Person person, HttpOutputMessage output) throws IOException, HttpMessageNotWritableException {
+        try(OutputStream stream = output.getBody()){
+            stream.write(person.toString().getBytes());
+        }
+    }
+}
+```
+
+We should also register it as custom converter in config file
+```java
+package com.example.logic.ann.web;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.List;
+
+@Configuration
+public class WebJavaConfig implements WebMvcConfigurer {
+    /**
+     * You can register new HttpMessageConverter by either addging a Bean
+     * or overriding configureMessageConverters
+     */
+    @Bean
+    public HttpMessageConverter<Person> httpMessageConverter(){
+        return new MyHMC();
+    }
+
+    @Override
+    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+        converters.add(new MyHMC());
+    }
+}
+```
+
+Simple controller example
+```java
+package com.example.logic.ann.web;
+
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/person")
+public class MyController {
+    @GetMapping
+    public Person handleGet(){
+        Person p = new Person();
+        p.setAge(30);
+        p.setName("Jack");
+        return p;
+    }
+
+    @PostMapping
+    public Person handlePost( Person p){
+        System.out.println("handlePost => " + p);
+        return p;
+    }
+}
+```
+
+
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
+@ComponentScan("com.example.logic.ann.web")
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+```
+Now you can send 2 requests 
+```
+curl -H "Accept: text/person" http://localhost:8080/person
+curl -H "Content-Type: text/person" -d "30/Jack" http://localhost:8080/person
+```
+
+
+
 
 #### DB
 ###### Spring JDBC
@@ -3027,6 +3229,9 @@ getById(28) =>DepartmentModel(id=28, name=finance, type=my)
 14:38:54.103 [main] DEBUG org.springframework.jdbc.datasource.SimpleDriverDataSource - Creating new JDBC Driver Connection to [jdbc:mysql://localhost:3306/spring5]
 deleteById(28) => true
 ```
+
+DriverManagerDataSource — Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call.
+SimpleDriverDataSource — Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi.
 
 `SimpleDriverDataSource` - is not pooled, so you can use it only for testing purpose.
 Although you can write your own implementation of `RowMapper` for each entity, if you db columns correspond to your model, you can
@@ -3416,6 +3621,10 @@ By default delete return void, but you still can verify that row was deleted. If
 default param - required - in this case nothing happens.
 mandatory - throw exception if method was called from non-transactioanl method
 require_new - open new transaction (so we have nested tx)
+
+Don't confuse 
+`javax.transaction.Transactional` - java EE7 annotation, but since spring3 also supported, 
+with `org.springframework.transaction.annotation.Transactional` - has more options and will always execute the right way.
 
 There are 2 types of transactions:
 * Local - work with single resource (single db) and either commit or rollback
