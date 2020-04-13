@@ -41,6 +41,10 @@
 6. [Spring Boot Actuator](#spring-boot-actuator)
 * 6.1 [Jmx monitoring](#jmx-monitoring)
 * 6.2 [Actuator monitoring](#actuator-monitoring)
+7. [Message Support](#message-support)
+* 7.1 [JMS](#jms)
+* 7.2 [AMQP (RabbitMQ)](#amqp-rabbitmq)
+* 7.3 [Kafka](#kafka)
 10. [Miscellaneous](#miscellaneous)
 * 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 10.2 [Get param names](#get-param-names)
@@ -3855,6 +3859,284 @@ public class App{
 }
 ```
 
+#### Message Support
+
+###### JMS
+To work with jms you should add to `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-artemis</artifactId>
+</dependency>
+```
+artemis is next generation of activemq. By default artemis use port 61616. But you can configure it
+```
+spring.artemis.host=localhost
+spring.artemis.port=61616
+spring.artemis.user=user
+spring.artemis.password=password
+```
+First you need to download [artemis](https://activemq.apache.org/components/artemis/download/)
+After downloading you can create broker `./apache-artemis-2.11.0/bin/artemis create mybroker`. It will create mybroker folder, and you can run it `./mybroker/bin/artemis run`.
+You can also access console from `http://localhost:8161/`
+
+If we are using `@SpringBootApplication`, `JmsTemplate` would be automatically created (because of auto-configuration). If not we should explicitly declare such a bean.
+
+To convert between your object and message you can use `org.springframework.jms.support.converter.MessageConverter`, you can implement it to crete your own, but there is no need, cause you can use `SimpleMessageConverter` or `MappingJackson2MessageConverter`.
+Config file
+```java
+package com.example.logic.ann.message.jms;
+
+import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
+
+import org.apache.activemq.artemis.jms.client.ActiveMQJMSConnectionFactory;
+import org.apache.activemq.artemis.jms.client.ActiveMQQueue;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.listener.DefaultMessageListenerContainer;
+import org.springframework.jms.listener.MessageListenerContainer;
+import org.springframework.jms.support.converter.MessageConverter;
+import org.springframework.jms.support.converter.SimpleMessageConverter;
+
+@Configuration
+public class MessageJavaConfig {
+    @Bean
+    public Destination destination(){
+        return new ActiveMQQueue("localhost:61616");
+    }
+
+    @Bean
+    public ConnectionFactory connectionFactory(){
+        return new ActiveMQJMSConnectionFactory();
+    }
+
+    @Bean
+    public MessageConverter messageConverter(){
+        return new SimpleMessageConverter();
+    }
+
+    @Bean
+    public JmsTemplate jmsTemplate(){
+        JmsTemplate jms = new JmsTemplate(connectionFactory());
+        jms.setDefaultDestination(destination());
+        return jms;
+    }
+
+    /**
+     * You can also implicitly set listener by creating component with method annotated @JmsListener
+     */
+    @Bean
+    public MessageListenerContainer listenerContainer() {
+        DefaultMessageListenerContainer container = new DefaultMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory());
+        container.setDestination(destination());
+        container.setMessageListener(new MyJmsListener(messageConverter()));
+        return container;
+    }
+}
+```
+Sender
+```java
+package com.example.logic.ann.message.jms;
+
+import javax.jms.Message;
+import java.time.LocalDateTime;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.stereotype.Component;
+
+@Component
+public class MyJmsSender {
+    @Autowired
+    private JmsTemplate jms;
+
+    public void send(){
+        jms.send(session -> session.createObjectMessage("time: " + LocalDateTime.now()));
+    }
+
+    /**
+     * You can receive messages synchronously with this call
+     */
+    public Message receive(){
+        return jms.receive();
+    }
+}
+```
+
+Receiver
+```java
+package com.example.logic.ann.message.jms;
+
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageListener;
+
+import org.springframework.jms.support.converter.MessageConverter;
+
+public class MyJmsListener implements MessageListener {
+    private MessageConverter converter;
+
+    public MyJmsListener(MessageConverter converter){
+        this.converter = converter;
+    }
+
+    @Override
+    public void onMessage(Message message) {
+        try {
+            System.out.println("converted => " + converter.fromMessage(message) + ", message => " + message);
+        } catch (JMSException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+Main code
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import com.example.logic.ann.message.jms.MyJmsSender;
+
+public class App{
+    public static void main(String[] args) throws InterruptedException {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.message.jms");
+        MyJmsSender jms = context.getBean(MyJmsSender.class);
+        jms.send();
+        jms.send();
+        System.out.println("done");
+    }
+}
+```
+
+
+###### AMQP (RabbitMQ)
+Advanced Message Queuing Protocol
+First add this dependency to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-amqp</artifactId>
+</dependency>
+```
+Adding this starter to your build will trigger autoconfiguration that will create a AMQP connection factory and RabbitTemplate beans.
+So if you don't use spring boot you will have to configure them manually.
+
+You also need to install rabbitmq `sudo apt-get install rabbitmq-server`. You can start/stop and check status with following commnads
+```shell script
+sudo systemctl start rabbitmq-server.service
+sudo systemctl enable rabbitmq-server.service
+sudo rabbitmqctl status
+```
+To get web console access you need to add web console and add user. After you can access it from `http://localhost:15672/`
+```shell script
+sudo rabbitmq-plugins enable rabbitmq_management
+
+# add user
+sudo rabbitmqctl add_user user password
+sudo rabbitmqctl set_user_tags user administrator
+sudo rabbitmqctl set_permissions -p / user ".*" ".*" ".*"
+```
+
+Config file
+```java
+package com.example.logic.ann.message.amqp;
+
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.listener.MessageListenerContainer;
+import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RabbitJavaConfig {
+    public final static String QUEUE_NAME = "my_queue";
+
+    @Bean
+    public ConnectionFactory connectionFactory(){
+        return new CachingConnectionFactory();
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(){
+        return new RabbitTemplate(connectionFactory());
+    }
+
+    /**
+     * Same can be achieved by using @RabbitListener
+     */
+    @Bean
+    public MessageListenerContainer listenerContainer() {
+        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory());
+        container.setQueueNames(QUEUE_NAME);
+        container.setMessageListener(new MyRabbitListener());
+        return container;
+    }
+}
+```
+
+Sender
+```java
+package com.example.logic.ann.message.amqp;
+
+import java.time.LocalDateTime;
+
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component
+public class MyRabbitSender {
+    @Autowired
+    private RabbitTemplate rabbit;
+
+    public void send() {
+        MessageConverter converter = rabbit.getMessageConverter();
+        MessageProperties properties = new MessageProperties();
+        Message message = converter.toMessage("time: " + LocalDateTime.now(), properties);
+        rabbit.send(RabbitJavaConfig.QUEUE_NAME, message);
+    }
+}
+```
+
+Receiver
+```java
+package com.example.logic.ann.message.amqp;
+
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageListener;
+
+public class MyRabbitListener implements MessageListener {
+    @Override
+    public void onMessage(Message message) {
+        System.out.println("message => " + message);
+    }
+}
+```
+
+Main code
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import com.example.logic.ann.message.amqp.MyRabbitSender;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.message.amqp");
+        var sender = context.getBean(MyRabbitSender.class);
+        sender.send();
+        sender.send();
+    }
+}
+```
+
+###### Kafka
 
 
 #### Miscellaneous
@@ -4035,155 +4317,6 @@ To use devtools add this to your `pom.xml`
     <artifactId>spring-boot-devtools</artifactId>
 </dependency>
 ```
-
-
-###### JMS, AMQP, Kafka
-To work with jms you should add to `pom.xml`
-```
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-artemis</artifactId>
-</dependency>
-```
-artemis is next generation of activemq. By default artemis use port 61616. But you can configure it
-```
-spring.artemis.host=localhost
-spring.artemis.port=61616
-spring.artemis.user=user
-spring.artemis.password=password
-```
-First you need to download [artemis](https://activemq.apache.org/components/artemis/download/)
-After downloading you can create broker `./apache-artemis-2.11.0/bin/artemis create mybroker`. It will create mybroker folder, and you can run it `./mybroker/bin/artemis run`.
-If we are using `@SpringBootApplication`, `JmsTemplate` would be automatically created (because of auto-configuration). If not we should explicitly declare such a bean.
-
-To convert between your object and message you can use `org.springframework.jms.support.converter.MessageConverter`, you can implement it to crete your own, but there is no need, cause you can use `SimpleMessageConverter` or `MappingJackson2MessageConverter`.
-Config file
-```java
-package com.example.logic.ann.message.jms;
-
-import javax.jms.ConnectionFactory;
-import javax.jms.Destination;
-
-import org.apache.activemq.artemis.jms.client.ActiveMQJMSConnectionFactory;
-import org.apache.activemq.artemis.jms.client.ActiveMQQueue;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.jms.core.JmsTemplate;
-import org.springframework.jms.listener.DefaultMessageListenerContainer;
-import org.springframework.jms.listener.MessageListenerContainer;
-import org.springframework.jms.support.converter.MessageConverter;
-import org.springframework.jms.support.converter.SimpleMessageConverter;
-
-@Configuration
-public class MessageJavaConfig {
-    @Bean
-    public Destination destination(){
-        return new ActiveMQQueue("localhost:61616");
-    }
-
-    @Bean
-    public ConnectionFactory connectionFactory(){
-        return new ActiveMQJMSConnectionFactory();
-    }
-
-    @Bean
-    public MessageConverter messageConverter(){
-        return new SimpleMessageConverter();
-    }
-
-    @Bean
-    public JmsTemplate jmsTemplate(){
-        JmsTemplate jms = new JmsTemplate(connectionFactory());
-        jms.setDefaultDestination(destination());
-        return jms;
-    }
-
-    /**
-     * You can also implicitly set listener by creating component with method annotated @JmsListener
-     */
-    @Bean
-    public MessageListenerContainer listenerContainer() {
-        DefaultMessageListenerContainer container = new DefaultMessageListenerContainer();
-        container.setConnectionFactory(connectionFactory());
-        container.setDestination(destination());
-        container.setMessageListener(new MyJmsListener(messageConverter()));
-        return container;
-    }
-}
-```
-Sender
-```java
-package com.example.logic.ann.message.jms;
-
-import javax.jms.Message;
-import java.time.LocalDateTime;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jms.core.JmsTemplate;
-import org.springframework.stereotype.Component;
-
-@Component
-public class MyJmsSender {
-    @Autowired
-    private JmsTemplate jms;
-
-    public void send(){
-        jms.send(session -> session.createObjectMessage("time: " + LocalDateTime.now()));
-    }
-
-    /**
-     * You can receive messages synchronously with this call
-     */
-    public Message receive(){
-        return jms.receive();
-    }
-}
-```
-
-Receiver
-```java
-package com.example.logic.ann.message.jms;
-
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.MessageListener;
-
-import org.springframework.jms.support.converter.MessageConverter;
-
-public class MyJmsListener implements MessageListener {
-    private MessageConverter converter;
-
-    public MyJmsListener(MessageConverter converter){
-        this.converter = converter;
-    }
-
-    @Override
-    public void onMessage(Message message) {
-        try {
-            System.out.println("converted => " + converter.fromMessage(message) + ", message => " + message);
-        } catch (JMSException e) {
-            e.printStackTrace();
-        }
-    }
-}
-```
-
-Main code
-```java
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import com.example.logic.ann.message.jms.MyJmsSender;
-
-public class App{
-    public static void main(String[] args) throws InterruptedException {
-        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.message.jms");
-        MyJmsSender jms = context.getBean(MyJmsSender.class);
-        jms.send();
-        jms.send();
-        System.out.println("done");
-    }
-}
-```
-
 
 
 

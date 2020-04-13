@@ -14,7 +14,7 @@ import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.converter.SimpleMessageConverter;
 
 @Configuration
-public class MessageJavaConfig {
+public class JmsJavaConfig {
     @Bean
     public Destination destination(){
         return new ActiveMQQueue("localhost:61616");
