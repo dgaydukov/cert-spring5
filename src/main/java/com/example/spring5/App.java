@@ -1,13 +1,14 @@
 package com.example.spring5;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import com.example.logic.ann.message.jms.MyJmsSender;
 
-@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
 public class App{
-    public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
+    public static void main(String[] args) throws InterruptedException {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.message.jms");
+        MyJmsSender jms = context.getBean(MyJmsSender.class);
+        jms.send();
+        jms.send();
+        System.out.println("done");
     }
 }
