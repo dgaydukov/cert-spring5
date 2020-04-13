@@ -4160,7 +4160,7 @@ mkdir ~/kafka && cd ~/kafka
 wget http://www.trieuvan.com/apache/kafka/2.4.1/kafka_2.13-2.4.1.tgz
 tar -xvzf kafka_2.13-2.4.1.tgz --strip 1
 rm kafka_2.13-2.4.1.tgz
-.~/kafka/bin/kafka-server-start.sh ~/kafka/config/server.properties
+./bin/kafka-server-start.sh config/server.properties
 ```
 
 Config file
@@ -4395,7 +4395,6 @@ after => StepExecution: id=1, version=2, name=myStep, status=COMPLETED, exitStat
 
 
 ###### Spring Integration
-
 First you need to add integration starter and message security to your `pom.xml`
 ```
 <dependency>
