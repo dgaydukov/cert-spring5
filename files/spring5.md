@@ -4137,6 +4137,150 @@ public class App{
 ```
 
 ###### Kafka
+Kafka is new generation message system offers clustering out of the box. 
+First you need to add to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.kafka</groupId>
+    <artifactId>spring-kafka</artifactId>
+</dependency>
+```
+If you are using spring boot it will auto configure `KafkaTemplate`, otherwise you have to do it manually.
+
+To install kafka you have to install zookeeper and kafka
+```shell script
+sudo apt-get install zookeeperd
+# start/stop/status
+systemctl start zookeeper
+systemctl stop zookeeper
+systemctl status zookeeper
+
+# It's better to install kafka under separate user, but since it's our dev env, we won't create dedicated user
+mkdir ~/kafka && cd ~/kafka
+wget http://www.trieuvan.com/apache/kafka/2.4.1/kafka_2.13-2.4.1.tgz
+tar -xvzf kafka_2.13-2.4.1.tgz --strip 1
+rm kafka_2.13-2.4.1.tgz
+.~/kafka/bin/kafka-server-start.sh ~/kafka/config/server.properties
+```
+
+Config file
+```java
+package com.example.logic.ann.message.kafka;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.listener.KafkaMessageListenerContainer;
+import org.springframework.kafka.listener.MessageListenerContainer;
+
+@Configuration
+public class KafkaJavaConfig {
+    public final static String TOPIC_NAME = "my_topic";
+    private final static String SERVER_URL = "localhost:9092";
+    private final static String GROUP_ID = "my_group";
+
+    @Bean
+    public ProducerFactory<String, String> producerFactory(){
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, SERVER_URL);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        return new DefaultKafkaProducerFactory<>(props);
+    }
+
+    @Bean
+    public ConsumerFactory<String, String> consumerFactory(){
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, SERVER_URL);
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID);
+        return new DefaultKafkaConsumerFactory<>(props);
+    }
+
+    @Bean
+    public KafkaTemplate<String, String> kafkaTemplate(){
+        return new KafkaTemplate<>(producerFactory());
+    }
+
+    @Bean
+    public MessageListenerContainer messageListenerContainer() {
+        KafkaMessageListenerContainer<String, String> listener = new KafkaMessageListenerContainer<>(consumerFactory(), new ContainerProperties(TOPIC_NAME));
+        listener.setupMessageListener(new MyKafkaListener());
+        return listener;
+    }
+
+}
+```
+
+Sender
+```java
+package com.example.logic.ann.message.kafka;
+
+import java.time.LocalDateTime;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Component;
+
+@Component
+public class MyKafkaSender {
+    @Autowired
+    private KafkaTemplate<String, String> kafka;
+
+    public void send(){
+        kafka.send(KafkaJavaConfig.TOPIC_NAME, "time: " + LocalDateTime.now());
+    }
+}
+```
+
+Listener
+```java
+package com.example.logic.ann.message.kafka;
+
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.kafka.listener.MessageListener;
+
+public class MyKafkaListener implements MessageListener<String, String> {
+    @Override
+    public void onMessage(ConsumerRecord<String, String> record) {
+        System.out.println("record => " + record);
+    }
+}
+```
+
+
+Main file
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import com.example.logic.ann.message.kafka.MyKafkaSender;
+
+public class App{
+    public static void main(String[] args) throws InterruptedException {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.message.kafka");
+        var sender = context.getBean(MyKafkaSender.class);
+        sender.send();
+        sender.send();
+    }
+}
+```
+
+
+
+
+
 
 
 #### Miscellaneous
