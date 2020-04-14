@@ -61,7 +61,7 @@
 
 
 
-
+###### Dependency injection
 
 
 
@@ -765,7 +765,7 @@ Because BFPP objects must be instantiated very early in the container lifecycle,
 
 
 If you want to use both annotation and xml config you can do
-* In case of `AnnotationConfigApplicationContext`, add `@ImportResource("app.xml")` to your `@Configuration` class
+* In case of `AnnotationConfigApplicationContext`, add `@ImportResource("app.xml")` to your `@Configuration` class. This annotation also helpful with you have `@SpringBootApplication` and want to import xml config
 * In case of `GenericXmlApplicationContext`, add `<context:annotation-config/>` to your xml file
 
 ###### PostConstruct and PreDestroy
@@ -2425,10 +2425,41 @@ public class App {
 }
 ```
 
-If `WebSocket` is not supported by browser we call fallback to SockJs. For client take a [sockjs](#https://github.com/sockjs/sockjs-client#getting-started).
+If `WebSocket` is not supported by browser we call fallback to SockJs. For client take a [sockjs](https://github.com/sockjs/sockjs-client#getting-started).
 For server add this `withSockJS()` to `registry.addHandler().`
 
 ###### Reactive WebFlux
+In java reactive api is 4 nested interfaces in `java.util.concurrent.Flow` class. `Publisher` produces data that it sends to a `Subscriber` per a `Subscription`.
+Since in java we have only interfaces of reactive, you should use either Reactor (spring use it) or RxJava
+Here is short example to compare Reactor with Java Stream/Optional
+```java
+import java.util.Optional;
+import java.util.stream.Stream;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+public class App {
+    public static void main(String[] args) {
+        String name = "mike";
+        /**
+         * Reactor Mono is equivalent to java Optional
+         */
+        Mono.just(name).map(String::toUpperCase).map(n->"Hello, "+n).subscribe(System.out::println);
+        Optional.of(name).map(String::toUpperCase).map(n->"Hello, "+n).ifPresent(System.out::println);
+
+        /**
+         * Reactor Flux is equivalent to java Stream
+         */
+        Stream.of(1,2,3).filter(i->i%2==0).map(i->i*2).forEach(System.out::println);
+        Flux.just(1,2,3).filter(i->i%2==0).map(i->i*2).subscribe(System.out::println);
+    }
+}
+```
+
+
+
+
 To use project Reactor you should add to your `pom.xml`
 ```
 <dependency>
@@ -2436,6 +2467,8 @@ To use project Reactor you should add to your `pom.xml`
     <artifactId>spring-boot-starter-webflux</artifactId>
 </dependency>
 ```
+
+
 Basic syntax
 ```java
 import java.util.ArrayList;
@@ -4437,7 +4470,15 @@ public class App{
 Here we using P2P channel, if we want to send message to many channels we should use `PublishSubscribeChannel`
 `@BridgeFrom` - can connect PubSub channel with P2P
 
-
+There are several building blocks of integration
+* Channel (`PublishSubscribeChannel` or `FluxMessageChannel`) - pipes that connect all other parts
+* Filter (Bean annotated with `@Filter`) - can be placed between channels to determine should message go further
+* Transformer (Bean with `@Transformer` returning `GenericTransformer<S, T>`) - can transform data 
+* Router (Bean with `@Router`, returning `AbstractMessageRouter`) - direct messages to different channels based on some criteria
+* Splitter (Bean with `@Splitter`) - split message into several submessages. (You can combine it with router and split message from one channel and send 2 message to 2 other channels)
+* Service activator (Bean with `@ServiceActivator` returning `MessageHandler`) - receive message from channel and handle it
+* Gateway (interface with `@MessagingGateway`) - entry point to which third-party app send data for spring integration
+* Channel Adapter (Bean with `@InboundChannelAdapter` returning `MessageSource<T>`) - entry point
 
 
 
