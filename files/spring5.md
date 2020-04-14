@@ -2456,7 +2456,23 @@ public class App {
     }
 }
 ```
-
+Useful functions:
+`fromArray/fromIterable/fromStream` to consume array/list/stream
+`range(to, from)` (from value is inclusive) to generate flow of data.
+`mergeWith` - combine flux with another (`concat` in stream api)
+`zip` - combine flux with another and produce tuples (where one element from first flux, another from second) - so you can handle both flux at the same time (no alternative in stream api)
+`skip` - skip first n elements (`skip` in stream api)
+`take` - take first n elements (`take` in stream api)
+`filter` - filter elements based on Predicate (`filter` in stream api)
+`distinct` - filter only distinct elements (`distinct` in stream api)
+`map/flatMap` - transform value (`map/flatMap` in stream api)
+`subscribe` - terminal operation (`forEach` in stream api)
+`subscribeOn` - how we should handle flow (takes `reactor.core.scheduler.Scheduler`, usually from `Schedulers` you call `single/immediate/parallel`)
+`buffer` - create buffers of size n `Flux<List<T>>` (kind of `collect` in stream api)
+`collectList` - create `Mono<List<T>>` (`collect(Collectors.toList())` in stream api)
+`collectMap` - create `Mono<Map<K, V>>` (`collect(Collectors.toMap())` in stream api)
+`all` - take predicate, verify that all elements comply to it (`allMatch` in stream api)
+`yan` - take predicate, verify that at least one element comply to it (`anyMatch` in stream api)
 
 
 
@@ -2467,7 +2483,6 @@ To use project Reactor you should add to your `pom.xml`
     <artifactId>spring-boot-starter-webflux</artifactId>
 </dependency>
 ```
-
 
 Basic syntax
 ```java
@@ -2491,6 +2506,35 @@ public class App {
 
 First we need to build reactive repository. It's done very simple, just add new layer above your crud repository, and wrap all calls to Flux/Mono.
 Controller stay the same, but it returns not values but also Flux/Mono, and media type should be `MediaType.TEXT_EVENT_STREAM_VALUE` (server will create a response with `Content-Type: text/event-stream`)
+
+If you want to work with reactive spring data, your repo should extends from `ReactiveCrudRepository`.
+
+
+You can also use funcional controllers. The idea is not to use annotation, but instead create beans with type `RouterFunction` and return routes there.
+For this to work you should remove `spring-boot-starter-web` from `pom.xml`, or exclude tomcat from it.
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.ServerResponse;
+
+import static org.springframework.web.reactive.function.server.RouterFunctions.route;
+import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
+import static org.springframework.web.reactive.function.server.ServerResponse.ok;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Configuration
+public class MyFunctionalController {
+    @Bean
+    RouterFunction<ServerResponse> routes() {
+        return
+            route(GET("/employee"), req -> ok().body(Flux.just("a", "b"), String.class))
+                .and(route(GET("/employee/{id}"), req -> ok().body(Mono.just("a"), String.class)));
+    }
+}
+```
 
 
 
@@ -3722,6 +3766,9 @@ once and then will just use cached version. If we have several config file we sh
 * If you want to test db you should use `@DataJpaTest` (loads all beans, but throw away everything except `@Repository`)
 * If you want to test controllers you should use `@WebMvcTest` (loads all beans, but throw away everything except `@Controller`)
 * If you need mock inside your test you should add `@MockBean` to property and use it later. But if you need mock only to build other objects, you can add them to classs level like `@MockBean(MyService.class)`, it works since it repeatable.
+* You can also test web flux with `WebTestClient`
+
+
 
 Simple example to test mvc
 ```java
@@ -3815,6 +3862,10 @@ public class BeansIntegrationTest {
     }
 }
 ```
+
+
+
+
 
 
 #### Spring Boot Actuator
