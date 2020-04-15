@@ -55,13 +55,14 @@
 * 10.7 [Spring DevTools](#spring-devtools)
 * 10.8 [JMS, AMQP, Kafka](#jms-amqp-kafka)
 * 10.9 [YML Autocompletion](#yml-autocompletion)
+* 10.10 [Spring Cloud](#spring-cloud)
 
 
 
 
 
 
-###### Dependency injection
+
 
 
 
@@ -4681,4 +4682,89 @@ And then also use auto-complete to tune your starter from main project
 
 
 
+###### Spring Cloud
+Spring Cloud - allows easy production deployment. It consist of
+* Eureka (service discovery from Netflix) - distinct service that store all services by name and provide them to other services
+* Ribbon (client-side load balancer) - client library that help to work with eureka server
+* Config server - distinct service that pull configuration from git or vault service and provide it to your microservices
+* Spring Cloud Bus - automatic update of configuration in the Config Server, once they has been committed to git server
+* Spring Cloud Stream - inter-service communacation with rabbitmq or kafka (can be used to propagate changes from config server to all microservices)
 
+To work with eureka add this to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+</dependency>
+```
+To enable eureka add this to your configuration `@EnableEurekaServer`. And your discovery server is ready.
+In client-side (microservice that would use eureka) you should add
+```
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+```
+This dependency add both eureka client and ribbon. You should add name of your sevice to `spring.application.name=myService`. And it would be available in eureka dashboard.
+By default client will try to connect to eureka at localhost:8761. But you can change eureka url with property `eureka.client.service-url`
+Once you enable client eureka you can create load-balanced `RestTemplate` or `WebClient` like
+```java
+@Bean
+@LoadBalanced
+public RestTemplate restTemplate() {
+    return new RestTemplate();
+}
+
+@Bean
+@LoadBalanced
+public WebClient.Builder webClientBuilder() {
+    return WebClient.builder();
+}
+```
+
+You can also use feign client, that works like spring data, automatically generating rest code. First add this dependency to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+```
+First enable feign config
+```java
+@Configuration
+@EnableFeignClients
+public RestClientConfiguration {
+}
+```
+
+Then create rest api like
+```java
+// employee-service - name of service by which you get actual url from eureka
+@FeignClient("employee-service")
+public interface EmployeeClient {
+@GetMapping("/employee/{id}")
+    Employee getEmployee(@PathVariable("id") String id);
+}
+```
+
+
+To create config server, add this to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-config-server</artifactId>
+</dependency>
+```
+To enable it add this `@EnableConfigServer`. 
+You should also add git url, where properties are located `spring.cloud.config.server.git.uri`. You can also set port to 8888, cause it's default port to which clients will try to connect to get configuration.
+After it's done you can access config server in `http://localhost:8888/{nameOfYourApp}/{profile}/{gitBranchName}`.
+If git server has auth you should add to your props `spring.cloud.config.server.username` and `spring.cloud.config.server.password`
+The best practice is first to deploy config server, and all microservices connect to it to get eureka server url as property param.
+
+For client to consume properties from config server add this dependency
+```
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-config</artifactId>
+</dependency>
+```
