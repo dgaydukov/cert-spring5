@@ -2277,6 +2277,46 @@ public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
 For every controller you can inject current user like `@AuthenticationPrincipal UserEnityt entity`
 
 
+For servlet we configure `HttpSecurity`, for reactive we configure `ServerHttpSecurity`.
+```java
+package com.example.logic.ann.reactive;
+
+import java.util.List;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+
+import reactor.core.publisher.Mono;
+
+/**
+ * Example for setting up security for webflux app
+ * We don't need to extend from WebSecurityConfigurerAdapter and override any configure methods
+ * We have 2 beans, one to configure http security and another to configure user details
+ */
+@Configuration
+@EnableWebFluxSecurity
+public class ReactiveJavaConfig {
+    @Bean
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        return http
+            .authorizeExchange()
+            .pathMatchers("/person").hasAuthority("USER")
+            .anyExchange().permitAll()
+            .and()
+            .build();
+    }
+
+    @Bean
+    public ReactiveUserDetailsService reactiveUserDetailsService(){
+        return username -> Mono.just(new User(username, "password", List.of(()->"ROLE_USER")));
+    }
+}
+```
 
 
 ###### Aop security
@@ -2507,10 +2547,19 @@ public class App {
 First we need to build reactive repository. It's done very simple, just add new layer above your crud repository, and wrap all calls to Flux/Mono.
 Controller stay the same, but it returns not values but also Flux/Mono, and media type should be `MediaType.TEXT_EVENT_STREAM_VALUE` (server will create a response with `Content-Type: text/event-stream`)
 
-If you want to work with reactive spring data, your repo should extends from `ReactiveCrudRepository`.
+If you want to work with reactive spring data, your repo should extends from `ReactiveCrudRepository`. Notice that only cassandra and mongodb support true reactive programming.
+Relational databases don't support reactive, due to blocking nature of JDBC. Although you can use `ReactiveCrudRepository` for relational db, it just wrap all calls to jdbc into `Flux/Mono`.
+To work with cassandra you should add to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-cassandra-reactive</artifactId>
+</dependency>
+```
+For both mongo & cassandra we have reactive as well as non-reactive starters.
 
 
-You can also use funcional controllers. The idea is not to use annotation, but instead create beans with type `RouterFunction` and return routes there.
+You can also use functional controllers. The idea is not to use annotation, but instead create beans with type `RouterFunction` and return routes there.
 For this to work you should remove `spring-boot-starter-web` from `pom.xml`, or exclude tomcat from it.
 ```java
 import org.springframework.context.annotation.Bean;
