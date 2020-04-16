@@ -2044,6 +2044,8 @@ Spring has default implementation `org.springframework.web.SpringServletContaine
 So when you create a class from `WebApplicationInitializer` it get hooked by `SpringServletContainerInitializer` which in turn
 get hooked by tomcat and that's why you implement it, and not directly `ServletContainerInitializer`.
 
+If you have spring boot project, that you are going to build into war, it has a class `SpringBootServletInitializer` which implements `WebApplicationInitializer`, so you don't have to write your own implementation. You will have main entry point, and spring boot will do this under the hood.
+
 ###### Spring Boot
 In spring boot you have 2 new events. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
 ```
@@ -3751,6 +3753,8 @@ you can always get session like `Session current = (Session) entityManager.getDe
 
 By default delete return void, but you still can verify that row was deleted. If row didn't exist `EmptyResultDataAccessException` would be thrown. So you can catch it and do something.
 
+If you want to subscribe on events for some repository you can extedn `AbstractRepositoryEventListener<YourRepo>` and implements methods like `afterCreate` and have some custom logic there.
+
 ###### JTA - java transaction API
 `@Transactional` - has propagation param, that instruct spring what to do when you call one transactional method from another.
 default param - required - in this case nothing happens.
@@ -3995,13 +3999,66 @@ public class App{
 
 By default all mapping are `/actuator/health` and so on, so base path is `actuator`. You can change that mapping to whatever you want, in your config file
 ```
-endpoints:
-    web:
-        base-path: /
-        path-mapping:
-            health: apphealth
+management.endpoints.web.base-path = /
+management.endpoints.web.path-mapping.health = apphealth
 ```
-By default only `/health` & `/info` are enabled.
+By default only `/health` & `/info` are enabled, cause actuator doesn't have any security. You can secure it with spring security, and enable other features by adding `management.endpoints.web.exposure.include = health,info,beans,conditions`, or set it to `*` to include all endpoints.
+If you want to include all, except a few you can add `include=*` and `management.endpoints.web.exposure.exclude = info, beans`.
+
+If you want to work with `jmx` rather than with web, that you should add to config like `management.endpoints.jmx.`
+
+`/info` - empty by default, but you can add anything there, by adding properties with prefix `info`, like
+```
+info.my.v1=100
+info.my.v2=200
+```
+Health by default just show status (`up/down/unknown/out_of_service`), but if you want more details you can add `management.endpoint.health.show-details=always`
+
+
+`/beans` - view context configuration
+`/conditions` - view autoconfiguration rules (which beans has been autoconfigured)
+`/env` - info about env variables. It's not only GET, but calling POST with valid json, you can create/update env vars on the fly (they would apply to current running instance, and would be lost once we restart app)
+`/mappings` - info about current http endpoints
+`/loggers` - view logging level for every component (like with env, you can change logging level with POST request)
+`/heapdump` - download gzip heap dump file with info about heap, memory and so on (useful in debugging memory leaks or heap problems)
+`/metrics` - view all metrics of running app
+
+Customizing actuator
+`/info` - you should implement `InfoContributor`
+`/health` - you should implement `HealthIndicator`
+`/metics` - you can inject `MeterRegistry` into any bean, and add info into it.
+
+You can also create custom endpoint. For this annotate class with `@Endpoint`, method should be annotated with `@ReadOperation/@WriteOperation/@DeleteOperation`.
+The reason actuator use it's own annotation instead of `@Controller`, is that actuator is not just controller, it's also expose data to JMX console. So that's why create only controller not enough.
+
+To secure actuator you should use spring security. Since `/actuator` path can be changes from config file, it's better to use `EndpointRequest` like
+```java
+protected void configure(HttpSecurity http) throws Exception {
+    http
+    .requestMatcher(EndpointRequest.toAnyEndpoint().excluding("health", "info"))
+    .authorizeRequests()
+    .anyRequest().hasRole("ADMIN")
+    .and()
+    .httpBasic();
+}
+```
+
+If you want to have nice ui to view actuator endpoints you should add spring boot admin to your `pom.xml`
+```
+<dependency>
+    <groupId>de.codecentric</groupId>
+    <artifactId>spring-boot-admin-starter-server</artifactId>
+</dependency>
+```
+And add `@EnableAdminServer`.
+
+
+
+
+
+
+
+
 
 
 #### Message Support
