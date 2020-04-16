@@ -38,9 +38,9 @@
 * 4.3 [Spring Data](#spring-data)
 * 4.4 [JTA - java transaction API](#jta---java-transaction-api)
 5. [Spring Testing](#spring-testing)
-6. [Spring Boot Actuator](#spring-boot-actuator)
+6. [Spring Monitoring](#spring-monitoring)
 * 6.1 [Jmx monitoring](#jmx-monitoring)
-* 6.2 [Actuator monitoring](#actuator-monitoring)
+* 6.2 [Spring Boot Actuator](#spring-boot-actuator)
 7. [Message Support](#message-support)
 * 7.1 [JMS](#jms)
 * 7.2 [AMQP (RabbitMQ)](#amqp-rabbitmq)
@@ -3918,7 +3918,7 @@ public class BeansIntegrationTest {
 
 
 
-#### Spring Boot Actuator
+#### Spring Monitoring
 ###### Jmx monitoring
 If we want to import spring beans to jmx we would need to add. Spring will try to find running `MBeanServer`, and in case of web app it would be tomcat.
 ```java
@@ -3969,7 +3969,7 @@ props.put("hibernate.session_factory_name", "sessionFactory");
 
 
 
-###### Actuator monitoring
+###### Spring Boot Actuator
 First you should add this dependency 
 ```
 <dependency>
@@ -3992,6 +3992,17 @@ public class App{
     }
 }
 ```
+
+By default all mapping are `/actuator/health` and so on, so base path is `actuator`. You can change that mapping to whatever you want, in your config file
+```
+endpoints:
+    web:
+        base-path: /
+        path-mapping:
+            health: apphealth
+```
+By default only `/health` & `/info` are enabled.
+
 
 #### Message Support
 
@@ -4689,6 +4700,7 @@ Spring Cloud - allows easy production deployment. It consist of
 * Config server - distinct service that pull configuration from git or vault service and provide it to your microservices
 * Spring Cloud Bus - automatic update of configuration in the Config Server, once they has been committed to git server
 * Spring Cloud Stream - inter-service communacation with rabbitmq or kafka (can be used to propagate changes from config server to all microservices)
+* Hystrix (Cirbuit Breaker) - netflix library to handle bad responses from other microservices
 
 To work with eureka add this to your `pom.xml`
 ```
@@ -4768,3 +4780,24 @@ For client to consume properties from config server add this dependency
     <artifactId>spring-cloud-starter-config</artifactId>
 </dependency>
 ```
+
+
+Hystrix implemented as an aspect applied to a method that triggers a fallback method should the target method fail. Aspect also tracks how frequently the target method fails and then forwards all requests to the fallback if the failure rate exceeds some threshold.
+To work with hystrix add it to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+</dependency>
+```
+To start use it in your app, add this to your config `@EnableHystrix`. 
+Then any method that runs some rest code (or db query) is annotated with `@HystrixCommand(fallbackMethod="youDefaultFallbackMethod")`. And in case of failure `youDefaultFallbackMethod` will be called.
+If method takes more than 1 second, fallback method would be called, but you can tune execution time for every method.
+You can monitor hystrix from actuator, or create new project with hystrix dashboard, and monitor it there.
+```
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix-dashboard</artifactId>
+</dependency>
+```
+Then add to your config `@EnableHystrixDashboard`
