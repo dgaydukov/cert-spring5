@@ -1,16 +1,31 @@
 package com.example.spring5;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.stereotype.Component;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
-
-@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
-@ComponentScan("com.example.logic.ann.reactive")
 public class App {
     public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
+        var context = new AnnotationConfigApplicationContext("com.example.spring5");
     }
 }
+
+@Component
+class A{
+    @Autowired
+    public void setB(B b){
+        System.out.println("setB => " + b);
+    }
+    @Autowired(required = false)
+    public void setBFalse(B b){
+        System.out.println("setBFalse => " + b);
+    }
+    @Autowired(required = false)
+    public void setBoth(B b, C c){
+        System.out.println("setBoth => " + b + ", " + c);
+    }
+}
+@Component
+class B{}
+//@Component
+class C{}

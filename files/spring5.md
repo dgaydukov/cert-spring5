@@ -4,14 +4,14 @@
 * 1.1 [Dependency injection](#dependency-injection)
 * 1.2 [Xml, Groovy, Properties example](#xml-groovy-properties-example)
 * 1.3 [BFPP, BPP, ApplicationListener](#bfpp-bpp-applicationlistener)
-* 1.4 [Prototype into Singleton](#bfpp-bpp-applicationlistener)
+* 1.4 [Prototype into Singleton](#prototype-into-singleton)
 * 1.5 [PostConstruct and PreDestroy](#postconstruct-and-predestroy)
 * 1.6 [BeanNameAware and ApplicationContextAware](#beannameaware-and-applicationcontextaware)
 * 1.7 [BeanFactory and FactoryBean<?>](#beanfactory-and-factorybean)
 * 1.8 [Spring i18n](#spring-i18n)
 * 1.9 [Resource interface](#resource-interface)
 * 1.10 [Environment and PropertySource](#environment-and-propertysource)
-* 1.11 [Profile, Primary, Qualifier, Order](#profile-primary-qualifier-order)
+* 1.11 [Profile, Primary, Qualifier, Order, Lazy](#profile-primary-qualifier-order-lazy)
 * 1.12 [PropertySource and ConfigurationProperties](#propertysource-and-configurationproperties)
 * 1.13 [Task scheduling](#task-scheduling)
 * 1.14 [Remoting](#remoting)
@@ -72,7 +72,7 @@
 
 #### DI and IoC
 ###### Dependency injection
-Rewrite filed injection (with `@Autowired`) to constructor injection. The pros are
+Rewrite filed injection with `@Autowired` (perfomed by `AutowiredAnnotationBeanPostProcessor`) to constructor injection. The pros are
 - you can use `final` keyword with constructor injection, can’t be done with filed injection
 - it’s easy to see when you break S in SOLID. If your class has more than 10 dependencies, your constructor would be bloated, and it’s easily to spot
 - works with unit tests (without di support) without problems`
@@ -82,6 +82,7 @@ Use Interfaces for every class, at least for every Service class. The naming con
 - Interface clear defines contract. Who knows why developer made the method public (maybe he just forget to rename it to private). Classes generally unclear and cluttered to define public contract.
 - interfaces allow di and mocking without use of reflection (don’t need to parse class implementation)
 - JDK dynamic proxy can work only with interfaces (if class implement any it use it), otherwise java switch to CGLIB to create proxies
+
 
 You must use interface for every class. The reason is that later somebody can add aspect or custom BPP to some methods of your class
 and if you are using injection by class, in this case you got exception, cause there is no such class anymore (it was replaced by proxy)
@@ -345,6 +346,9 @@ constructing SimpleBean...
 printer => I'm SimpleBean, my name is goodBean
 ```
 
+
+
+
 Generally you should prefer `ApplicationContext` over `BeanFactory`, cause it adds bpp, bfpp, aop, i18n and so on do di.
 Remember that you need to call `refresh()` on context.
 ```java
@@ -600,6 +604,9 @@ printer => I'm SimpleBean, my name is goodBean
 
 We can have nested application contexts. `GenericApplicationContext` have `setParent` method, where you can pass parent context. And you can get all beans in child context from parent context.
 
+`ClassPathXmlApplicationContext` - load context from xml file that is located in the class path
+`FileSystemXmlApplicationContext` - load context from xml file located anywhere in the file system
+`XmlWebApplicationContext` - load web context from xml file
 
 ###### BFPP, BPP, ApplicationListener
 If you want to implement some custom logic during app lifecycle you should have classes that implement following interfaces
@@ -608,6 +615,8 @@ If you want to implement some custom logic during app lifecycle you should have 
     * `postProcessBeforeInitialization` - fires before initialization, we can be sure that in this method we have original beans
     * `postProcessAfterInitialization` - fires after init, usually here we can substitute our bean with dynamic proxy
 * `ApplicationListener<E extends ApplicationEvent>` - fires after bfpp and bpp, when we got some events
+
+Since app context is also `ApplicationEventPublisher`, you can use context to publish `ApplicationEvent`.
 
 `@Order` - not working for BPP, if you want them ordered, they should implement `Ordered`.
 
@@ -666,6 +675,32 @@ private MyService proxy;
 ```
 And call one method from another, not with `this`, but with `proxy`.
 Or you can also create your own annotation `@SelfAutowired` and custom BPP to inject proxy.
+
+To activate your BPP you can either add `@Component` to it, or add it as static bean to java config file (bean should be static so it would be executed first, before config class is loaded), or you can do it manually by code.
+`DefaultListableBeanFactory => ConfigurableListableBeanFactory => ConfigurableBeanFactory`
+`ConfigurableBeanFactory.addBeanPostProcessor` - method to programatically add BPP
+here is example
+```java
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import com.example.logic.ann.postprocessors.LoggingWrapperBPP;
+
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.postprocessors");
+        ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
+        System.out.println("beanFactory => " + beanFactory.getClass().getName());
+        System.out.println("beanFactory instanceof ConfigurableBeanFactory => " + (beanFactory instanceof ConfigurableBeanFactory));
+        beanFactory.addBeanPostProcessor(new LoggingWrapperBPP());
+    }
+}
+```
+```
+beanFactory => org.springframework.beans.factory.support.DefaultListableBeanFactory
+beanFactory instanceof ConfigurableBeanFactory => true
+```
 
 ###### Prototype into Singleton
 You can use following code to get scope of any class in your app context
@@ -772,7 +807,7 @@ If you want to use both annotation and xml config you can do
 ###### PostConstruct and PreDestroy
 You have 4 options to hook to post construct event (when spring has set all properties)
 * 1. Define init method in xml config `init-method=init`
-* 2. Bean should implement `InitializingBean` interface with one method `afterPropertiesSet`, and put init logic there
+* 2. Bean should implement `InitializingBean` interface with one method `afterPropertiesSet`, and put init logic there. (If we add `@PostConstruct` to this method, it would be called only once).
 * 3. add `@PostConstruct` annotation above any method you would like to be called (in this case you can annotate as many methods as you want, in previous 2 works only with one method)
 * 4. set `@Bean(initMethod = "init")` in java config file
 In case of 1 and 3, you can add `private` to init method (spring still would be able to call it via reflection), but nobody outside will be able to call it second time.
@@ -788,6 +823,32 @@ The same way you can hook up to destroy event
 Destroy events are not fired automatically, you have to call `((AbstractApplicationContext)context).close();`. 
 Method `destroy` in context is deprecated, and inside just make a call to `close`.
 
+If you create bean with java config, any method named `close` would be called when context is closed. To avoid this, create bean with empty destroy method
+```java
+@Bean(destroyMethod = "")
+public DestroyMethodBean destroyMethodBean(){
+    return new DestroyMethodBean();
+}
+```
+close - close context right now, registerShutdownHook - close context when jvm exit
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import com.example.logic.ann.beans.JavaConfig;
+
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(JavaConfig.class);
+        /**
+         * will gracefully close context later when jvm exit
+         */
+        context.registerShutdownHook();
+        /**
+         * will close context now
+         */
+        context.close();
+    }
+}
+```
 
 Since parent init is private, and child-public, it's not overriding. So when we create child bean parent init also called.
 If it was public, it wouldn't be called.
@@ -933,7 +994,7 @@ myValue
 ```
 
 
-###### Profile, Primary, Qualifier, Order
+###### Profile, Primary, Qualifier, Order, Lazy
 `@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean
 `@Qualifier("beanName")` - you can inject any bean you want. It's stronger than primary, so it autowired bean by name.
 
@@ -945,7 +1006,49 @@ Those without it goes last with default sort.
 If you have list of implementation and bean that return also list of implementations, when injected spring will collect list of impl, not your bean.
 To use your bean, you have to add `Qualifier`
 
-`@Qualifier` -work as and. So if we have bean with multiple qualifiers only those that are include both would be autowired
+When you use `@Autowired` and have 2 or more beans(and not Primary/Qualifier) it will try to autowire it by variable name
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.stereotype.Component;
+
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        context.getBean(SimpleBean.class).sayHello();
+    }
+}
+
+interface Printer {
+    void print(String str);
+}
+@Component
+class OldPrinter implements Printer {
+    @Override
+    public void print(String str) {
+        System.out.println("OldPrinter => " + str);
+    }
+}
+@Component
+class NewPrinter implements Printer {
+    @Override
+    public void print(String str) {
+        System.out.println("NewPrinter => " + str);
+    }
+}
+@Component
+class SimpleBean {
+    @Autowired
+    public Printer newPrinter;
+
+    public void sayHello(){
+        newPrinter.print("hello");
+    }
+}
+```
+Since variable name is `newPrinter`, it autowire it as `NewPrinter` bean. If you change it to `oldPrinter` then `OldPrinter` would be injected. If you change it anything else, you got `NoUniqueBeanDefinitionException`.
+
+`@Qualifier` work as and. So if we have bean with multiple qualifiers only those that are include both would be autowired
 ```java
 package com.example.logic.ann.misc;
 
@@ -1019,7 +1122,68 @@ public class App {
 ```
 First since qualifier - not repetable it's better to create custom qualifiers and add them
 Second - as you see only bean that satisfy both qualifier got injected.
-If you need `or` qualifier - you have to write your custom BPP~~~~
+If you need `or` qualifier - you have to write your custom BPP
+
+`@Lazy` - works in 2 ways
+* When it's declared on bean it would defer bean instantiation, until you first request it
+* When declared inside constructor, it can help fix circular dependencies. 
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
+
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        A a = context.getBean(A.class);
+        a.print();
+    }
+}
+
+
+@Component
+class A{
+    private final B b;
+    public A(@Lazy B b){
+        /**
+         * Here b is empty proxy, if you try to call any method on it you will get BeanCurrentlyInCreationException
+         * For this to work @Lazy should be inside constructor param. If you remove it and add to B, you still get exception
+         */
+        System.out.println("constructing A, b => " + b.getClass().getName());
+        this.b = b;
+    }
+    public void print(){
+        /**
+         * Here b is fully featured proxy, you can call methods on it
+         */
+        System.out.println("b => " + b.getClass().getName());
+        b.print();
+    }
+}
+
+@Component
+class B{
+    private final A a;
+    public B(A a){
+        System.out.println("constructing B, a => " + a.getClass().getName());
+        this.a = a;
+    }
+    public void print(){
+        System.out.println("class B");
+    }
+}
+```
+```
+21:26:37.212 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'a'
+constructing A, b => com.example.spring5.B$$EnhancerBySpringCGLIB$$75dd6352
+21:26:37.403 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'b'
+21:26:37.417 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Autowiring by type from bean name 'b' via constructor to bean named 'a'
+constructing B, a => com.example.spring5.A
+b => com.example.spring5.B$$EnhancerBySpringCGLIB$$75dd6352
+class B
+```
+As you see it first create instance of a with proxy, and later when you request it, it change proxy to fully-featured proxy.
+
 
 ###### PropertySource and ConfigurationProperties
 We can load properties from `.properties/.yml` files.
@@ -3789,6 +3953,74 @@ First let's add junit to `pom.xml`
 </dependency>
 ```
 Scope - test, means that junit types would be available only in testing scope, not inside main app.
+
+By default this starter come with junit4 and junit-vintage. If you want to use new junit5 jupiter, you should exclude these 2 and add jupiter explicitly
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+    <exclusions>
+        <exclusion>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </exclusion>
+        <exclusion>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter-api</artifactId>
+    <version>5.6.2</version>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter-engine</artifactId>
+    <version>5.6.2</version>
+    <scope>test</scope>
+</dependency>
+```
+
+RunWith vs ExtendWith:
+If you are using Junit version < 5, so you have to use @RunWith(SpringRunner.class) or @RunWith(MockitoJUnitRunner.class) etc.
+If you are using Junit version = 5, so you have to use @ExtendWith(SpringExtension.class) or @ExtendWith(MockitoExtension.class) etc.
+
+If we want to load context or use `@Autowired` we should annotate test class with
+```java
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = JavaConfig.class)
+```
+But this 2 can be simplified to `@SpringJUnitConfig`. For web we should use `@SpringJUnitWebConfig`.
+Here is full example
+```java
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+
+import com.example.logic.ann.beans.JavaConfig;
+import com.example.logic.ann.beans.Printer;
+
+@SpringJUnitConfig(classes = JavaConfig.class)
+public class MySimpleTest {
+    @Autowired
+    private Printer printer;
+
+    @Test
+    public void getVersion(){
+        String currentVersion = Test.class.getPackage().getImplementationVersion();
+        System.out.println("currentVersion => " + currentVersion);
+    }
+
+    @Test
+    public void doWork(){
+        printer.print("hello");
+    }
+}
+```
 
 There are a few useful annotations you can use inside your test framework
 `@Before/@After` - run some logic before all tests starts

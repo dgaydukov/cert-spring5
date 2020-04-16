@@ -2,6 +2,7 @@ package com.example.logic.ann.beans;
 
 import javax.annotation.PostConstruct;
 
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Service;
 import com.example.logic.ann.postprocessors.annotation.PostAppReady;
 
 @Service
-public class SimpleBean {
+public class SimpleBean implements InitializingBean {
     @Value("goodBean")
     private String name;
     @Autowired
@@ -36,5 +37,10 @@ public class SimpleBean {
 
     public void sayHello() {
         printer.print("I'm SimpleBean, my name is " + name);
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println("SimpleBean.afterPropertiesSet");
     }
 }
