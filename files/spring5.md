@@ -56,6 +56,7 @@
 * 10.8 [JMS, AMQP, Kafka](#jms-amqp-kafka)
 * 10.9 [YML Autocompletion](#yml-autocompletion)
 * 10.10 [Spring Cloud](#spring-cloud)
+* 10.11 [Spring Utils](#spring-utils)
 
 
 
@@ -1050,19 +1051,25 @@ Since variable name is `newPrinter`, it autowire it as `NewPrinter` bean. If you
 
 `@Qualifier` work as and. So if we have bean with multiple qualifiers only those that are include both would be autowired
 ```java
-package com.example.logic.ann.misc;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
+
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.List;
 
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        context.getBean(MyQualifierTest.class).print();
+    }
+}
 
 @Component
-public class MyQualifierTest{
+class MyQualifierTest{
     @Autowired
     @Suv
     @Sport
@@ -1105,24 +1112,146 @@ class AnyCar extends Car{}
 @Qualifier
 @interface Sport{}
 ```
-Main code
-```java
-import com.example.logic.ann.misc.MyQualifierTest;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-
-public class App {
-    public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.misc");
-        context.getBean(MyQualifierTest.class).print();
-    }
-}
-```
 ```
 [SportSuvCar]
 ```
 First since qualifier - not repetable it's better to create custom qualifiers and add them
 Second - as you see only bean that satisfy both qualifier got injected.
-If you need `or` qualifier - you have to write your custom BPP
+
+If you need `or` qualifier - you have to write your custom BPP. Here is example
+```java
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.stereotype.Component;
+
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        context.getBean(MyQualifierTest.class).print();
+    }
+}
+
+@Component
+class OrQualifierBPP implements BeanPostProcessor{
+    Map<Annotation, List<Object>> qualifiers = new HashMap<>();
+    Map<Annotation, List<Field>> fields = new HashMap<>();
+    Map<Field, Object> beans = new HashMap<>();
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        Class<?> cls = bean.getClass();
+        for(var ann: cls.getAnnotations()) {
+            if(AnnotationUtils.findAnnotation(ann.getClass(), OrQualifier.class) != null){
+                qualifiers.merge(ann, new ArrayList<>(List.of(bean)), (ls, v)->{
+                    ls.addAll(v);
+                    return ls;
+                });
+            }
+        }
+        for(var field: cls.getDeclaredFields()){
+            if(field.getType() == List.class){
+                beans.put(field, bean);
+                for(var ann: field.getAnnotations()){
+                    if(AnnotationUtils.findAnnotation(ann.getClass(), OrQualifier.class) != null){
+                        fields.merge(ann, new ArrayList<>(List.of(field)), (ls, v)->{
+                            ls.addAll(v);
+                            return ls;
+                        });
+                    }
+                }
+            }
+        }
+
+        for(var ann: fields.keySet()){
+            for(var field: fields.get(ann)){
+                var obj = beans.get(field);
+                field.setAccessible(true);
+                try {
+                    List list = (List)field.get(obj);
+                    if (list == null){
+                        list = new ArrayList<>();
+                    }
+                    var inject = qualifiers.get(ann);
+                    if(inject != null){
+                        for(var item: inject){
+                            if(!list.contains(item)){
+                                list.add(item);
+                            }
+                        }
+                    }
+                    field.set(obj, list);
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return bean;
+    }
+}
+
+@Component
+class MyQualifierTest{
+    @Suv
+    @Sport
+    private List<Car> cars;
+
+    public void print(){
+        System.out.println(cars);
+    }
+}
+
+class Car {
+    @Override
+    public String toString(){
+        return this.getClass().getSimpleName();
+    }
+}
+
+@Suv
+@Component
+class SuvCar extends Car{
+}
+
+@Sport
+@Component
+class SportCar extends Car{}
+
+@Sport
+@Suv
+@Component
+class SportSuvCar extends Car{}
+
+@Component
+class AnyCar extends Car{}
+
+@Retention(RetentionPolicy.RUNTIME)
+@OrQualifier
+@interface Suv{}
+
+@Retention(RetentionPolicy.RUNTIME)
+@OrQualifier
+@interface Sport{}
+
+
+@Retention(RetentionPolicy.RUNTIME)
+@interface OrQualifier{}
+```
+```
+[SportCar, SportSuvCar, SuvCar]
+```
+As you see it took all 3
+
 
 `@Lazy` - works in 2 ways
 * When it's declared on bean it would defer bean instantiation, until you first request it
@@ -5090,3 +5219,39 @@ You can monitor hystrix from actuator, or create new project with hystrix dashbo
 </dependency>
 ```
 Then add to your config `@EnableHystrixDashboard`
+
+
+###### Spring Utils
+`AnnotationUtils` - can be useful when you want to find some annotation that you can't get by default. By default `getAnnotation` search only annotation of a class itself, so if we have Ann1=>Ann2=>OutClass, only Ann2 would be visible.
+Of course we can write recursive function to retreive all annotations up to the top, but it's better to use `AnnotationUtils.findAnnotation`.
+```java
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+import org.springframework.core.annotation.AnnotationUtils;
+
+public class App {
+    public static void main(String[] args) {
+        System.out.println(A.class.getAnnotation(Ann1.class));
+        System.out.println(AnnotationUtils.findAnnotation(A.class, Ann1.class));
+    }
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@interface Ann1{}
+
+@Ann1
+@Retention(RetentionPolicy.RUNTIME)
+@interface Ann2{}
+
+@Ann2
+@Retention(RetentionPolicy.RUNTIME)
+@interface Ann3{}
+
+@Ann3
+class A{}
+```
+```
+null
+@com.example.spring5.Ann1()
+```
