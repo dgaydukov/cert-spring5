@@ -1,4 +1,4 @@
-package com.example.logic.ann.jdbc.jpa.repository;
+package com.example.logic.ann.jdbc.spring.repository;
 
 import org.springframework.data.repository.CrudRepository;
 

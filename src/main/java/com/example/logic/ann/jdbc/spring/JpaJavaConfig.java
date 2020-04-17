@@ -1,4 +1,4 @@
-package com.example.logic.ann.jdbc.jpa;
+package com.example.logic.ann.jdbc.spring;
 
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;

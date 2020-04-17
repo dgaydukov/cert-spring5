@@ -3626,7 +3626,7 @@ For spring jdbc you should add to your `pom.xml`. You also would like embedded d
 Spring nicely translate all checked sql exeptions into runtime execptions with clear names.
 But you can also add logic there, by creating your own translator
 ```java
-package com.example.logic.ann.jdbc.spring;
+package com.example.logic.ann.jdbc.template;
 
 import java.sql.SQLException;
 
@@ -3680,7 +3680,7 @@ r2 => DepartmentModel(id=1, name=Exchange, type=IT)
 Here is example how to query data with `JdbcTemplate`
 `DepartmentDao.java`
 ```java
-package com.example.logic.ann.jdbc.spring;
+package com.example.logic.ann.jdbc.template;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -3791,12 +3791,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import com.example.logic.ann.jdbc.DepartmentModel;
-import com.example.logic.ann.jdbc.spring.DepartmentDao;
+import com.example.logic.ann.jdbc.template.DepartmentDao;
 
 
 public class App {
     public static void main(String[] args) {
-        ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann.jdbc.spring");
+        ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann.jdbc.template");
         var dao = context.getBean(DepartmentDao.class);
         System.out.println("getAll => " + dao.getAll());
         var model = new DepartmentModel();
@@ -4184,7 +4184,7 @@ public class App {
 Jpa `EntityManagerFactory` resembles `SessionFactory`. You can call `entityManagerFactory.createEntityManager()` to get current `EntityManager` on which you can run queries like `update/remove/save`
 Although you can use `EntityManager` to manually create queries, it's better to use spring data repository pattern, that wrap entity manager inside and provide many default queries out of the box.
 There are 2 interfaces `CrudRepository` & `JpaRepository` from which you can extend your repository interface (spring will create class automatically) and have many default queries already implemented.
-To enable work with repository add this to your config `@EnableJpaRepositories("com.example.logic.ann.jdbc.jpa.repository")`.
+To enable work with repository add this to your config `@EnableJpaRepositories("com.example.logic.ann.jdbc.spring.repository")`.
 But if you want some custom query (like fine user by first and last name) you just need to add abstract method `findByFirstNameAndLastName(String firstName, String lastName)` and it would work (spring automatically build query based on it's name).
 In case you want to have your own query for the method, just add `@Query("your query")`.
 

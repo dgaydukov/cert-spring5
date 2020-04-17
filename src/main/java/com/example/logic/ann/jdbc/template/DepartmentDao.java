@@ -1,4 +1,4 @@
-package com.example.logic.ann.jdbc.spring;
+package com.example.logic.ann.jdbc.template;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;

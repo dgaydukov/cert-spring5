@@ -1,4 +1,4 @@
-package com.example.logic.ann.jdbc.spring;
+package com.example.logic.ann.jdbc.template;
 
 import javax.sql.DataSource;
 
@@ -11,12 +11,16 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @Configuration
 @PropertySource("jdbc.properties")
+@EnableTransactionManagement
 public class JdbcJavaConfig {
     @Value("${driverClassName}")
     private String driverClassName;
@@ -33,7 +37,7 @@ public class JdbcJavaConfig {
 
     @Bean
     @Primary
-    public DataSource simpleDs() {
+    public DataSource dataSource() {
         try{
             SimpleDriverDataSource ds = new SimpleDriverDataSource();
             ds.setDriverClass((Class<? extends Driver>) Class.forName(driverClassName));
@@ -47,18 +51,17 @@ public class JdbcJavaConfig {
     }
 
     @Bean
-    public DataSource embeddedDs() {
+    public DataSource embeddedDatabase() {
         EmbeddedDatabaseBuilder builder = new EmbeddedDatabaseBuilder();
         return builder.setType(EmbeddedDatabaseType.H2).build();
     }
 
     @Bean
     public JdbcTemplate jdbcTemplate(){
-        DataSource ds = simpleDs();
         JdbcTemplate template = new JdbcTemplate();
         MySqlExTranslator translator = new MySqlExTranslator();
-        translator.setDataSource(ds);
-        template.setDataSource(ds);
+        translator.setDataSource(dataSource());
+        template.setDataSource(dataSource());
         template.setExceptionTranslator(translator);
         return template;
     }
@@ -66,5 +69,10 @@ public class JdbcJavaConfig {
     @Bean
     public NamedParameterJdbcTemplate namedParameterJdbcTemplate(){
         return new NamedParameterJdbcTemplate(jdbcTemplate());
+    }
+
+    @Bean
+    public PlatformTransactionManager platformTransactionManager(){
+        return new DataSourceTransactionManager(dataSource());
     }
 }
