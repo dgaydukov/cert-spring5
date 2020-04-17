@@ -198,6 +198,67 @@ class MyPrinter implements Printer {
 print2
 ```
 
+Bean id and name is same thing. When you create beans with java config with `@Bean`, by default bean name is function name, but you can override it by supplying array of names.
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackage().getName());
+        System.out.println(context.getBean("oldPrinter"));
+        System.out.println(context.getBean("newPrinter"));
+        System.out.println(context.getBean("printer"));
+    }
+}
+
+
+class Printer{}
+@Component
+class JavaConfig{
+    @Bean({"oldPrinter", "newPrinter"})
+    public Printer printer(){
+        return new Printer();
+    }
+}
+```
+```
+com.example.spring5.Printer@4ec4f3a0
+com.example.spring5.Printer@4ec4f3a0
+Exception in thread "main" org.springframework.beans.factory.NoSuchBeanDefinitionException: No bean named 'printer' available
+```
+Since we override bean names, there is no name `printer`
+
+
+`@Configuration` - create proxy, so it can't be final, as well as `@Bean` methods can't be final. Even if your config file extends interface, spring still will use cglib.
+The reason for the Spring container subclassing `@Configuration` classes is to control bean creation, for singleton beans, subsequent requests to the method creating the bean 
+should return the same bean instance as created at the first invocation of the @Bean annotated method.
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackage().getName());
+        System.out.println(context.getBean("a").getClass().getName());
+        System.out.println(context.getBean("b").getClass().getName());
+    }
+}
+
+
+@Component
+class A{}
+
+@Configuration
+class B{}
+```
+```
+com.example.spring5.A
+com.example.spring5.B$$EnhancerBySpringCGLIB$$a868d187
+```
+
 ###### Xml, Groovy, Properties example
 If we have same bean in xml, java config, and @Component => xml wins
 Here is quick example to demonstrate how to use di in practice.
@@ -1015,7 +1076,7 @@ import org.springframework.stereotype.Component;
 
 public class App {
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        var context = new AnnotationConfigApplicationContext(App.class.getPackage().getName());
         context.getBean(SimpleBean.class).sayHello();
     }
 }
@@ -1063,7 +1124,7 @@ import java.util.List;
 
 public class App {
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        var context = new AnnotationConfigApplicationContext(App.class.getPackage().getName());
         context.getBean(MyQualifierTest.class).print();
     }
 }
@@ -1137,7 +1198,7 @@ import java.util.Map;
 
 public class App {
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        var context = new AnnotationConfigApplicationContext(App.class.getPackage().getName());
         context.getBean(MyQualifierTest.class).print();
     }
 }
@@ -1263,7 +1324,7 @@ import org.springframework.stereotype.Component;
 
 public class App {
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        var context = new AnnotationConfigApplicationContext(App.class.getPackage().getName());
         A a = context.getBean(A.class);
         a.print();
     }
@@ -1455,7 +1516,7 @@ public class App {
 
 
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        var context = new AnnotationConfigApplicationContext(App.class.getPackage().getName());
         var app = context.getBean(App.class);
         app.doWork();
         System.out.println("done");
@@ -2203,7 +2264,7 @@ I'm AopSimpleBean
 As you see we have 2 beans of the same type, original - not adviced and adviced.
 If you want to have one bean, and you never need original you can remove it from javaconfig, and inject it directly into `ProxyFactoryBean`
 
-You can also use aspecj annotations, you should first enable them `@EnableAspectJAutoProxy(proxyTargetClass = true)`;
+You can also use aspecj annotations, you should first enable them `@EnableAspectJAutoProxy(proxyTargetClass = true)` (setting proxyTargetClass force spring aop to use CGLIB)
 If you are using `@SpringBootApplication` you don't need to explicitly include `@EnableAspectJAutoProxy`, cause it inside include
 `@EnableAutoConfiguration` which with the help of conditional annotations enables aop.
 `AopAnnotatedAdvice.java`
@@ -2254,6 +2315,117 @@ I'm AopSimpleBean
 
 printing...
 ```
+
+Pointcut Designators
+
+* execution - for matching method execution join points, this is the primary pointcut designator you will use when working with Spring AOP
+* within - limits matching to join points within certain types (simply the execution of a method declared within a matching type when using Spring AOP)
+* this - limits matching to join points (the execution of methods when using Spring AOP) where the bean reference (Spring AOP proxy) is an instance of the given type
+* target - limits matching to join points (the execution of methods when using Spring AOP) where the target object (application object being proxied) is an instance of the given type
+* args - limits matching to join points (the execution of methods when using Spring AOP) where the arguments are instances of the given types
+* @target - limits matching to join points (the execution of methods when using Spring AOP) where the class of the executing object has an annotation of the given type
+* @args - limits matching to join points (the execution of methods when using Spring AOP) where the runtime type of the actual arguments passed have annotations of the given type(s)
+* @within - limits matching to join points within types that have the given annotation (the execution of methods declared in types with the given annotation when using Spring AOP)
+* @annotation - limits matching to join points where the subject of the join point (method being executed in Spring AOP) has the given annotation
+* bean - limits matching to join points (method being executed in Spring AOP) to beans with provided name
+
+Example
+```java
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        MyBean bean = context.getBean(MyBean.class);
+        bean.print();
+        System.out.println();
+        bean.print("test");
+        System.out.println();
+        bean.print(new MyClass());
+    }
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@interface MyService{}
+
+@MyService
+class MyClass{}
+
+@Component
+@Service
+class MyBean {
+    public void print(){
+        System.out.println("print");
+    }
+    @MyService
+    public void print(String str){
+        System.out.println("print.str => " + str);
+    }
+
+    /**
+     * would be intercepted by argsAnnotation() pointcut
+     */
+    public void print(Object obj){
+        System.out.println("print.obj => " + obj);
+    }
+}
+
+@Aspect
+@Component
+@EnableAspectJAutoProxy
+class MyAdvice {
+    /**
+     * .. - means any number of params
+     * empty - with no params
+     * int, int - with 2 params of type int, int
+     */
+    @Pointcut("execution(* print(..))")
+    public void executionPrint(){}
+
+    @Pointcut("within(com.example.spring5..*)")
+    public void withinPackage(){}
+
+    @Pointcut("this(com.example.spring5.MyBean)")
+    public void thisClass(){}
+
+    @Pointcut("target(com.example.spring5.MyBean)")
+    public void targetClass(){}
+
+    @Pointcut("args(String)")
+    public void argsString(){}
+
+    @Pointcut("@target(org.springframework.stereotype.Service)")
+    public void targetAnnotation(){}
+
+    @Pointcut("@args(com.example.spring5.MyService)")
+    public void argsAnnotation(){}
+
+    @Pointcut("@within(org.springframework.stereotype.Service)")
+    public void withinAnnotation(){}
+
+    /**
+     * catch methods annotated with MyService
+     */
+    @Pointcut("@annotation(MyService)")
+    public void annAnnotation(){}
+
+    @Before("withinAnnotation()")
+    public void beforeAdvice(JoinPoint jp){
+        System.out.println("beforeAdvice => " + jp.getSignature().getName());
+    }
+}
+```
+
 
 
 ###### Native AspectJ
