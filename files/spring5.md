@@ -57,6 +57,7 @@
 * 10.9 [YML Autocompletion](#yml-autocompletion)
 * 10.10 [Spring Cloud](#spring-cloud)
 * 10.11 [Spring Utils](#spring-utils)
+* 10.12 [Spring Boot Logging](#spring-boot-logging)
 
 
 
@@ -4402,7 +4403,8 @@ If you want to scan package you should add just `@ContextConfiguration` and add 
 `@Spy` - create real bean, but you still can overwrite behaviour with `when/then`.
 `@InjectMocks` - create real bean, and inject all `@Mock/@Spy` beans declared within test class. If some undeclared, inject null.
 
-
+`@Mock/@Spy` - plain mockito annotation to be used in unit tests
+`@MockBean/@SpyBean` - spring boot test annotation used in integration tests (They add mock to sring application context, so every call to such bean within context would be replaced with mock bean)
 
 ```java
 package com.example.spring5;
@@ -5426,4 +5428,56 @@ class A{}
 ```
 null
 @com.example.spring5.Ann1()
+```
+
+###### Spring Boot Logging
+There are a few types of looging in java
+* java.util.logging - standard package for logging from jdk
+* logback - custom logging implementation
+* apache common loggign - custom logging from apache
+* slf4j - simple loggig facade for java
+
+By default spring using common logging for internal logging and slf4j(with logback) for external
+
+```java
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class App{
+    public static void main(String[] args) {
+        String className = App.class.getName();
+
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS %4$s %2$s %5$s%6$s%n");
+        Logger javaLog = Logger.getLogger(className);
+        javaLog.info("hello");
+        javaLog.log(Level.SEVERE, "my ex");
+
+        org.slf4j.Logger log = LoggerFactory.getLogger(className);
+        log.info("hello");
+        log.error("my ex");
+
+        Log commonLog = LogFactory.getLog(className);
+        commonLog.info("hello");
+        commonLog.error("my ex");
+
+
+        ch.qos.logback.classic.Logger logback = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(className);
+        logback.info("hello");
+        logback.error("my ex");
+    }
+}
+```
+```
+2020-04-18 17:21:15 INFO com.example.spring5.App main hello
+2020-04-18 17:21:15 SEVERE com.example.spring5.App main my ex
+17:21:15.396 [main] INFO com.example.spring5.App - hello
+17:21:15.400 [main] ERROR com.example.spring5.App - my ex
+17:21:15.409 [main] INFO com.example.spring5.App - hello
+17:21:15.409 [main] ERROR com.example.spring5.App - my ex
+17:21:15.409 [main] INFO com.example.spring5.App - hello
+17:21:15.410 [main] ERROR com.example.spring5.App - my ex
 ```
