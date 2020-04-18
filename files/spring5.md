@@ -58,6 +58,7 @@
 * 10.10 [Spring Cloud](#spring-cloud)
 * 10.11 [Spring Utils](#spring-utils)
 * 10.12 [Spring Boot Logging](#spring-boot-logging)
+* 10.13 [Controller's method params](#controllers-method-params)
 
 
 
@@ -2171,6 +2172,57 @@ Hello, I'm Person
 true
 ```
 
+Simple example of creating a bean from class and mixin other interface on the fly
+```java
+import org.springframework.aop.framework.ProxyFactoryBean;
+import org.springframework.aop.support.DelegatingIntroductionInterceptor;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        var person = (Person & Printer) context.getBean("person");
+        person.sayHello();
+        person.print();
+    }
+}
+
+@Configuration
+class JavaConfig{
+    @Bean
+    public ProxyFactoryBean person() {
+        class PrinterAdvice extends DelegatingIntroductionInterceptor implements Printer {
+            @Override
+            public void print(){
+                System.out.println("hello");
+            }
+        }
+        
+        ProxyFactoryBean pfb = new ProxyFactoryBean();
+        pfb.setTarget(new Person());
+        pfb.addAdvice(new PrinterAdvice());
+        pfb.setOptimize(true);
+        return pfb;
+    }
+}
+
+class Person{
+    public void sayHello(){
+        System.out.println("Hello, I'm Person");
+    }
+}
+
+interface Printer{
+    void print();
+}
+```
+```
+Hello, I'm Person
+hello
+```
 
 
 ###### Aop framework
@@ -5481,3 +5533,54 @@ public class App{
 17:21:15.409 [main] INFO com.example.spring5.App - hello
 17:21:15.410 [main] ERROR com.example.spring5.App - my ex
 ```
+
+
+###### Controller's method params
+Method of controller can take following params
+* HttpSession
+* HttpServletRequest (or ServletRequest since it's super interface)
+* HttpServletResponse (or ServletResponse since it's super interface)
+```java
+package com.example.logic.ann.misc;
+
+import lombok.Data;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.context.request.WebRequest;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+@Controller
+@RequestMapping("/person")
+public class MyController {
+    @PostMapping
+    @ResponseBody
+    public Person postPerson(@RequestBody Person p, HttpServletRequest req, HttpServletResponse res, HttpSession session, WebRequest webReq){
+        System.out.println(req);
+        System.out.println(res);
+        System.out.println(session);
+        System.out.println(webReq);
+        System.out.println(p);
+        return p;
+    }
+}
+
+@Data
+class Person{
+    private int age;
+    private String name;
+}
+```
+```
+org.apache.catalina.connector.RequestFacade@3bf9b57e
+org.apache.catalina.connector.ResponseFacade@141ae951
+org.apache.catalina.session.StandardSessionFacade@28ebc7f6
+ServletWebRequest: uri=/person;client=127.0.0.1;session=FEF5F030027934B5366BF585FD50342D
+Person(age=30, name=Jack)
+```
+Send `curl -H "Content-type: application/json" -d 'ck"}' http://localhost:8080/person`
