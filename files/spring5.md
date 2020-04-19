@@ -75,7 +75,8 @@
 
 #### DI and IoC
 ###### Dependency injection
-Rewrite filed injection with `@Autowired` (perfomed by `AutowiredAnnotationBeanPostProcessor`) to constructor injection. The pros are
+Rewrite filed injection with `@Autowired` (performed by `AutowiredAnnotationBeanPostProcessor`, has one filed `boolean required`, default true
+- will fail if no dep found, if set false - will set null) to constructor injection. The pros are
 - you can use `final` keyword with constructor injection, can’t be done with filed injection
 - it’s easy to see when you break S in SOLID. If your class has more than 10 dependencies, your constructor would be bloated, and it’s easily to spot
 - works with unit tests (without di support) without problems`
@@ -1592,7 +1593,8 @@ Of course you should share code for `MyService` between 2 apps.
 
 
 ###### Conditional Annotation
-There are several annotaion that can help you determine should you create a bean or not. `@Profile` - can be used to determine should bean be created for certain profile.
+There are several annotaions that can help you determine should you create a bean or not. 
+`@Profile` - can be used to determine should bean be created for certain profile. Can be used on class and methods (in case method is a `@Bean`)
 But there also class of `@Conditional` annotations.
 `@ConditionalOnClass(MyService.class)` - bean would be created if MyService bean exists
 `@ConditionalOnBean(name = "myService")` - bean would be created if bean with name myService exists
@@ -1646,12 +1648,12 @@ Spring aop can be applied only to public methods. If you want advice protected/p
 
 
 Spring supports 6 types of advices
-* `org.springframework.aop.MethodBeforeAdvice` - before method execution. has access to params. In case of exception, jointpoint is not called
-* `org.springframework.aop.AfterReturningAdvice` -  after method executed, has access to params & return value. If method execution throws exception, not called
-* `org.springframework.aop.AfterAdvice` (after-finally) - cause would be executed no matter what
-* `org.aopalliance.intercept.MethodInterceptor` (around) - has full control over method execution
-* `org.springframework.aop.ThrowsAdvice` - run if execution method throws exception
-* `org.springframework.aop.IntroductionAdvisor` - add special logic to class
+* `org.springframework.aop.MethodBeforeAdvice` (@Before) - before method execution. has access to params. In case of exception, jointpoint is not called
+* `org.springframework.aop.AfterReturningAdvice` (@AfterReturning) -  after method executed, has access to params & return value. If method execution throws exception, not called
+* `org.springframework.aop.AfterAdvice` (@After) - cause would be executed no matter what
+* `org.aopalliance.intercept.MethodInterceptor` (@Around) - has full control over method execution
+* `org.springframework.aop.ThrowsAdvice` (@AfterThrowing) run if execution method throws exception
+* `org.springframework.aop.IntroductionAdvisor` (no annotation, have to manuaaly create such a bean with ProxyFactoryBean) add special logic to class
 
 3 advices example (before, after, around). Notice that proxy is changed object, not original
 ```java
@@ -2843,8 +2845,9 @@ public class ReactiveJavaConfig {
 ###### Aop security
 To work with aop security add following annotation to your config `@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)`
 * prePostEnabled => pre/post annotations
-* securedEnabled => determines if the @Secured annotation should be enabled
-* jsr250Enabled =>  allows us to use the @RoleAllowed annotation
+* securedEnabled => determines if the `@Secured` annotation should be enabled
+* jsr250Enabled =>  allows us to use the `@RoleAllowed` annotation
+
 If we want to allow only certain roles to access some method, add this to any method `@Secured({"ROLE_USER", "ROLE_ADMIN"})` or `@RolesAllowed({"ROLE_USER", "ROLE_ADMIN"})` from jsr250
 `@PreAuthorize/@PostAuthorize` - can take spel expressions (first check before entering the method, second - check after method execution)
 `@PreAuthorize("isAuthenticated()")` - check if user authenticated
@@ -2875,6 +2878,19 @@ Basically these 3 annotations are the same
 `@RolesAllowed({"ROLE_ADMIN"})` - can be checked only against role
 `@Secured("ADMIN")` - can checked more than role, but doesn't support SPEL
 `@PreAuthorize("hasRole('ADMIN')")` - the most versatile, can use SPEL
+
+`@PreFilter` - filter a list as param to a function (if we have only 1 param as list, we can omit `filterTarget`)
+`@PostFilter` - filter returned list
+```java
+@PreFilter(value = "filterObject != authentication.principal.username", filterTarget = "usernames")
+public String joinUsernamesAndRoles(List<String> usernames, List<String> roles) {
+}
+
+@PostFilter("filterObject != authentication.principal.username")
+public List<String> getAllUsernamesExceptCurrent() {
+    return userRoleRepository.getAllUsernames();
+}
+```
 
 
 
@@ -3887,6 +3903,7 @@ deleteById(28) => true
 
 DriverManagerDataSource — Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call.
 SimpleDriverDataSource — Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi.
+SingleConnectionDataSource - (implement SmartDataSource) - use single connection without closing it
 
 `SimpleDriverDataSource` - is not pooled, so you can use it only for testing purpose.
 Although you can write your own implementation of `RowMapper` for each entity, if you db columns correspond to your model, you can
@@ -5584,3 +5601,11 @@ ServletWebRequest: uri=/person;client=127.0.0.1;session=FEF5F030027934B5366BF585
 Person(age=30, name=Jack)
 ```
 Send `curl -H "Content-type: application/json" -d 'ck"}' http://localhost:8080/person`
+
+To set return type of controller or method you can use `@ResponseStatus`.
+You can also add it above exception class like
+```java
+@ResponseStatus(code = HttpStatus.BAD_REQUEST)
+class MyException extends RuntimeException {}
+```
+And when you throw such exception from controller you got 400 error.
