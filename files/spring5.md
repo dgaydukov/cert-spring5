@@ -32,6 +32,8 @@
 * 3.9 [HATEOAS - Hypermedia as the Engine of Application State](#hateoas---hypermedia-as-the-engine-of-application-state)
 * 3.10 [RestTemplate and WebClient](#resttemplate-and-webclient)
 * 3.11 [Custom HttpMessageConverter](#custom-httpmessageconverter)
+* 3.12 [Spring ViewResolver](#spring-viewresolver)
+* 3.13 [HandlerMapping & HandlerAdapter](#handlermapping--handleradapter)
 4. [DB](#db)
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
@@ -261,6 +263,9 @@ class B{}
 com.example.spring5.A
 com.example.spring5.B$$EnhancerBySpringCGLIB$$a868d187
 ```
+
+
+`@Required` - used with xml config, and indicate that property is required, throws `BeanInitializationException` if property not set in xml (deprecated of spring 5).
 
 ###### Xml, Groovy, Properties example
 If we have same bean in xml, java config, and @Component => xml wins
@@ -2512,6 +2517,9 @@ public class App{
 `@SessionAttributes` - post request gets the same instance of the model attribute object that was placed into the get request.
 `@CrossOrigin(origins="*")` - set origin to anybody, by default it same-host
 `PUT` vs. `PATCH`. put - opposite to get, so it to replace whole object for url. Patch - is to replace some fields within the object.
+`@RequestParam` - have field required (default true), so if you don't pass param field you got exception. If you set it to false value would be null (if your value is primitive you got `IllegalStateException: Optional int parameter 'id' is present but cannot be translated into a null value due to being declared as a primitive type. Consider declaring it as object wrapper for the corresponding primitive type.`)
+`ContextLoaderListener` - load root web app context
+
 
 It's important to return correct value
 curl http://localhost:8080/m1 - javax.servlet.ServletException: Circular view path [m1]
@@ -2852,6 +2860,19 @@ If we want to allow only certain roles to access some method, add this to any me
 `@PreAuthorize/@PostAuthorize` - can take spel expressions (first check before entering the method, second - check after method execution)
 `@PreAuthorize("isAuthenticated()")` - check if user authenticated
 `@PreFilter/@PostFilter` - can be used to filter requests
+
+Old way to configure security was in xml files
+```
+security.xml:
+
+<intercept-url pattern="/myrul" access="hasRole('ROLE_ADMIN')" method="POST"/>
+
+MyController.java:
+
+@PostMapping("/myrul")
+@PreAuthorize("hasRole('ROLE_ADMIN')")
+public void doWork(){}
+```
 
 ```java
 package com.concretepage.service;
@@ -3600,8 +3621,33 @@ curl -H "Accept: text/person" http://localhost:8080/person
 curl -H "Content-Type: text/person" -d "30/Jack" http://localhost:8080/person
 ```
 
+###### Spring ViewResolver
+`ViewResolver` - special interface to determine which view to show. There are several implementation:
+`InternalResourceViewResolver extends UrlBasedViewResolver` - allows to set prefix & suffix to view name
+`BeanNameViewResolver` - resolves views declared as beans
 
+###### HandlerMapping & HandlerAdapter
+`HttpRequestHandler` - special interface to handle requests
+`HandlerMapping` - define a mapping between reqeust and `HandlerAdapter`
+`HandlerAdapter` - handler that executed when some url called
 
+```java
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.HttpRequestHandler;
+
+@Configuration
+class JavaConfig{
+    @Bean(name = "/test")
+    public HttpRequestHandler httpRequestHandler(){
+        return (HttpServletRequest req, HttpServletResponse res) -> System.out.println("handle");
+    }
+}
+```
+You can go to `curl http://localhost:8080/test`.
 
 #### DB
 ###### Spring JDBC
@@ -3961,25 +4007,25 @@ In hibernate we will show how to work with persistance objects
 ```java
 package com.example.logic.ann.jdbc.hibernate.entities;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Version;
-
 import java.util.List;
-
 import lombok.Data;
 
 @Data
 @Entity
 @Table(name = "department")
+@NamedQuery(name = "DepartmentEntity.GET_BY_ID", query = "SELECT d FROM DepartmentEntity d JOIN FETCH d.employees WHERE d.id=:id")
 public class DepartmentEntity {
+    public final static String GET_BY_ID = "DepartmentEntity.GET_BY_ID";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -3994,11 +4040,8 @@ public class DepartmentEntity {
     @Version
     private int version;
 
-    /**
-     * We are using FetchType.EAGER to fetch join queries eagerly, generally it's not a good practice
-     * and you should use lazy loading in prod
-     */
-    @OneToMany(mappedBy = "department", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    //@OneToMany(mappedBy = "department", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "department")
     private List<EmployeeEntity> employees;
 }
 ```
@@ -4076,6 +4119,7 @@ public class DepartmentDao implements MyDao<DepartmentEntity> {
 
     @Override
     public DepartmentEntity getById(int id) {
+        //return (DepartmentEntity) sessionFactory.getCurrentSession().getNamedQuery(DepartmentEntity.GET_BY_ID).setParameter("id", id).uniqueResult();
         return (DepartmentEntity) sessionFactory.getCurrentSession().createQuery("from DepartmentEntity d where d.id=:id").setParameter("id", id).uniqueResult();
     }
 
@@ -4256,7 +4300,16 @@ Although you can use `EntityManager` to manually create queries, it's better to 
 There are 2 interfaces `CrudRepository` & `JpaRepository` from which you can extend your repository interface (spring will create class automatically) and have many default queries already implemented.
 To enable work with repository add this to your config `@EnableJpaRepositories("com.example.logic.ann.jdbc.spring.repository")`.
 But if you want some custom query (like fine user by first and last name) you just need to add abstract method `findByFirstNameAndLastName(String firstName, String lastName)` and it would work (spring automatically build query based on it's name).
-In case you want to have your own query for the method, just add `@Query("your query")`.
+In case you want to have your own query for the method, just add `@Query("your query")`. By default it take JPL(java persistence language) query, but you can set `nativeQuery` to true and add pure sql query (in this case no support for sorting & pagination)
+If we have a named query for repo `@NamedQuery(name = "MyEntity.myQuery", query="...")` and we have 
+```java
+public interface MyEntityRepository extends JpaRepository <MyEntity, Long> {
+    List<MyEntity> myQuery();
+}
+```
+This query will use named query automatically. But if we add `@Query` it will override named query.
+It takes precedence over named queries, which are annotated with `@NamedQuery` or defined in an orm.xml file. For native queries paginatin can be enabled by setting `countQuery` to some native sql.
+
 
 Also spring data can build all api endpoint for your repos. For this just add following to your `pom.xml`
 ```

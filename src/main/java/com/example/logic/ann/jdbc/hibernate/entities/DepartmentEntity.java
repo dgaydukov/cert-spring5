@@ -9,9 +9,7 @@ import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Version;
-
 import java.util.List;
-
 import lombok.Data;
 
 @Data
