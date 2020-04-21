@@ -33,7 +33,7 @@
 * 3.10 [RestTemplate and WebClient](#resttemplate-and-webclient)
 * 3.11 [Custom HttpMessageConverter](#custom-httpmessageconverter)
 * 3.12 [Spring ViewResolver](#spring-viewresolver)
-* 3.13 [HandlerMapping & HandlerAdapter](#handlermapping--handleradapter)
+* 3.13 [HandlerMapping, HandlerAdapter, HttpRequestHandler](#handlermapping-handleradapter-httprequesthandler)
 4. [DB](#db)
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
@@ -3626,7 +3626,7 @@ curl -H "Content-Type: text/person" -d "30/Jack" http://localhost:8080/person
 `InternalResourceViewResolver extends UrlBasedViewResolver` - allows to set prefix & suffix to view name
 `BeanNameViewResolver` - resolves views declared as beans
 
-###### HandlerMapping & HandlerAdapter
+###### HandlerMapping, HandlerAdapter, HttpRequestHandler
 `HttpRequestHandler` - special interface to handle requests
 `HandlerMapping` - define a mapping between reqeust and `HandlerAdapter`
 `HandlerAdapter` - handler that executed when some url called
@@ -5656,9 +5656,76 @@ Person(age=30, name=Jack)
 Send `curl -H "Content-type: application/json" -d 'ck"}' http://localhost:8080/person`
 
 To set return type of controller or method you can use `@ResponseStatus`.
-You can also add it above exception class like
+There are 2 ways to have map between your exceptions and http status codes
 ```java
-@ResponseStatus(code = HttpStatus.BAD_REQUEST)
-class MyException extends RuntimeException {}
+package com.example.logic.ann.misc;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/")
+public class MyController {
+    @GetMapping("/a")
+    public void handleGet(){
+        System.out.println("handleGet");
+        throw new MyException1();
+    }
+    @GetMapping("/b")
+    public void handleGet2(){
+        System.out.println("handleGet2");
+        throw new MyException2();
+    }
+}
+
+
+
+@ResponseStatus(value = HttpStatus.NOT_FOUND, reason = "oops 400")
+class MyException1 extends RuntimeException{}
+
+class MyException2 extends RuntimeException{}
+
+
+@ControllerAdvice
+class MyExceptionHandler{
+    @ExceptionHandler(MyException2.class)
+    public ResponseEntity<String> handleMyException2(){
+        System.out.println("handleException");
+        return new ResponseEntity<>("oops 400", HttpStatus.NOT_FOUND);
+    }
+}
 ```
-And when you throw such exception from controller you got 400 error.
+`curl http://localhost:8080/a` => `{"timestamp":"2020-04-21T05:29:59.165+0000","status":404,"error":"Not Found","message":"oops 400","path":"/a"}`
+`curl http://localhost:8080/b` => `oops 400`
+* If you have `spring-boot-devtools` with `@ResponseStatus` or `ResponseStatusException` it will also include long trace into response
+
+`@MatrixVariable` - get path variables of special format like `;a=1;b=2;c=3;`
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.util.UrlPathHelper;
+
+@RestController
+@RequestMapping("/")
+public class MyController {
+    @GetMapping("/a/{pathId}/{matrixId}")
+    public void handleGet(@PathVariable String pathId, @RequestParam("id") String paramId, @MatrixVariable String matrixId){
+        System.out.println("pathId => " + pathId + ", paramId => " + paramId + ", matrixId => " + matrixId);
+    }
+}
+
+
+@Configuration
+class WebConfig implements WebMvcConfigurer {
+    @Override
+    public void configurePathMatch(PathMatchConfigurer configurer) {
+        UrlPathHelper urlPathHelper = new UrlPathHelper();
+        urlPathHelper.setRemoveSemicolonContent(false);
+        configurer.setUrlPathHelper(urlPathHelper);
+    }
+}
+```
+If we hit ` curl http://localhost:8080/a/1/matrixId=2?id=3` we got `pathId => 1, paramId => 3, matrixId => 2`
