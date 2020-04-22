@@ -12,13 +12,15 @@ There are 2 main reasons to get it.
 * [Spring Tips](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md)
 
 
+### Preparation Sources
+* [tutorial point 20 questions](https://www.tutorialspoint.com/spring/spring_online_test.htm)
+* [free 4.2, 200 questions](https://github.com/vojtechruz/spring-core-cert-notes-4.2)
+* [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
+* [mock/250/25](http://itestjava.com/java-certification-practice-tests/product/enter.do?product=SPRING-CORE50)
+* [mobile mock](https://play.google.com/store/apps/details?id=com.springqcm)
+
+
 ### TODO
 * [spring-certification-5.0](https://github.com/vshemyako/spring-certification-5.0)
 * [SpringCertification5.0](https://github.com/MrR0807/SpringCertification5.0)
-* [tutorial point 20 questions](https://www.tutorialspoint.com/spring/spring_online_test.htm)
-* [free 4.2, 50 questions](http://javaetmoi.com/wp-content/uploads/2016/01/spring-certification-4_2-mock-exam-antoine.pdf)
-* [free 4.2, 200 questions](https://github.com/vojtechruz/spring-core-cert-notes-4.2)
 * [mock/280/80](https://www.certification-questions.com/spring-exam/professional-dumps.html)
-* [mock/250/25](http://itestjava.com/java-certification-practice-tests/product/enter.do?product=SPRING-CORE50)
-* [mobile mock](https://play.google.com/store/apps/details?id=com.springqcm)
-* [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)

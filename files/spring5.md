@@ -351,8 +351,12 @@ File: `app.xml`
         <property name="printer" ref="simplePrinter"/>
     </bean>
     <bean id="simplePrinter" class="com.example.logic.xml.SimplePrinter"/>
+    <bean id="string1" class="java.lang.String"/>
+    <bean class="java.lang.String"/>
 </beans>
 ```
+Pay attention that for first String bean name would be `string1`, but for second `java.lang.String#0`. So if we don't specify id in xml, spring will generate it by concat full name + number.
+
 And main file
 ```java
 package com.example.spring5;
@@ -868,7 +872,7 @@ public static MyBFPP myBFPP(){
 Otherwise you will get error `@Bean method JavaConfig.myBFPP is non-static and returns an object assignable to Spring's BeanFactoryPostProcessor interface. This will result in a failure to process annotations such as @Autowired, @Resource and @PostConstruct within the method's declaring @Configuration class. Add the 'static' modifier to this method to avoid these container lifecycle issues; see @Bean javadoc for complete details.`
 BeanFactoryPostProcessor-returning @Bean methods
 Special consideration must be taken for @Bean methods that return Spring BeanFactoryPostProcessor (BFPP) types. 
-Because BFPP objects must be instantiated very early in the container lifecycle, they can interfere with processing of annotations such as @Autowired, @Value, and @PostConstruct within @Configuration classes. To avoid these lifecycle issues, mark BFPP-returning @Bean methods as static. 
+Because BFPP objects must be instantiated very early in the container lifecycle, they can interfere with processing of annotations such as `@Autowired`, `@Value`, and `@PostConstruct` within @Configuration classes. To avoid these lifecycle issues, mark BFPP-returning @Bean methods as static. 
 
 
 If you want to use both annotation and xml config you can do
@@ -884,7 +888,9 @@ You have 4 options to hook to post construct event (when spring has set all prop
 In case of 1 and 3, you can add `private` to init method (spring still would be able to call it via reflection), but nobody outside will be able to call it second time.
 But in case of implementing interface, `afterPropertiesSet` - is public, and can be called directly from your bean. More over in this case you are coupling your logic with spring.
 If you set all 4 the order is this: 
-`@PostConstruct` (registred with `CommonAnnotationBeanPostProcessor`)'=>`afterPropertiesSet`=>`xml config init` => `Bean config init`
+`@PostConstruct` (registered with `CommonAnnotationBeanPostProcessor`)'=>`afterPropertiesSet`=>`xml config init` => `Bean config init`
+
+
 
 The same way you can hook up to destroy event
 * `destroy-method=destory` in xml config
@@ -894,13 +900,74 @@ The same way you can hook up to destroy event
 Destroy events are not fired automatically, you have to call `((AbstractApplicationContext)context).close();`. 
 Method `destroy` in context is deprecated, and inside just make a call to `close`.
 
-If you create bean with java config, any method named `close` would be called when context is closed. To avoid this, create bean with empty destroy method
+
+Order of execution: 
+`PostConstruct => afterPropertiesSet => initMethod`
+`PreDestroy => destroy => destroyMethod`
 ```java
-@Bean(destroyMethod = "")
-public DestroyMethodBean destroyMethodBean(){
-    return new DestroyMethodBean();
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        context.close();
+    }
+}
+
+class MyBean implements InitializingBean, DisposableBean {
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println("afterPropertiesSet");
+    }
+
+    public void initMethod(){
+        System.out.println("initMethod");
+    }
+    public void destroyMethod(){
+        System.out.println("destroyMethod");
+    }
+
+    @PostConstruct
+    public void postConstruct(){
+        System.out.println("PostConstruct");
+    }
+    @PreDestroy
+    public void PreDestroy(){
+        System.out.println("PreDestroy");
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        System.out.println("destroy");
+    }
+}
+
+@Configuration
+class JavaConfig{
+    @Bean(initMethod = "initMethod", destroyMethod = "destroyMethod")
+    public MyBean myBean(){
+        return new MyBean();
+    }
 }
 ```
+```
+PostConstruct
+afterPropertiesSet
+initMethod
+17:11:03.733 [main] DEBUG org.springframework.context.annotation.AnnotationConfigApplicationContext - Closing org.springframework.context.annotation.AnnotationConfigApplicationContext@482f8f11, started on Wed Apr 22 17:11:03 HKT 2020
+PreDestroy
+destroy
+destroyMethod
+```
+
 close - close context right now, registerShutdownHook - close context when jvm exit
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -1077,7 +1144,7 @@ Those without it goes last with default sort.
 If you have list of implementation and bean that return also list of implementations, when injected spring will collect list of impl, not your bean.
 To use your bean, you have to add `Qualifier`
 
-When you use `@Autowired` and have 2 or more beans(and not Primary/Qualifier) it will try to autowire it by variable name
+When you use `@Autowired` and have 2 or more beans(and not Primary/Qualifier) it will try to autowire it by variable name.
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -1638,6 +1705,7 @@ class MyService{
 
 * spring aspects fire before custom BPP
 * if class implements at least 1 interface with 1 method, aspect will create dynamic proxy, otherwise will use cglib
+* spring aop can work only with public methods
 
 ###### Aop basics
 

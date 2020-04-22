@@ -9,5 +9,7 @@
         <property name="printer" ref="simplePrinter"/>
     </bean>
     <bean id="simplePrinter" class="com.example.logic.xml.SimplePrinter"/>
+    <bean id="string1" class="java.lang.String"/>
+    <bean class="java.lang.String"/>
 
 </beans>
