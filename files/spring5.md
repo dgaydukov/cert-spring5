@@ -4025,6 +4025,8 @@ Although you can write your own implementation of `RowMapper` for each entity, i
 use one of default impl like `BeanPropertyRowMapper`, or if you need to get a map (key - columns, value- values)
 you can use `ColumnMapRowMapper`.
 
+If you want to manipulate the whole result set you can use `ResultSetExtractor`.
+
 By default spring boot searches for `schema.sql` and `data.sql` under `src/resources` and run these files on start to recreate db.
 You can change file location with this configs.
 ```
@@ -4540,11 +4542,11 @@ it will run only small part of total context. It also caching contexts for confi
 So if you have one config for 10 tests, spring boot won't recreate context for all tests 10 time, instead it will create context
 once and then will just use cached version. If we have several config file we should use `@ContextHierarchy`
 * If you don't pass anything spring boot test will search for `@SpringBootConfiguration`
-* If we want to clear context for some test or after it, we should use `@DirtiesContext`
+* If we want to clear context for some test or after it, we should use `@DirtiesContext`. You can add it to class/method, you can modify context as you want, but after execution, spring will reload context.
 * If we want to have custom configuration that won't be used by spring boot test we should annotate it with `@TestConfiguration`
 * If you want to test db you should use `@DataJpaTest` (loads all beans, but throw away everything except `@Repository`)
 * If you want to test controllers you should use `@WebMvcTest` (loads all beans, but throw away everything except `@Controller`)
-* If you need mock inside your test you should add `@MockBean` to property and use it later. But if you need mock only to build other objects, you can add them to classs level like `@MockBean(MyService.class)`, it works since it repeatable.
+* If you need mock inside your test you should add `@MockBean` to property and use it later. But if you need mock only to build other objects, you can add them to class level like `@MockBean(MyService.class)`, it works since it repeatable.
 * You can also test web flux with `WebTestClient`
 
 
@@ -4578,6 +4580,8 @@ public class ControllerTest {
 ```
 
 You can use `@ContextConfiguration(locations="classpath:config.xml" ,classes=Config.class)` and pass either list of xml configs or java configs.
+This annotation is `@Inherited`, so you can create base test config class and extend all other classes from it to use same context.
+If you don't specify any data to this annotation, it will load inner classes marked with `@Configuration`
 If you use this annotation across multiple test, spring will automatically cache context, when you use the same `locations`.
 This will enable to speed up your tests.
 If you want to have separate contexts for different tests you should use
@@ -4595,7 +4599,7 @@ If you want to scan package you should add just `@ContextConfiguration` and add 
 `@InjectMocks` - create real bean, and inject all `@Mock/@Spy` beans declared within test class. If some undeclared, inject null.
 
 `@Mock/@Spy` - plain mockito annotation to be used in unit tests
-`@MockBean/@SpyBean` - spring boot test annotation used in integration tests (They add mock to sring application context, so every call to such bean within context would be replaced with mock bean)
+`@MockBean/@SpyBean` - spring boot test annotation used in integration tests (They add mock to spring application context, so every call to such bean within context would be replaced with mock bean)
 
 ```java
 package com.example.spring5;

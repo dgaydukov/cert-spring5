@@ -4,12 +4,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -88,6 +92,9 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
         return model;
     }
 
+    /**
+     * Here we have access to one row at a time
+     */
     private static class DepartmentModelMapper implements RowMapper<DepartmentModel> {
         @Override
         public DepartmentModel mapRow(ResultSet rs, int rowNumber) throws SQLException {
@@ -96,6 +103,23 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
             model.setName(rs.getString("name"));
             model.setType(rs.getString("type"));
             return model;
+        }
+    }
+
+    /**
+     * Here we have access to whole ResultSet, so we can manipulate it whatever we want (like creating a map with name as key and type as list)
+     */
+    private static class DepartmentResultSetExtractor implements ResultSetExtractor<Map<String, List<String>>> {
+        @Override
+        public Map<String, List<String>> extractData(ResultSet rs) throws SQLException, DataAccessException {
+            Map<String, List<String>> map = new HashMap<>();
+            while (rs.next()){
+                map.merge(rs.getString("name"), new ArrayList<>(List.of(rs.getString("type"))), (acc, v)->{
+                    acc.addAll(v);
+                    return acc;
+                });
+            }
+            return map;
         }
     }
 
