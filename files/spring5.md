@@ -61,6 +61,7 @@
 * 10.11 [Spring Utils](#spring-utils)
 * 10.12 [Spring Boot Logging](#spring-boot-logging)
 * 10.13 [Controller's method params](#controllers-method-params)
+* 10.14 [Spring Caching](#spring-caching)
 
 
 
@@ -4670,7 +4671,9 @@ info.my.v1=100
 info.my.v2=200
 ```
 Health by default just show status (`up/down/unknown/out_of_service`), but if you want more details you can add `management.endpoint.health.show-details=always`
-
+If you want change the severity you should changed `management.health.status.order` props
+If you want to add new status you should add `anagement.health.status.order=FATAL, DOWN, OUT_OF_SERVICE, UNKNOWN, UP` to your props file.
+If you want to map health status to http status you should add `management.health.status.http-mapping.FATAL=422` (this would map FATAL status to http 422 unproccessible entity)
 
 `/beans` - view context configuration
 `/conditions` - view autoconfiguration rules (which beans has been autoconfigured)
@@ -5729,3 +5732,89 @@ class WebConfig implements WebMvcConfigurer {
 }
 ```
 If we hit ` curl http://localhost:8080/a/1/matrixId=2?id=3` we got `pathId => 1, paramId => 3, matrixId => 2`
+
+
+
+###### Spring Caching
+You should enable cache `@EnableCaching` 
+```java
+package com.example.logic.ann.misc;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.*;
+
+import lombok.SneakyThrows;
+
+@RestController
+@RequestMapping("/")
+public class MyController {
+    @Autowired
+    private MyService service;
+    
+    /**
+     * Since we are using spring boot, this bean would be autoconfigured
+     */
+    @Autowired
+    private CacheManager cacheManager;
+
+    @GetMapping
+    public String handleGet(){
+        System.out.println("handleGet");
+        String name = service.getName();
+        System.out.println("name => " + name);
+        return name;
+    }
+
+    @PostMapping
+    @CacheEvict(JavaConfig.CACHE_NAME)
+    public void handlePost(){
+        System.out.println("remove cache");
+        /**
+         * You can remove cache by annotation and by code
+         */
+        cacheManager.getCache(JavaConfig.CACHE_NAME).clear();
+    }
+}
+
+@Service
+class MyService{
+    @SneakyThrows
+    @Cacheable(JavaConfig.CACHE_NAME)
+    public String getName(){
+        Thread.sleep(3000);
+        return "Jack";
+    }
+}
+
+@Configuration
+@EnableCaching
+class JavaConfig{
+    public static final String CACHE_NAME = "my_name";
+}
+```
+
+Main code
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
+@ComponentScan("com.example.logic.ann.misc")
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+```
+First time you run ` curl http://localhost:8080/` you will wait for 3 sec, later you would get response immediately.
+To clear cache call `curl -X POST http://localhost:8080/`
+
