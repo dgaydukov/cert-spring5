@@ -1135,6 +1135,16 @@ myValue
 ###### Profile, Primary, Qualifier, Order, Lazy
 `@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean
 `@Qualifier("beanName")` - you can inject any bean you want. It's stronger than primary, so it autowired bean by name.
+We have spring qualifier and also jsr-330 `javax.inject.Qualifier`.
+Spring support both of them. Moreover you can create your own qualifiers based on any of these 2.
+To add JSR-330 you should add to your `pom.xml`
+```
+<dependency>
+    <groupId>javax.inject</groupId>
+    <artifactId>javax.inject</artifactId>
+    <version>1</version>
+</dependency>
+```
 
 If you inject list of interfaces, spring will try to find all beans that implement this interface, and will inject them in default order (sorted by names).
 If you need custom order you can add `@Order(1)` on beans, and by this you will create custom order of injection.
@@ -3859,7 +3869,12 @@ For spring jdbc you should add to your `pom.xml`. You also would like embedded d
 </dependency>
 ```
 
-Spring nicely translate all checked sql exeptions into runtime execptions with clear names.
+`jdbcTemplate` has only `update` method to run update/inserts. There is no `insert` method.
+For `update/query` it may take a third param as array of `java.sql.Types`. Setting argument type provides correctness and optimisation (slight) for the underlying SQL statement.
+JdbcTemplate handles creation and release of resources.
+When you test application code that manipulates the state of the Hibernate session, make sure to flush the underlying session within test methods that execute that code.
+
+Spring nicely translate all checked sql exceptions into runtime exceptions with clear names.
 But you can also add logic there, by creating your own translator
 ```java
 package com.example.logic.ann.jdbc.template;
@@ -4477,6 +4492,41 @@ In test framework you have `@Rollback/@Commit`. Rollback - by default true, can 
 Don't confuse 
 `javax.transaction.Transactional` - java EE7 annotation, but since spring3 also supported, 
 with `org.springframework.transaction.annotation.Transactional` - has more options and will always execute the right way.
+
+If for some reason you don't want to use this annotation (for example you have a method that takes too long to run and if you put `@Transactional` on it, you will use all available connections), you can use programmatic transaction with `TransactionTemplate`
+```java
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
+
+public class App{
+    public static void main(String[] args) {
+        PlatformTransactionManager manager = new JpaTransactionManager();
+        TransactionTemplate template = new TransactionTemplate(manager);
+        /**
+         * with some return value
+         */
+        template.execute(status -> {
+            // you can rollback by 
+            status.setRollbackOnly();
+            return "done";
+        });
+        /**
+         * Without return value
+         */
+        template.execute(new TransactionCallbackWithoutResult() {
+            @Override
+            protected void doInTransactionWithoutResult(TransactionStatus status) {
+                // you can rollback by 
+                status.setRollbackOnly();
+            }
+        });
+    }
+}
+```
+`@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into transactions.
 
 There are 2 types of transactions:
 * Local - work with single resource (single db) and either commit or rollback
