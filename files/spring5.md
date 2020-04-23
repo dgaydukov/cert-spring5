@@ -2555,6 +2555,58 @@ class MyAdvice {
 }
 ```
 
+`AopUtils/AopTestUtils` - can be useful for testing purpose. Here is small example
+```java
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.stereotype.Component;
+
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        var bean = context.getBean(Worker.class);
+        System.out.println("class => " + bean.getClass().getName());
+        System.out.println("getTargetClass => " + AopUtils.getTargetClass(bean).getName());
+        System.out.println("isAopProxy => " + AopUtils.isAopProxy(bean));
+        System.out.println("isCglibProxy => " + AopUtils.isCglibProxy(bean));
+        System.out.println("isJdkDynamicProxy => " + AopUtils.isJdkDynamicProxy(bean));
+    }
+}
+
+@Component
+class MyBean implements Worker{
+    public void print(){}
+}
+
+interface Worker {
+    default void work(){}
+}
+
+/**
+ * If we want to force it to use cglib we should set proxyTargetClass = true
+ */
+@EnableAspectJAutoProxy
+@Aspect
+@Component
+class MyAspect{
+    @Before("execution(* print())")
+    private void beforeAdvice(JoinPoint jp){
+        System.out.println("beforeAdvice => " + jp.getSignature().getName());
+    }
+}
+```
+```
+class => com.example.spring5.$Proxy16
+getTargetClass => com.example.spring5.MyBean
+isAopProxy => true
+isCglibProxy => false
+isJdkDynamicProxy => true
+```
 
 
 ###### Native AspectJ
@@ -4417,8 +4469,10 @@ If you want to subscribe on events for some repository you can extedn `AbstractR
 ###### JTA - java transaction API
 `@Transactional` - has propagation param, that instruct spring what to do when you call one transactional method from another.
 default param - required - in this case nothing happens.
-mandatory - throw exception if method was called from non-transactioanl method
+mandatory - throw exception if method was called from non-transactional method
 require_new - open new transaction (so we have nested tx)
+By default all `RuntimeException` rollback transaction whereas checked exceptions don't. This is an EJB legacy. You can configure this by using `rollbackFor()` and `noRollbackFor()` annotation parameters `@Transactional(rollbackFor=Exception.class)`
+In test framework you have `@Rollback/@Commit`. Rollback - by default true, can set to false (same as set just `@Commit`). If you don't specify anything, for all integration tests all transactions would be rollbacked after test run.
 
 Don't confuse 
 `javax.transaction.Transactional` - java EE7 annotation, but since spring3 also supported, 
@@ -4624,7 +4678,7 @@ import static org.mockito.Mockito.*;
 public class BeansIntegrationTest {
     /**
      * In case you want to scan package you should add
-     * inner static class
+     * inner static class (signature can't be private, otherwise ContextConfiguration can't load it)
      */
     @Configuration
     @ComponentScan("com.example.logic.ann.beans")
@@ -5218,6 +5272,9 @@ public class App{
 
 
 #### Miscellaneous
+`@SpringBootApplication` - by default use component scanning of base package (where it was defined) and all subpackages. You can change this behavior by setting `scanBasePackages/scanBasePackageClasses` by setting other packages or java config classes.
+
+
 ###### mvnw and mvnw.cmd
 When you download [spring boot](https://start.spring.io/) you have 2 files `mvnw` and `mvnw.cmd`. These 2 files from [Maven Wrapper Plugin](https://github.com/takari/takari-maven-plugin) 
 that allows to run app on systems where there is no mvn installed. `mvnv` - script for linux, `mvnw.cmd` - for windows. Generally you don't need them in your work, so you may delete them.

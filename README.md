@@ -13,14 +13,12 @@ There are 2 main reasons to get it.
 
 
 ### Preparation Sources
-* [tutorial point 20 questions](https://www.tutorialspoint.com/spring/spring_online_test.htm)
-* [free 4.2, 200 questions](https://github.com/vojtechruz/spring-core-cert-notes-4.2)
-* [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
+* [github/java project](https://github.com/vshemyako/spring-certification-5.0)
 * [mock/250/25](http://itestjava.com/java-certification-practice-tests/product/enter.do?product=SPRING-CORE50)
 * [mobile mock](https://play.google.com/store/apps/details?id=com.springqcm)
+* [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
 
 
 ### TODO
-* [spring-certification-5.0](https://github.com/vshemyako/spring-certification-5.0)
-* [SpringCertification5.0](https://github.com/MrR0807/SpringCertification5.0)
+* [github/pdf](https://github.com/MrR0807/SpringCertification5.0)
 * [mock/280/80](https://www.certification-questions.com/spring-exam/professional-dumps.html)
