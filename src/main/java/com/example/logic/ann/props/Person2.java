@@ -12,8 +12,8 @@ import lombok.ToString;
  */
 @Component
 @ToString
-@ConfigurationProperties
 @Setter
+@ConfigurationProperties
 public class Person2 {
     @Value("2")
     private int id;

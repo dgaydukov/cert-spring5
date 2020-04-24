@@ -1122,17 +1122,47 @@ class path resource [app.xml]
 ###### Environment and PropertySource
 Since `ApplicationContext` extends `EnvironmentCapable` interface with 1 method `getEnvironment()`, you can get env object from context.
 ```java
-ConfigurableEnvironment env = (ConfigurableEnvironment) context.getEnvironment();
-MutablePropertySources sources = env.getPropertySources();
-Map<String, Object> props = new HashMap<>();
-props.put("myKey", "myValue");
-sources.addLast(new MapPropertySource("props", props));
-System.out.println(env.getProperty("myKey"));
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.MutablePropertySources;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext();
+        ConfigurableEnvironment env = context.getEnvironment();
+        MutablePropertySources sources = env.getPropertySources();
+        Map<String, Object> props = new HashMap<>();
+        props.put("myKey", "myValue");
+        sources.addLast(new MapPropertySource("props", props));
+        System.out.println(env.getProperty("myKey"));
+    }
+}
 ```
 ```
 myValue
 ```
 
+`PropertySourcesPlaceholderConfigurer` (extends `PlaceholderConfigurerSupport`) is special BFPP that is equivalent ot annotation `@PropertySource`
+```java
+@Configuration
+@EnableConfigurationProperties
+public class PropsJavaConfig {
+    /**
+     * This bean is the same as adding @PropertySource("application.properties") to configuration class
+     * since it BFPP is should be static
+     */
+    @Bean
+    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer(){
+        PropertySourcesPlaceholderConfigurer propConfig = new PropertySourcesPlaceholderConfigurer();
+        propConfig.setLocation(new ClassPathResource("application.properties"));
+        return propConfig;
+    }
+}
+```
 
 ###### Profile, Primary, Qualifier, Order, Lazy
 `@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean
