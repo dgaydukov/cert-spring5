@@ -40,6 +40,7 @@
 * 4.3 [Spring Data](#spring-data)
 * 4.4 [JTA - java transaction API](#jta---java-transaction-api)
 5. [Spring Testing](#spring-testing)
+* 5.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
 6. [Spring Monitoring](#spring-monitoring)
 * 6.1 [Jmx monitoring](#jmx-monitoring)
 * 6.2 [Spring Boot Actuator](#spring-boot-actuator)
@@ -4543,6 +4544,50 @@ To work with global tx you should add to your `pom.xml`
 
 
 #### Spring Testing
+
+###### TestPropertySource and TestPropertyValues
+In testing you can add custom properties in 2 ways. `@TestPropertySource` - to pass test source. If you don't pass anything it will search for  default property file with name of your test class. 
+If such filed doesn't exist you got `IllegalStateException: Could not detect default properties file for test class [com.example.spring5.JavaConfigTest]: class path resource [com/example/spring5/JavaConfigTest.properties] does not exist`.
+You can also use `TestPropertyValues` to change properties on the fly.
+```java
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import com.example.logic.ann.props.Person1;
+
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(initializers = {JavaConfigTest.PropsACI.class}, classes = {JavaConfigTest.Config.class})
+@TestPropertySource(properties = {"name = foo"})
+public class JavaConfigTest {
+    @ComponentScan("com.example.logic.ann.props")
+    static class Config{}
+
+    static class PropsACI implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+        @Override
+        public void initialize(ConfigurableApplicationContext context) {
+            TestPropertyValues.of("age=22").applyTo(context);
+        }
+    }
+
+    @Autowired
+    private ConfigurableApplicationContext context;
+
+    @Test
+    public void test(){
+        System.out.println(context.getBean(Person1.class));
+    }
+}
+```
+
+
 First let's add junit to `pom.xml`
 ```
 <dependency>
