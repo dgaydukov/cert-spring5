@@ -41,6 +41,7 @@
 * 4.4 [JTA - java transaction API](#jta---java-transaction-api)
 5. [Spring Testing](#spring-testing)
 * 5.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
+* 5.2 [OutputCaptureRule](#outputcapturerule)
 6. [Spring Monitoring](#spring-monitoring)
 * 6.1 [Jmx monitoring](#jmx-monitoring)
 * 6.2 [Spring Boot Actuator](#spring-boot-actuator)
@@ -4529,6 +4530,34 @@ public class App{
 ```
 `@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into transactions.
 
+You can even work without this template and use tx manager directly
+```java
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
+
+public class App{
+    public static void main(String[] args) {
+        PlatformTransactionManager manager = new JpaTransactionManager();
+        JdbcTemplate template = new JdbcTemplate();
+
+        DefaultTransactionDefinition params = new DefaultTransactionDefinition();
+        // you can set tx name this way
+        params.setName("myGoodTx");
+        TransactionStatus status = manager.getTransaction(params);
+
+        try{
+            template.update("sql query", params);
+            manager.commit(status);
+        }catch (Exception e) {
+            manager.rollback(status);
+        }
+    }
+}
+```
+
 There are 2 types of transactions:
 * Local - work with single resource (single db) and either commit or rollback
 * Global - work with many resources (like one mysql and one oracle db), and either all changes to all db commiter or rollbacked. Using `XA` protocol.
@@ -4583,6 +4612,40 @@ public class JavaConfigTest {
     @Test
     public void test(){
         System.out.println(context.getBean(Person1.class));
+    }
+}
+```
+
+
+###### OutputCaptureRule
+This class helps to test what has been logged to console
+```java
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.OutputCaptureRule;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringRunner;
+
+import com.example.logic.ann.beans.JavaConfig;
+import com.example.logic.ann.beans.Printer;
+
+@RunWith(SpringRunner.class)
+@ContextConfiguration(classes = JavaConfig.class)
+public class MySimpleTest {
+    @Autowired
+    private Printer printer;
+
+    @Rule
+    public OutputCaptureRule capture = new OutputCaptureRule();
+
+    @Test
+    public void test(){
+        printer.print("Hello World!");
+        assertThat(capture.toString(), containsString("World"));
     }
 }
 ```
