@@ -4125,6 +4125,29 @@ use one of default impl like `BeanPropertyRowMapper`, or if you need to get a ma
 you can use `ColumnMapRowMapper`.
 
 If you want to manipulate the whole result set you can use `ResultSetExtractor`.
+`RowCallbackHandler` can be used in `query`, but you have to manually regulate state
+```java
+private DepartmentModel resultSetToModel(ResultSet rs) throws SQLException {
+    DepartmentModel model = new DepartmentModel();
+    model.setId(rs.getInt("id"));
+    model.setName(rs.getString("name"));
+    model.setType(rs.getString("type"));
+    return model;
+}
+
+public List<DepartmentModel> getAllRCH() {
+    List<DepartmentModel> list = new ArrayList<>();
+    jdbcTemplate.query("select * from department", rs->{
+        // add first row
+        list.add(resultSetToModel(rs));
+        // add all other rows
+        while (rs.next()) {
+            list.add(resultSetToModel(rs));
+        }
+    });
+    return list;
+}
+```
 
 By default spring boot searches for `schema.sql` and `data.sql` under `src/resources` and run these files on start to recreate db.
 You can change file location with this configs.
@@ -4466,6 +4489,12 @@ public class App {
 
 ###### Spring Data
 Jpa `EntityManagerFactory` resembles `SessionFactory`. You can call `entityManagerFactory.createEntityManager()` to get current `EntityManager` on which you can run queries like `update/remove/save`
+You can also autowire it like
+```java
+@PersistenceContext
+private EntityManager em;
+```
+`@PersistenceContext` takes care to create a unique EntityManager for every thread. So you shouldn't use `@Autowired` in this case.
 Although you can use `EntityManager` to manually create queries, it's better to use spring data repository pattern, that wrap entity manager inside and provide many default queries out of the box.
 There are 2 interfaces `CrudRepository` & `JpaRepository` from which you can extend your repository interface (spring will create class automatically) and have many default queries already implemented.
 To enable work with repository add this to your config `@EnableJpaRepositories("com.example.logic.ann.jdbc.spring.repository")`.

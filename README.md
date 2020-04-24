@@ -13,12 +13,9 @@ There are 2 main reasons to get it.
 
 
 ### Preparation Sources
+* [github/pdf](https://github.com/MrR0807/SpringCertification5.0)
 * [github/java project](https://github.com/vshemyako/spring-certification-5.0)
 * [mock/250/25](http://itestjava.com/java-certification-practice-tests/product/enter.do?product=SPRING-CORE50)
+* [mock/280/80](https://www.certification-questions.com/spring-exam/professional-dumps.html)
 * [mobile mock](https://play.google.com/store/apps/details?id=com.springqcm)
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
-
-
-### TODO
-* [github/pdf](https://github.com/MrR0807/SpringCertification5.0)
-* [mock/280/80](https://www.certification-questions.com/spring-exam/professional-dumps.html)

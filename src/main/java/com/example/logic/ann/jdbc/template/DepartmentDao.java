@@ -29,6 +29,29 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    private DepartmentModel resultSetToModel(ResultSet rs) throws SQLException {
+        DepartmentModel model = new DepartmentModel();
+        model.setId(rs.getInt("id"));
+        model.setName(rs.getString("name"));
+        model.setType(rs.getString("type"));
+        return model;
+    }
+
+    public List<DepartmentModel> getAllRCH() {
+        List<DepartmentModel> list = new ArrayList<>();
+        jdbcTemplate.query("select * from department", rs->{
+            // add first row
+            list.add(resultSetToModel(rs));
+            // add all other rows
+            while (rs.next()) {
+                list.add(resultSetToModel(rs));
+            }
+        });
+        return list;
+    }
+
+
+
     @Override
     public List<DepartmentModel> getAll() {
         return jdbcTemplate.query("select * from department", new DepartmentModelMapper());
