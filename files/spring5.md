@@ -1765,7 +1765,59 @@ class MyService{
 
 * spring aspects fire before custom BPP
 * if class implements at least 1 interface with 1 method, aspect will create dynamic proxy, otherwise will use cglib
-* spring aop can work only with public methods
+* spring aop can work only with public methods for jdk proxies and with public/protected/package-private for cglib
+```java
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        context.getBean(MyBean.class).m1();
+    }
+}
+
+
+@Component
+class MyBean{
+    @Autowired
+    private MyBean myBean;
+
+    public void m1(){
+        System.out.println("m1");
+        myBean.m2();
+    }
+
+    /**
+     * m2 can be public/protected/package-private (no modifier) and it would be annotated
+     * if it's private, aop won't be applied
+     */
+    protected void m2(){
+        System.out.println("m2");
+    }
+}
+
+@EnableAspectJAutoProxy
+@Aspect
+@Component
+class MyAspect{
+    @Before("execution (* m*())")
+    private void before(JoinPoint jp){
+        System.out.println("before => " + jp.getSignature().getName());
+    }
+}
+```
+```
+before => m1
+m1
+before => m2
+m2
+```
 
 ###### Aop basics
 
