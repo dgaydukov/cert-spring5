@@ -1,10 +1,12 @@
-package com.example.logic.ann.prototypeintosingleton.oldway;
+package com.example.logic.ann.prototypeintosingleton.proxymode;
 
+import javax.annotation.PostConstruct;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class PrototypePrinter {
     private int rand;
 
+    @PostConstruct
     public void init(){
         rand = ThreadLocalRandom.current().nextInt(99, 999);
     }

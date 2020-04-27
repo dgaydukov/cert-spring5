@@ -1,10 +1,8 @@
-package com.example.logic.ann.prototypeintosingleton;
+package com.example.logic.ann.prototypeintosingleton.proxymode;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Lookup;
-import org.springframework.stereotype.Service;
 
-@Service
 public class SingletonBean {
     @Autowired
     private PrototypePrinter printer;

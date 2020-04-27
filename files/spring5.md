@@ -802,7 +802,7 @@ return this::myService;
 }
 ```
 ```java
-import com.example.logic.ann.prototypeintosingleton.SingletonBean;
+import com.example.logic.ann.prototypeintosingleton.lookup.SingletonBean;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -823,10 +823,9 @@ public class App {
 5 => I'm SingletonBean
 ```
 
-Alternatively you can declare your singleton as abstract class with 1 abstract method to get printer (just like `@Lookup`)
-and override this method in config
+Alternatively you can declare your singleton as abstract class with 1 abstract method to get printer and override this method in config
 ```java
-package com.example.logic.ann.prototypeintosingleton.oldway;
+package com.example.logic.ann.prototypeintosingleton.abstractmethod;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -848,12 +847,12 @@ public class PsJavaConfig {
 ```
 And then
 ```java
-import com.example.logic.ann.prototypeintosingleton.oldway.SingletonBean;
+import com.example.logic.ann.prototypeintosingleton.abstractmethod.SingletonBean;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 public class App {
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.prototypeintosingleton.oldway");
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.prototypeintosingleton.abstractmethod");
         context.getBean(SingletonBean.class).sayHello();
         context.getBean(SingletonBean.class).sayHello();
     }
@@ -863,6 +862,9 @@ public class App {
 963 => I'm SingletonBean
 752 => I'm SingletonBean
 ```
+
+If you don't want to manually create a bean and override abstract method, you can add `@Lookup` annotation on it, and spring will use cglib to create such a bean and will override your abstract method.
+The same way you can delcare your method as non-abstract and return null, but anyway when you add `@Lookup` spring will use cglib to override it.
 
 If you declare BFPP with `@Bean`, you should make your method static
 ```java

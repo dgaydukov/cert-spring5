@@ -1,15 +1,14 @@
-package com.example.logic.ann.prototypeintosingleton;
+package com.example.logic.ann.prototypeintosingleton.lookup;
 
 import javax.annotation.PostConstruct;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
-import org.springframework.context.annotation.ScopedProxyMode;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
-@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE, proxyMode = ScopedProxyMode.TARGET_CLASS)
+@Component
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class PrototypePrinter {
     private int rand;
 
