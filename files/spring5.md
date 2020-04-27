@@ -42,6 +42,7 @@
 5. [Spring Testing](#spring-testing)
 * 5.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
 * 5.2 [OutputCaptureRule](#outputcapturerule)
+* 5.3 [TestExecutionListener](#testexecutionlistener)
 6. [Spring Monitoring](#spring-monitoring)
 * 6.1 [Jmx monitoring](#jmx-monitoring)
 * 6.2 [Spring Boot Actuator](#spring-boot-actuator)
@@ -780,6 +781,17 @@ beanFactory instanceof ConfigurableBeanFactory => true
 ```
 
 ###### Prototype into Singleton
+You can create you custom scope by implementing `org.springframework.beans.factory.config.Scope`
+To register your scope, you have to implement BFPP and register it there
+```java
+public class NewScopeBFPP implements BeanFactoryPostProcessor {
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory factory) throws BeansException {
+        factory.registerScope("newscope", new NewScope());
+    }
+}
+```
+
 You can use following code to get scope of any class in your app context
 ```java
 private static String getScope(ApplicationContext context, Class<?> cls){
@@ -882,6 +894,10 @@ Because BFPP objects must be instantiated very early in the container lifecycle,
 If you want to use both annotation and xml config you can do
 * In case of `AnnotationConfigApplicationContext`, add `@ImportResource("app.xml")` to your `@Configuration` class. This annotation also helpful with you have `@SpringBootApplication` and want to import xml config
 * In case of `GenericXmlApplicationContext`, add `<context:annotation-config/>` to your xml file
+
+If you have multiple confugurations annotated with `@Configuration` you can use `@Import` to import one into another. 
+Since now we are using component scanning, we don't need to explicitly define it. But is still can be usefule in testing where you can have multiple configs.
+`@Import` - take list of classes, `@ImportResource` - take list of paths to xml or packages.
 
 ###### PostConstruct and PreDestroy
 You have 4 options to hook to post construct event (when spring has set all properties)
@@ -3030,7 +3046,7 @@ Old way to configure security was in xml files
 ```
 security.xml:
 
-<intercept-url pattern="/myrul" access="hasRole('ROLE_ADMIN')" method="POST"/>
+<intercept-url pattern="/myrul" access="hasRole('ROLE_ADMIN')" method="POST" requires-channel="https"/>
 
 MyController.java:
 
@@ -3904,6 +3920,7 @@ For spring jdbc you should add to your `pom.xml`. You also would like embedded d
 ```
 
 `jdbcTemplate` has only `update` method to run update/inserts. There is no `insert` method.
+`JdbcTemplate` simplify work with jdbc, we also have `HibernateTemplate` that simplify work with hibernate
 For `update/query` it may take a third param as array of `java.sql.Types`. Setting argument type provides correctness and optimisation (slight) for the underlying SQL statement.
 JdbcTemplate handles creation and release of resources.
 When you test application code that manipulates the state of the Hibernate session, make sure to flush the underlying session within test methods that execute that code.
@@ -4495,12 +4512,18 @@ You can also autowire it like
 ```java
 @PersistenceContext
 private EntityManager em;
+
+@PersistenceUnit
+EntityManagerFactory emf;
 ```
 `@PersistenceContext` takes care to create a unique EntityManager for every thread. So you shouldn't use `@Autowired` in this case.
+`@PersistenceUnit` - to auwowire EntityManagerFactory
+PersistenceUnit injects an EntityManagerFactory, and PersistenceContext injects an EntityManager. It's generally better to use PersistenceContext unless you really need to manage the EntityManager lifecycle manually.
 Although you can use `EntityManager` to manually create queries, it's better to use spring data repository pattern, that wrap entity manager inside and provide many default queries out of the box.
 There are 2 interfaces `CrudRepository` & `JpaRepository` from which you can extend your repository interface (spring will create class automatically) and have many default queries already implemented.
 To enable work with repository add this to your config `@EnableJpaRepositories("com.example.logic.ann.jdbc.spring.repository")`.
-But if you want some custom query (like fine user by first and last name) you just need to add abstract method `findByFirstNameAndLastName(String firstName, String lastName)` and it would work (spring automatically build query based on it's name).
+But if you want some custom query (like fine user by first and last name) you just need to add abstract method `findByFirstNameAndLastName(String firstName, String lastName)` 
+and it would work (spring automatically build query based on it's name). The valid names are: `read...By, get...By, find...By`
 In case you want to have your own query for the method, just add `@Query("your query")`. By default it take JPL(java persistence language) query, but you can set `nativeQuery` to true and add pure sql query (in this case no support for sorting & pagination)
 If we have a named query for repo `@NamedQuery(name = "MyEntity.myQuery", query="...")` and we have 
 ```java
@@ -4550,6 +4573,7 @@ default param - required - in this case nothing happens.
 mandatory - throw exception if method was called from non-transactional method
 require_new - open new transaction (so we have nested tx)
 By default all `RuntimeException` rollback transaction whereas checked exceptions don't. This is an EJB legacy. You can configure this by using `rollbackFor()` and `noRollbackFor()` annotation parameters `@Transactional(rollbackFor=Exception.class)`
+You can also pass array of strings for `rollbackForClassName` or `noRollbackForClassName
 In test framework you have `@Rollback/@Commit`. Rollback - by default true, can set to false (same as set just `@Commit`). If you don't specify anything, for all integration tests all transactions would be rollbacked after test run.
 
 Don't confuse 
@@ -4712,6 +4736,25 @@ public class MySimpleTest {
 ```
 
 
+###### TestExecutionListener
+This is special interface that helps to manage test lifecycle. kind of `@BeforeEach, @AfterEach, @BeforeAll, and @AfterAll`
+There are default impl, but you can create your own impl. To add it to your class use 
+```java
+@TestExecutionListeners(value = {
+  CustomTestExecutionListener.class,
+  DependencyInjectionTestExecutionListener.class
+})
+```
+Pay attention that adding it like that remove all default listeners, that's why we explicitly add `DI` listener.
+To preserve default listener add `mergeMode = MergeMode.MERGE_WITH_DEFAULTS`
+
+
+
+
+
+
+
+
 First let's add junit to `pom.xml`
 ```
 <dependency>
@@ -4853,11 +4896,12 @@ public class ControllerTest {
 ```
 
 You can use `@ContextConfiguration(locations="classpath:config.xml" ,classes=Config.class)` and pass either list of xml configs or java configs.
+To get access to shared context you can also extend your class from abstract `AbstractJUnit4SpringContextTests` or directly implement `ApplicationContextAware`.
 This annotation is `@Inherited`, so you can create base test config class and extend all other classes from it to use same context.
 If you don't specify any data to this annotation, it will load inner classes marked with `@Configuration`
 If you use this annotation across multiple test, spring will automatically cache context, when you use the same `locations`.
 This will enable to speed up your tests.
-If you want to have separate contexts for different tests you should use
+If you want to have separate contexts for different tests you should use. Order of configuration is important, if A depends on B, then B should go first.
 ```java
 @ContextHierarchy({
     @ContextConfiguration("/parent-config.xml"),
