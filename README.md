@@ -19,3 +19,7 @@ There are 2 main reasons to get it.
 * [mock/280/80](https://www.certification-questions.com/spring-exam/professional-dumps.html)
 * [mobile mock](https://play.google.com/store/apps/details?id=com.springqcm)
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
+
+
+1. spring boot war app
+2. web app without main (war file to tomcat)

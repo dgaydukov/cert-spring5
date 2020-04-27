@@ -1515,6 +1515,35 @@ As you see it first create instance of a with proxy, and later when you request 
 We can load properties from `.properties/.yml` files.
 `@PropertySource` - repetable, so we can load several files. If keys are the same => those declared after will overwrite those declared before.
 You can use `@Value("${propName}")` on every field, or use `ConfigurationProperties` with public setter methods for every field.
+You can also use this annotation on methods. In this case spring will call this methods and set all params to this value
+```java
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        context.getBean(MyService.class);
+    }
+}
+
+@Component
+class MyService{
+    @Value("hello")
+    public void set1(String s){
+        System.out.println(s);
+    }
+    @Value("hello")
+    public void set2(String s1, String s2){
+        System.out.println(s1 + ", " + s2);
+    }
+    @Value("hello")
+    public void set3(String s1, @Value("world") String s2){
+        System.out.println(s1 + ", " + s2);
+    }
+}
+```
 
 `${expr} --> Immediate Evaluation`
 `#{expr} --> Deferred Evaluation`
@@ -4753,6 +4782,7 @@ public class JavaConfigTest {
 }
 ```
 
+You can also use `MockEnvironment` and `MockPropertySource`
 
 ###### OutputCaptureRule
 This class helps to test what has been logged to console
