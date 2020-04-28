@@ -1073,12 +1073,60 @@ You should use this interfaces, when you bean is not business logic, but some sp
 Don't confuse the 2 interfaces
 * `BeanFactory` - basic di interface, `ApplicationContext` is inhereted from it
 * `FactoryBean<?>` - helper interface to create factory objects (used when you need to implement factory pattern)
+There are 3 ways we can use factory 
+1. Use any class, just add static method to get other class
+2. Use singleton (private constructor, static method to get oneself), add non-static method to get other class
+3. Implement `FactoryBean`
+`factorybean.xml`
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="myUserFactory" class="com.example.spring5.MyUserFactory"/>
+    <bean id="user1" factory-bean="myUserFactory" factory-method="getUser"/>
+
+    <bean id="user2" class="com.example.spring5.MyUserFactory" factory-method="getStaticUser"/>
+
+    <bean id="user3" class="com.example.spring5.SpringUserFactory"/>
+
+</beans>
+```
 ```java
-package com.example.logic.ann.factorybean;
-
 import org.springframework.beans.factory.FactoryBean;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-public class UserFactory implements FactoryBean<User> {
+
+
+public class App{
+    public static void main(String[] args) {
+        var context = new ClassPathXmlApplicationContext("factorybean.xml");
+        System.out.println("user1 => " + context.getBean("user1"));
+        System.out.println("user2 => " + context.getBean("user2"));
+        System.out.println("user3 => " + context.getBean("user3"));
+    }
+}
+
+class User{}
+class MyUserFactory{
+    private static User user = new User();
+    private static MyUserFactory instance = new MyUserFactory();
+    private MyUserFactory(){}
+
+    public static MyUserFactory getInstance(){
+        return instance;
+    }
+
+    public User getUser(){
+        return user;
+    }
+
+    public static User getStaticUser(){
+        return user;
+    }
+}
+class SpringUserFactory implements FactoryBean<User> {
     @Override
     public User getObject() {
         return new User();
@@ -1088,14 +1136,8 @@ public class UserFactory implements FactoryBean<User> {
     public Class<User> getObjectType() {
         return User.class;
     }
-    
-    public User createInstance(){
-        return new User();
-    }
 }
 ```
-In case you don't want to use `FactoryBean`, and you have custom factory with method name `createInstance`, 
-you can configure your factory in xml like `<bean id="myUser" factory-bean="UserFactory" factory-method="createInstance"/>` or in case you are using `FactoryBean` => `<bean id="myUser" class="UserFactory"/>`.
 
 
 ###### Spring i18n
