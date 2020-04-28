@@ -1094,7 +1094,8 @@ public class UserFactory implements FactoryBean<User> {
     }
 }
 ```
-In case you don't want to use `FactoryBean`, and you have custom factory with method name `createInstance`, you can configure your factory in xml like `<bean id="myUser" factory-bean="UserFactory" factory-method="createInstance"/>`.
+In case you don't want to use `FactoryBean`, and you have custom factory with method name `createInstance`, 
+you can configure your factory in xml like `<bean id="myUser" factory-bean="UserFactory" factory-method="createInstance"/>` or in case you are using `FactoryBean` => `<bean id="myUser" class="UserFactory"/>`.
 
 
 ###### Spring i18n
@@ -1109,22 +1110,56 @@ resources/i18n/msg_fr.properties
 ```
 You need to inject `MessageSource` bean into context
 ```java
-@Bean
-public MessageSource messageSource(){
-    ResourceBundleMessageSource bundle = new ResourceBundleMessageSource();
-    bundle.setBasename("i18n/msg");
-    return bundle;
+import java.util.Locale;
+
+import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ResourceBundleMessageSource;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println(context.getMessage("name", null, Locale.ENGLISH));
+        System.out.println(context.getMessage("name", null, Locale.FRENCH));
+    }
 }
-```
-And then you can just call
-```java
-System.out.println(context.getMessage("name", null, Locale.ENGLISH));
-System.out.println(context.getMessage("name", null, Locale.FRENCH));
+
+@Configuration
+class JavaConfig {
+    @Bean
+    public MessageSource messageSource(){
+        ResourceBundleMessageSource bundle = new ResourceBundleMessageSource();
+        bundle.setBasename("i18n/msg");
+        return bundle;
+    }
+}
 ```
 ```
 English Resource
 French Resource
 ```
+
+If we don't explicitly set message source, spring will create it's own empty `DelegatingMessageSource`
+```java
+import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        var source = context.getBean(MessageSource.class);
+        System.out.println(source.getClass().getName() + " => " + source);
+    }
+}
+```
+```
+org.springframework.context.support.DelegatingMessageSource => Empty MessageSource
+```
+
+
+
 
 ###### Resource interface
 Since `ApplicationContext` extends `ResourceLoader`, that has method `getResource`, you can load resources using context
