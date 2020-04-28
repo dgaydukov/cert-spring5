@@ -3,7 +3,17 @@ package com.example.logic.ann.prototypeintosingleton.proxymode;
 import javax.annotation.PostConstruct;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
+import org.springframework.context.annotation.ScopedProxyMode;
+import org.springframework.stereotype.Component;
+
+@Component
+@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE, proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class PrototypePrinter {
+    public PrototypePrinter(){
+        System.out.println("PrototypePrinter constructor...");
+    }
     private int rand;
 
     @PostConstruct

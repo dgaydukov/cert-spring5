@@ -13,12 +13,18 @@ import org.springframework.mock.env.MockEnvironment;
 import org.springframework.mock.env.MockPropertySource;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.test.context.junit.jupiter.web.SpringJUnitWebConfig;
 import org.springframework.test.context.junit4.AbstractJUnit4SpringContextTests;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.web.WebAppConfiguration;
 
-@RunWith(SpringRunner.class)
+//@RunWith(SpringRunner.class)
 //@ContextConfiguration
 //@TestPropertySource("classpath:application.yml")
+//@SpringJUnitConfig
+@WebAppConfiguration
+@SpringJUnitWebConfig
 public class MySimpleTest extends AbstractJUnit4SpringContextTests {
 //    @Configuration
 //    @ComponentScan("com.example.logic.ann.props")

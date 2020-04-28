@@ -268,6 +268,36 @@ com.example.spring5.A
 com.example.spring5.B$$EnhancerBySpringCGLIB$$a868d187
 ```
 
+There are 2 ways to pass dependency in java config
+1. directly call method `myController1`. Downside that injected bean should be in the same java config.
+2. pass it as param into method `myController2`. In this case spring will find dependency and inject it into method. This approach is better cause injected bean can be in another java config, or xml file.
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+class MyService{};
+class MyController{
+    public MyController(MyService service){}
+}
+
+@Configuration
+class JavaConfig{
+    @Bean
+    public MyService myService(){
+        return new MyService();
+    }
+
+    @Bean
+    public MyController myController1(){
+        return new MyController(myService());
+    }
+    @Bean
+    public MyController myController2(MyService service){
+        return new MyController(service);
+    }
+}
+```
+
 
 `@Required` - used with xml config, and indicate that property is required, throws `BeanInitializationException` if property not set in xml (deprecated of spring 5).
 
@@ -802,9 +832,32 @@ private static String getScope(ApplicationContext context, Class<?> cls){
     return null;
 }
 ```
+
+If prototype bean is dependency of singleton, then it would be eagerly created once, and stay inside container until close.
 To add ability for singleton to get every time new prototype we should add `@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE, proxyMode = ScopedProxyMode.TARGET_CLASS)`
-In this case proxy (not actual bean) is created and injected and every time you request it, proxy inside create new bean. 
-TARGET_CLASS - use cglib proxy, INTERFACES - use jdk proxy
+In this case proxy (not actual bean) is created and injected once. So only 1 instance of proxy would stay in container. Then for every method call, proxy create new instance of original object inside and call it's method.
+TARGET_CLASS - use cglib proxy, INTERFACES - use jdk proxy.
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import com.example.logic.ann.prototypeintosingleton.proxymode.SingletonBean;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.prototypeintosingleton.proxymode");
+        var bean = context.getBean(SingletonBean.class);
+        bean.sayHello();
+        bean.sayHello();
+    }
+}
+```
+```
+PrototypePrinter constructor...
+524 => I'm SingletonBean
+PrototypePrinter constructor...
+529 => I'm SingletonBean
+```
+As you see for every call new object is created inside proxy.
+
 In case of xml configuration, we would need to make singleton abstract, and add abstract method to get prototype instance, and add it to xml like `<lookup-method name="getPrinter" bean="prototypePrinter"/>`
 Thrird way is to use 
 ```java
@@ -2867,7 +2920,7 @@ public class App{
 `@CrossOrigin(origins="*")` - set origin to anybody, by default it same-host
 `PUT` vs. `PATCH`. put - opposite to get, so it to replace whole object for url. Patch - is to replace some fields within the object.
 `@RequestParam` - have field required (default true), so if you don't pass param field you got exception. If you set it to false value would be null (if your value is primitive you got `IllegalStateException: Optional int parameter 'id' is present but cannot be translated into a null value due to being declared as a primitive type. Consider declaring it as object wrapper for the corresponding primitive type.`)
-`ContextLoaderListener` - load root web app context
+`ContextLoaderListener` (implements `ServletContextListener`) load root web app context
 
 
 It's important to return correct value
@@ -5033,6 +5086,7 @@ once and then will just use cached version. If we have several config file we sh
 * If you want to test controllers you should use `@WebMvcTest` (loads all beans, but throw away everything except `@Controller`)
 * If you need mock inside your test you should add `@MockBean` to property and use it later. But if you need mock only to build other objects, you can add them to class level like `@MockBean(MyService.class)`, it works since it repeatable.
 * You can also test web flux with `WebTestClient`
+* If you need web app context you can add class level annotation `@WebAppConfiguration`, or you can use `@SpringJUnitWebConfig` which is the same as `@SpringJUnitConfig + @WebAppConfiguration`
 
 
 
