@@ -6,7 +6,7 @@
 * 1.3 [BFPP, BPP, ApplicationListener](#bfpp-bpp-applicationlistener)
 * 1.4 [Prototype into Singleton](#prototype-into-singleton)
 * 1.5 [PostConstruct and PreDestroy](#postconstruct-and-predestroy)
-* 1.6 [BeanNameAware and ApplicationContextAware](#beannameaware-and-applicationcontextaware)
+* 1.6 [BeanNameAware, BeanFactoryAware, ApplicationContextAware](#beannameaware-beanfactoryaware-applicationcontextaware)
 * 1.7 [BeanFactory and FactoryBean<?>](#beanfactory-and-factorybean)
 * 1.8 [Spring i18n](#spring-i18n)
 * 1.9 [Resource interface](#resource-interface)
@@ -1035,38 +1035,48 @@ Parent
 Child
 ```
 
-###### BeanNameAware and ApplicationContextAware
+###### BeanNameAware, BeanFactoryAware, ApplicationContextAware
 If you want to have bean name or app context to be injected into your bean you can implement this interfaces
 ```java
-package com.example.logic.ann;
-
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
 
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+    }
+}
+
 @Component
-public class AwareBean implements BeanNameAware, ApplicationContextAware {
-    private String beanName;
-    private ApplicationContext context;
+class AwareBean implements BeanNameAware, BeanFactoryAware, ApplicationContextAware {
 
     @Override
     public void setBeanName(String beanName) {
-        this.beanName = beanName;
+        System.out.println("setBeanName => " + beanName);
+    }
+
+    @Override
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        System.out.println("setBeanFactory => " + beanFactory);
     }
 
     @Override
     public void setApplicationContext(ApplicationContext context) {
-        this.context = context;
-    }
-
-    public void doWork(){
-        System.out.println("beanName => " + beanName + ", context => " + context);
+        System.out.println("setApplicationContext => " + context);
     }
 }
 ```
-If you call from your main `context.getBean(AwareBean.class).doWork();` you will get `beanName => awareBean, context => org.springframework.context.annotation.AnnotationConfigApplicationContext@66d33a, started on Fri Mar 27 15:50:43 HKT 2020`.
-You should use this interfaces, when you bean is not business logic, but some spring specific event.
+```
+setBeanName => awareBean
+setBeanFactory => org.springframework.beans.factory.support.DefaultListableBeanFactory@3a079870: defining beans [org.springframework.context.annotation.internalConfigurationAnnotationProcessor,org.springframework.context.annotation.internalAutowiredAnnotationProcessor,org.springframework.context.annotation.internalCommonAnnotationProcessor,org.springframework.context.annotation.internalPersistenceAnnotationProcessor,org.springframework.context.event.internalEventListenerProcessor,org.springframework.context.event.internalEventListenerFactory,awareBean]; root of factory hierarchy
+setApplicationContext => org.springframework.context.annotation.AnnotationConfigApplicationContext@482f8f11, started on Tue Apr 28 15:21:55 HKT 2020
+```
 
 
 ###### BeanFactory and FactoryBean<?>
