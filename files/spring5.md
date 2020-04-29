@@ -65,6 +65,7 @@
 * 10.12 [Spring Boot Logging](#spring-boot-logging)
 * 10.13 [Controller's method params](#controllers-method-params)
 * 10.14 [Spring Caching](#spring-caching)
+* 10.15 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
 
 
 
@@ -1904,6 +1905,34 @@ But there also class of `@Conditional` annotations.
 `@ConditionalOnProperty(prefix = "my.starter", name = "show", matchIfMissing = true)` - bean would be created if value
 of `my.starter.show` not false, or it doesn't exist in configuration.
 `@ConditionalOnResource(resources = "classpath:my.properties")` - bean would be created only if my.properties exist
+
+
+
+You can use expressions inside profile like:
+`@Profile({"!dev"})` - any profile except dev
+`@Profile({"!dev & !qa"})` - any profile except dev and qa
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.env.AbstractEnvironment;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        System.setProperty(AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME, "dev, qa");
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println(context.getBean(MyService.class));
+    }
+}
+
+/**
+ * If we declare @Profile({"dev", "qa"}) - it would mean if we have either dev or qa
+ * But using expression we can say that both at the same time
+ */
+@Profile({"dev & qa"})
+@Component
+class MyService{}
+```
 
 We can create custom condition by extending `SpringBootCondition`
 ```java
@@ -6433,3 +6462,22 @@ public class App{
 First time you run ` curl http://localhost:8080/` you will wait for 3 sec, later you would get response immediately.
 To clear cache call `curl -X POST http://localhost:8080/`
 
+###### JavaBeans, POJO, Spring Beans
+JavaBean - a bean with public no-arg constructor, private fields and public getter/setter. The best example is simple model
+```java
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+class User{
+    int id;
+    String name;
+}
+```
+We are using lombok to generate getter/setter but you can also write them by hand
+
+
+POJO - plain old java object (term inveted by Martin Fowler) - refers to any java object that's not coupled to any framework. 
+
+Spring Bean - a java object managed by spring container. Spring bean can be javabean, or pojo, or just some class.
