@@ -35,4 +35,10 @@ public class AopAnnotatedAdvice {
     public void afterReturnAdvice(JoinPoint jp, Object retVal){
         System.out.println("afterReturnAdvice => " + jp.getSignature().getName() + ", retVal => " + retVal);
     }
+
+    @AfterReturning(value = "execution(* getName(..))", returning="retVal")
+    public void afterReturnAdviceException(JoinPoint jp, Object retVal){
+        System.out.println("afterReturnAdvice => " + jp.getSignature().getName() + ", retVal => " + retVal);
+        throw new RuntimeException("oops");
+    }
 }

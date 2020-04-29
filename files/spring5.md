@@ -2033,7 +2033,7 @@ Spring aop can be applied only to public methods. If you want advice protected/p
 
 Spring supports 6 types of advices
 * `org.springframework.aop.MethodBeforeAdvice` (@Before) - before method execution. has access to params. In case of exception, jointpoint is not called
-* `org.springframework.aop.AfterReturningAdvice` (@AfterReturning) -  after method executed, has access to params & return value. If method execution throws exception, not called
+* `org.springframework.aop.AfterReturningAdvice` (@AfterReturning) -  after method executed, has access to params & return value. If method execution throws exception, not called. If advice throws exception, code won't proceed further (so you can implement some after validation)
 * `org.springframework.aop.AfterAdvice` (@After) - cause would be executed no matter what
 * `org.aopalliance.intercept.MethodInterceptor` (@Around) - has full control over method execution
 * `org.springframework.aop.ThrowsAdvice` (@AfterThrowing) run if execution method throws exception
