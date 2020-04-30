@@ -3236,7 +3236,7 @@ public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
 }
 ```
 
-For every controller you can inject current user like `@AuthenticationPrincipal UserEnityt entity`
+For every controller you can inject current user like `@AuthenticationPrincipal UserEntity entity`
 
 
 For servlet we configure `HttpSecurity`, for reactive we configure `ServerHttpSecurity`.
@@ -3304,6 +3304,13 @@ MyController.java:
 @PreAuthorize("hasRole('ROLE_ADMIN')")
 public void doWork(){}
 ```
+`intercept-url` ready in order in which they are defined, once match if found, the search is stopped. It's recommended to set more specific rules at the top
+
+There are couple of other security tags inside JSP
+First you should enable them in jsp `<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>`
+* `<sec:authorize access="hasRole('ROLE_ADMIN')">Hello Administator</sec:authorize>` - show content only for user with admin role
+* `<sec:authentication property="principal.username" />` - return current username
+* `<sec:accesscontrollist hasPermission="1,2" domainObject="${someObject}"></sec:accesscontrollist>` - only valid when used with Spring Security’s ACL module. It checks a comma-separated list of required permissions for a specified domain object
 
 ```java
 package com.concretepage.service;
@@ -4059,7 +4066,7 @@ curl -H "Content-Type: text/person" -d "30/Jack" http://localhost:8080/person
 
 ###### HandlerMapping, HandlerAdapter, HttpRequestHandler
 `HttpRequestHandler` - special interface to handle requests
-`HandlerMapping` - define a mapping between reqeust and `HandlerAdapter`
+`HandlerMapping` - define a mapping between request and `HandlerAdapter`
 `HandlerAdapter` - handler that executed when some url called
 
 ```java
@@ -4771,6 +4778,7 @@ EntityManagerFactory emf;
 PersistenceUnit injects an EntityManagerFactory, and PersistenceContext injects an EntityManager. It's generally better to use PersistenceContext unless you really need to manage the EntityManager lifecycle manually.
 Although you can use `EntityManager` to manually create queries, it's better to use spring data repository pattern, that wrap entity manager inside and provide many default queries out of the box.
 There are 2 interfaces `CrudRepository` & `JpaRepository` from which you can extend your repository interface (spring will create class automatically) and have many default queries already implemented.
+You can also add `@RepositoryDefinition` to your interface, and spring will create crud repository implementation for you (no need to extends other interfaces).
 To enable work with repository add this to your config `@EnableJpaRepositories("com.example.logic.ann.jdbc.spring.repository")`.
 But if you want some custom query (like fine user by first and last name) you just need to add abstract method `findByFirstNameAndLastName(String firstName, String lastName)` 
 and it would work (spring automatically build query based on it's name). The valid names are: `read...By, get...By, find...By`
@@ -4822,7 +4830,7 @@ If you want to subscribe on events for some repository you can extedn `AbstractR
 default param - required - in this case nothing happens.
 mandatory - throw exception if method was called from non-transactional method
 require_new - open new transaction (so we have nested tx)
-By default all `RuntimeException` rollback transaction whereas checked exceptions don't. This is an EJB legacy. You can configure this by using `rollbackFor()` and `noRollbackFor()` annotation parameters `@Transactional(rollbackFor=Exception.class)`
+By default all `RuntimeException` and `Error` rollback transaction whereas checked exceptions don't. This is an EJB legacy. You can configure this by using `rollbackFor()` and `noRollbackFor()` annotation parameters `@Transactional(rollbackFor=Exception.class)`
 You can also pass array of strings for `rollbackForClassName` or `noRollbackForClassName
 In test framework you have `@Rollback/@Commit`. Rollback - by default true, can set to false (same as set just `@Commit`). If you don't specify anything, for all integration tests all transactions would be rollbacked after test run.
 
@@ -4843,11 +4851,12 @@ public class App{
         PlatformTransactionManager manager = new JpaTransactionManager();
         TransactionTemplate template = new TransactionTemplate(manager);
         /**
-         * with some return value
+         * with some return value, takes TransactionCallback functioan interface with method doInTransaction
          */
         template.execute(status -> {
             // you can rollback by 
             status.setRollbackOnly();
+            template.update("sql query");
             return "done";
         });
         /**
@@ -4884,7 +4893,7 @@ public class App{
         TransactionStatus status = manager.getTransaction(params);
 
         try{
-            template.update("sql query", params);
+            template.update("sql query");
             manager.commit(status);
         }catch (Exception e) {
             manager.rollback(status);
