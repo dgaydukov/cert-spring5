@@ -3005,6 +3005,52 @@ get hooked by tomcat and that's why you implement it, and not directly `ServletC
 
 If you have spring boot project, that you are going to build into war, it has a class `SpringBootServletInitializer` which implements `WebApplicationInitializer`, so you don't have to write your own implementation. You will have main entry point, and spring boot will do this under the hood.
 
+If you choose `war` packaging spring will create 2 classes
+For local development
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class App {
+	public static void main(String[] args) {
+		/**
+		 * This is for local development, to run from intellij
+		 */
+		SpringApplication.run(App.class, args);
+	}
+}
+```
+
+For tomcat
+```java
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+
+/**
+ * This is for tomcat deployment. You should add class annotated with @SpringBootApplication to builder
+ */
+public class ServletInitializer extends SpringBootServletInitializer {
+	@Override
+	protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
+		return builder.sources(App.class);
+	}
+}
+```
+
+You add your class annotated with `@SpringBootApplication`. When you run locally from intellij, it run this App, that has main method. But when you deploy to tomcat, it will just run this class.
+* Change project name to more readable
+```
+<build>
+    <finalName>spring-boot-app</finalName>
+</build>
+```
+* Run `mvn clean install`
+* Download [tomcat](https://tomcat.apache.org/download-80.cgi) and extract in into `tomcat` directory
+* Run `chmod +x ./bin/catalina.sh` and then just run `./bin/catalina.sh run`
+* Copy your file `target/spring-boot-app.war` to `/tomcat/webapps`. This will force tomcat to exctract `.war` file into folder
+* Navigate to `http://localhost:8080/spring-boot-app/` - here your app.
+
 ###### Spring Boot
 In spring boot you have 2 new events. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
 ```
