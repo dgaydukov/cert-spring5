@@ -22,6 +22,9 @@
 * 2.3 [Native AspectJ](#native-aspectj)
 3.[Spring MVC](#spring-mvc)
 * 3.1 [DispatcherServlet](#dispatcherservlet)
+    * 3.1.1 [Build .war file with pure java](#build-war-file-with-pure-java)
+    * 3.1.2 [Build .war file with Spring](#build-war-file-with-spring)
+    * 3.1.3 [Build .war file with Spring Boot](#build-war-file-with-spring-boot)
 * 3.2 [Spring Boot](#spring-boot)
 * 3.3 [Custom Filters](#custom-filters)
 * 3.4 [Http security](#http-security)
@@ -66,6 +69,7 @@
 * 10.13 [Controller's method params](#controllers-method-params)
 * 10.14 [Spring Caching](#spring-caching)
 * 10.15 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
+
 
 
 
@@ -2989,8 +2993,10 @@ public class MyController {
 `org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests (it extends in the end `HttpServlet`).
 When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`, and has a method `getServletContext`, to get `ServletContext`.
 
-You can even build servlet app with pure [jAVA](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#java-servlet-webapp)
+###### Build .war file with pure java
+You can even build servlet app with pure [java](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#java-servlet-webapp)
 
+###### Build .war file with Spring
 Before the advent of spring boot for building web app we were using `.war` files (web archive).
 Inside we had web.xml were all configs are stores, then we put this file into `tomcat` directory, and when tomcat 
 starts, it takes with file and run it. That's why we didn't have any `main` method inside web app for spring.
@@ -3006,7 +3012,9 @@ get hooked by tomcat and that's why you implement it, and not directly `ServletC
 
 If you have spring boot project, that you are going to build into war, it has a class `SpringBootServletInitializer` which implements `WebApplicationInitializer`, so you don't have to write your own implementation. You will have main entry point, and spring boot will do this under the hood.
 
-If you choose `war` packaging spring will create 2 classes
+
+###### Build .war file with Spring Boot
+If you choose `war` packaging spring boot will create 2 classes
 For local development
 ```java
 import org.springframework.boot.SpringApplication;
@@ -3051,6 +3059,8 @@ You add your class annotated with `@SpringBootApplication`. When you run locally
 * Run `chmod +x ./bin/catalina.sh` and then just run `./bin/catalina.sh run`
 * Copy your file `target/spring-boot-app.war` to `/tomcat/webapps`. This will force tomcat to exctract `.war` file into folder
 * Navigate to `http://localhost:8080/spring-boot-app/` - here your app.
+
+
 
 
 ###### Spring Boot
