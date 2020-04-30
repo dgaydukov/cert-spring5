@@ -2986,15 +2986,16 @@ public class MyController {
 ```
 
 ###### DispatcherServlet
-`org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests.
-When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`,
-and has a method `getServletContext`, to get `ServletContext`.
+`org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests (it extends in the end `HttpServlet`).
+When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`, and has a method `getServletContext`, to get `ServletContext`.
+
+You can even build servlet app with pure [jAVA](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#java-servlet-webapp)
 
 Before the advent of spring boot for building web app we were using `.war` files (web archive).
 Inside we had web.xml were all configs are stores, then we put this file into `tomcat` directory, and when tomcat 
 starts, it takes with file and run it. That's why we didn't have any `main` method inside web app for spring.
 
-If you work without spring boot, you should implement `WebApplicationInitializer` and build war and put war into tomcat.
+If you work without spring, you should implement `WebApplicationInitializer` (but usually you just extends from `AbstractAnnotationConfigDispatcherServletInitializer`) and build war and put war into tomcat
 
 `WebApplicationInitializer vs ServletContainerInitializer`
 Tomcat 3.0+ search for `javax.servlet.ServletContainerInitializer` through the SPI and load class.
@@ -3050,6 +3051,7 @@ You add your class annotated with `@SpringBootApplication`. When you run locally
 * Run `chmod +x ./bin/catalina.sh` and then just run `./bin/catalina.sh run`
 * Copy your file `target/spring-boot-app.war` to `/tomcat/webapps`. This will force tomcat to exctract `.war` file into folder
 * Navigate to `http://localhost:8080/spring-boot-app/` - here your app.
+
 
 ###### Spring Boot
 In spring boot you have 2 new events. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines

@@ -6,8 +6,6 @@ package com.example.spring5;
  * containers.
  */
 
-import javax.servlet.Filter;
-
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 
 public class MyWAI extends AbstractAnnotationConfigDispatcherServletInitializer {
