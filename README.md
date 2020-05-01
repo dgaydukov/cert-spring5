@@ -19,3 +19,8 @@ There are 2 main reasons to get it.
 * [mock/280/80](https://www.certification-questions.com/spring-exam/professional-dumps.html)
 * [mobile mock](https://play.google.com/store/apps/details?id=com.springqcm)
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
+
+
+1. spring boot war project without App.main class (only ServletInitializer with springbotapp annotation)
+2. pure spring war project with MyWAI class, and with class that just implements WebApplicationInitializer
+3. use [wrk](https://github.com/wg/wrk) to test health checkpoint. Copmare it to [test-cli](https://github.com/gorelikov/cards-hub-evolution)

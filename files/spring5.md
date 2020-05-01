@@ -3639,6 +3639,10 @@ public class MyFunctionalController {
 }
 ```
 
+When you add webflux starter, it also add Reactor IPC to work with reactive servers like netty.
+Netty - framework for asyncronous operations. Comparing to tomcat, whick for every request create new thread and block it until work is done
+netty has 1 process, when it get request it use ChannelOperation to pass reqeust to `DispatcherHandler` which pass request to spring controllers.
+When conroller done it's work it call publisher to ChannelOperation where subscribe is called and netty returns result.
 
 
 ###### Data Validation
