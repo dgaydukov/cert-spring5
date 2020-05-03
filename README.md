@@ -32,3 +32,9 @@ dynamicinsert/dynamicupdate - изменять только те поля, ко�
 best practice
 interface for every class
 composition over inheritance
+
+5. spring context indexer
+Senior Solutions Architect
+
+hazelcast
+zookeeper
