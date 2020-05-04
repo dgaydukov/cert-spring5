@@ -41,6 +41,4 @@ zookeeper
 
 6. multiple autowire constructor with @required
 7. try to inject persistenceunit/context into object
-8. what is testNG
-9. application vs singleton
 

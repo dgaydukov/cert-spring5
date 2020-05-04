@@ -71,6 +71,7 @@
 * 10.15 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
 * 10.16 [Maven scope](#maven-scope)
 * 10.17 [Spring Boot Starter](#spring-boot-starter)
+* 10.18 [Spring bean scopes (singleton vs. application)](#spring-bean-scopes-singleton-vs-application)
 
 
 
@@ -4996,6 +4997,7 @@ To work with global tx you should add to your `pom.xml`
 
 
 #### Spring Testing
+When you add spring test starter `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.
 
 ###### TestPropertySource and TestPropertyValues
 In testing you can add custom properties in 2 ways. `@TestPropertySource` - to pass test source. If you don't pass anything it will search for  default property file with name of your test class. 
@@ -6607,8 +6609,19 @@ Although you should omit it, cause most starters (for example `spring-boot-start
 
 
 
+###### Spring bean scopes (singleton vs. application)
+There are 6 scopes for spring beans, you can also create your own by implementing `Scope` interface.
+2 are common for all apps
+* `singleton` - one instance per app context
+* `prototype` - new instance every time other bean call it
+4 are for web only
+* `request` - instance per http request
+* `session` - instance per http session
+* `application` - instance per `ServletContext`
+* `websocket` - instance per web socket connection
 
-
+`application` is somewhat similar to a Spring `singleton` bean but differs in two important ways: It is a singleton per ServletContext, not per Spring 'ApplicationContext' (or which there may be several in any given web application), 
+and it is actually exposed and therefore visible as a ServletContext attribute
 
 
 
