@@ -70,6 +70,7 @@
 * 10.14 [Spring Caching](#spring-caching)
 * 10.15 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
 * 10.16 [Maven scope](#maven-scope)
+* 10.17 [Spring Boot Starter](#spring-boot-starter)
 
 
 
@@ -2954,7 +2955,7 @@ public class App{
 `@CrossOrigin(origins="*")` - set origin to anybody, by default it same-host
 `PUT` vs. `PATCH`. put - opposite to get, so it to replace whole object for url. Patch - is to replace some fields within the object.
 `@RequestParam` - have field required (default true), so if you don't pass param field you got exception. If you set it to false value would be null (if your value is primitive you got `IllegalStateException: Optional int parameter 'id' is present but cannot be translated into a null value due to being declared as a primitive type. Consider declaring it as object wrapper for the corresponding primitive type.`)
-`ContextLoaderListener` (implements `ServletContextListener`) load root web app context
+`ContextLoaderListener` (implements `ServletContextListener`) load root web app context. You can add it to web.xml by `<listener><listener-class>org.springframework.web.context.ContextLoaderListener</listener-class></listener>`
 
 
 It's important to return correct value
@@ -2993,6 +2994,7 @@ public class MyController {
 ###### DispatcherServlet
 `org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests (it extends in the end `HttpServlet`).
 When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`, and has a method `getServletContext`, to get `ServletContext`.
+You can register it in `web.xml` by `<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>`
 
 ###### Build .war file with pure java
 You can even build servlet app with pure [java](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#java-servlet-webapp)
@@ -4889,10 +4891,24 @@ By default delete return void, but you still can verify that row was deleted. If
 If you want to subscribe on events for some repository you can extedn `AbstractRepositoryEventListener<YourRepo>` and implements methods like `afterCreate` and have some custom logic there.
 
 ###### JTA - java transaction API
-`@Transactional` - has propagation param, that instruct spring what to do when you call one transactional method from another.
-default param - required - in this case nothing happens.
-mandatory - throw exception if method was called from non-transactional method
-require_new - open new transaction (so we have nested tx)
+`@Transactional`
+
+`Propagation` => 
+
+* `REQUIRED` - default value, if no transaction exists, create new, otherwise run in current
+* `SUPPORTS` - if transaction exists, run in int, otherwise run as non-transactional
+* `MANDATORY` - throw exception if method was called from non-transactional method
+* `REQUIRES_NEW` - always create and run in new transaction
+* `NOT_SUPPORTED` - stop current transaction, run as non-transactioanl
+* `NEVER` - throw exception if there is active transaction
+* `NESTED` - if a transaction exists, then if yes, it marks a savepoint. This means if our business logic execution throws an exception, then transaction rollbacks to this savepoint. If there's no active transaction, it works like REQUIRED.
+             
+`Isolation` =>
+* `READ_UNCOMMITTED` - dirty reads, repeatable reads, phantom reads
+* `READ_COMMITTED` - repeatable reads, phantom reads
+* `REPEATABLE_READ` - phantom reads
+* `SERIALIZABLE` - no reads available
+
 By default all `RuntimeException` and `Error` rollback transaction whereas checked exceptions don't. This is an EJB legacy. You can configure this by using `rollbackFor()` and `noRollbackFor()` annotation parameters `@Transactional(rollbackFor=Exception.class)`
 You can also pass array of strings for `rollbackForClassName` or `noRollbackForClassName
 In test framework you have `@Rollback/@Commit`. Rollback - by default true, can set to false (same as set just `@Commit`). If you don't specify anything, for all integration tests all transactions would be rollbacked after test run.
@@ -6575,8 +6591,15 @@ Dependencies with scopes provided and test will never be included in the main pr
 
 
 
-
-
+###### Spring Boot Starter
+Core starter, including auto-configuration support, logging and YAML is:
+```
+<dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter</artifactId>
+</dependency>
+```
+Although you should omit it, cause most starters (for example `spring-boot-starter-web`) include it as transitive dependency, but not all. If you want to use jpa you should include both `spring-boot-starter-data-jpa` and `spring-boot-starter`.
 
 
 
