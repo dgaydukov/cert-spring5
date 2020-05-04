@@ -69,6 +69,7 @@
 * 10.13 [Controller's method params](#controllers-method-params)
 * 10.14 [Spring Caching](#spring-caching)
 * 10.15 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
+* 10.16 [Maven scope](#maven-scope)
 
 
 
@@ -5085,7 +5086,6 @@ First let's add junit to `pom.xml`
     <scope>test</scope>
 </dependency>
 ```
-Scope - test, means that junit types would be available only in testing scope, not inside main app.
 
 By default this starter come with junit4 and junit-vintage. If you want to use new junit5 jupiter, you should exclude these 2 and add jupiter explicitly
 ```
@@ -6552,3 +6552,50 @@ We are using lombok to generate getter/setter but you can also write them by han
 POJO - plain old java object (term inveted by Martin Fowler) - refers to any java object that's not coupled to any framework. 
 
 Spring Bean - a java object managed by spring container. Spring bean can be javabean, or pojo, or just some class.
+
+
+
+###### Maven scope
+There are 2 types of dependencies
+* Direct - directly included into project under `<dependency/>` tag
+* Transitive - dependencies of your direct dependencies. Although you don't explicitly add them to project, they are still there.
+We can list all of dependencies by running `mvn dependency:tree`
+
+Scopes can help to limit transitivity and modify classpath for different built tasks. There are 6 scopes:
+* `compile` - default scope if no other set. Dependencies with this scope available on the classpath for all builds. They are transitive.
+* `provided` - dependency should be provided by jdk or container. So it only available during compile-time. At run-time they won't be available. For example `spring-starter-tomcat` for `.war` application.
+* `runtime` - dependency only available at run-time not compile time. For example jdbc driver, since for compilation we are suing `DataSource` to obtain connection we don't need driver at compile time, be we definitely need it during runtime.
+* `test` - means that junit types would be available only in testing scope, not inside main app. For example class `AopTestUtils` is available under test folder, but you can't import it into main code.
+* `system` - similar to provided, but we should declare the exact path to jar file using `<systemPath/>` tag
+* `import` - available for type `pom`, should be replaced with all respective dependencies from it's pom.
+
+Dependencies with scopes provided and test will never be included in the main project.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
