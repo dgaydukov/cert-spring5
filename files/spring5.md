@@ -72,6 +72,7 @@
 * 10.16 [Maven scope](#maven-scope)
 * 10.17 [Spring Boot Starter](#spring-boot-starter)
 * 10.18 [Spring bean scopes (singleton vs. application)](#spring-bean-scopes-singleton-vs-application)
+* 10.19 [Spring Context Indexer)](#spring-context-indexer)
 
 
 
@@ -4831,14 +4832,14 @@ public class App {
 
 ###### Spring Data
 Jpa `EntityManagerFactory` resembles `SessionFactory`. You can call `entityManagerFactory.createEntityManager()` to get current `EntityManager` on which you can run queries like `update/remove/save`
-You can also autowire it like
+You can also autowire it like that. Types should match exactly.
 ```java
-@PersistenceContext
-private EntityManager em;
-
 @PersistenceUnit
-EntityManagerFactory emf;
+EntityManagerFactory factory;
+@PersistenceContext
+EntityManager manager;
 ```
+
 `@PersistenceContext` takes care to create a unique EntityManager for every thread. So you shouldn't use `@Autowired` in this case.
 `@PersistenceUnit` - to auwowire EntityManagerFactory
 PersistenceUnit injects an EntityManagerFactory, and PersistenceContext injects an EntityManager. It's generally better to use PersistenceContext unless you really need to manage the EntityManager lifecycle manually.
@@ -6625,8 +6626,16 @@ and it is actually exposed and therefore visible as a ServletContext attribute
 
 
 
-
-
+###### Spring Context Indexer
+If you need to scan your project to search for some components, it may take some time. So you may add a dependency
+```
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-context-indexer</artifactId>
+    <version>5.2.5.RELEASE</version>
+</dependency>
+```
+And it will generate during compile time file `/META-INF/spring.components` in your jar with all your stereotype components.
 
 
 

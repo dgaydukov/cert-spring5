@@ -24,21 +24,7 @@ There are 2 main reasons to get it.
 1. spring boot war project without App.main class (only ServletInitializer with springbotapp annotation)
 2. pure spring war project with MyWAI class, and with class that just implements WebApplicationInitializer
 3. use [wrk](https://github.com/wg/wrk) to test health checkpoint. Copmare it to [test-cli](https://github.com/gorelikov/cards-hub-evolution)
-4. hibernate [datasourceProxy](https://github.com/p6spy/p6spy) [assert-sql-count](https://github.com/vladmihalcea/db-util)
-onetotmany, fetch(fetchmode.subselect) - run 2 selects
-@namedentitygraph
-dynamicinsert/dynamicupdate - изменять только те поля, которые были изменены (по умочанию хибернет обновляет все поля даже если изменено 1)
+4. hibernate [datasourceProxy](https://github.com/p6spy/p6spy) [assert-sql-count](https://github.com/vladmihalcea/db-util) 
+5. onetotmany, fetch(fetchmode.subselect) - run 2 selects, @namedentitygraph, dynamicinsert/dynamicupdate - изменять только те поля, которые были изменены (по умочанию хибернет обновляет все поля даже если изменено 1)
 
-best practice
-interface for every class
-composition over inheritance
-
-5. spring context indexer
-Senior Solutions Architect
-
-hazelcast
-zookeeper
-
-6. multiple autowire constructor with @required
-7. try to inject persistenceunit/context into object
 

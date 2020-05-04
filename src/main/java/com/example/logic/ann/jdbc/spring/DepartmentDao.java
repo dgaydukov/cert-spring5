@@ -3,6 +3,7 @@ package com.example.logic.ann.jdbc.spring;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceUnit;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +18,11 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
     private EntityManagerFactory entityManagerFactory;
     @Autowired
     private EntityManager entityManager;
+
+    @PersistenceUnit
+    EntityManagerFactory factory;
     @PersistenceContext
-    private EntityManager entityManager2;
+    EntityManager manager;
 
     @Override
     public List<DepartmentModel> getAll() {
@@ -38,9 +42,6 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
     @Override
     public DepartmentModel save(DepartmentModel model) {
         System.out.println("saving...");
-        System.out.println(entityManagerFactory.createEntityManager());
-        System.out.println(entityManager);
-        System.out.println(entityManager2);
         return null;
     }
 }
