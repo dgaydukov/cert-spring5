@@ -11,11 +11,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.orm.hibernate5.HibernateTransactionManager;
 import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+import com.p6spy.engine.spy.P6DataSource;
 
 @Configuration
 @EnableTransactionManagement
@@ -35,7 +38,7 @@ public class HibernateJavaConfig {
     private String password;
 
     @Bean
-    public DataSource dataSource() {
+    public DataSource ds() {
         try{
             SimpleDriverDataSource ds = new SimpleDriverDataSource();
             ds.setDriverClass((Class<? extends Driver>) Class.forName(driverClassName));
@@ -46,6 +49,15 @@ public class HibernateJavaConfig {
         } catch (ClassNotFoundException ex){
             throw new RuntimeException(ex);
         }
+    }
+
+    @Bean
+    public DataSource dataSource() {
+        var ds = new DriverManagerDataSource();
+        ds.setUrl(url);
+        ds.setUsername(username);
+        ds.setPassword(password);
+        return new P6DataSource(ds);
     }
 
     private Properties properties() {

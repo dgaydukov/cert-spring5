@@ -1,5 +1,7 @@
 package com.example.logic.ann.jdbc.hibernate;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import javax.transaction.Transactional;
 import java.util.List;
 
@@ -12,6 +14,7 @@ import com.example.logic.ann.jdbc.hibernate.entities.DepartmentEntity;
 @Transactional
 @Repository
 public class DepartmentDao implements MyDao<DepartmentEntity> {
+
     @Autowired
     private SessionFactory sessionFactory;
 

@@ -19,11 +19,3 @@ There are 2 main reasons to get it.
 * [mock/280/80](https://www.certification-questions.com/spring-exam/professional-dumps.html)
 * [mobile mock](https://play.google.com/store/apps/details?id=com.springqcm)
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
-
-
-
-1. use [wrk](https://github.com/wg/wrk) to test health checkpoint. Copmare it to [test-cli](https://github.com/gorelikov/cards-hub-evolution)
-2. hibernate [datasourceProxy](https://github.com/p6spy/p6spy) [assert-sql-count](https://github.com/vladmihalcea/db-util) 
-3. onetotmany, fetch(fetchmode.subselect) - run 2 selects, @namedentitygraph, dynamicinsert/dynamicupdate - изменять только те поля, которые были изменены (по умочанию хибернет обновляет все поля даже если изменено 1)
-
-

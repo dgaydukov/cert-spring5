@@ -42,6 +42,8 @@
 * 4.2 [Hibernate](#hibernate)
 * 4.3 [Spring Data](#spring-data)
 * 4.4 [JTA - java transaction API](#jta---java-transaction-api)
+* 4.5 [DataSource Interceptor and Sql query counter](#datasource-interceptor-and-sql-query-counter)
+* 4.6 [@DynamicUpdate/@DynamicInsert and @NamedEntityGraph](#datasource-interceptor-and-sql-query-counter)
 5. [Spring Testing](#spring-testing)
 * 5.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
 * 5.2 [OutputCaptureRule](#outputcapturerule)
@@ -3080,7 +3082,6 @@ public class App implements WebApplicationInitializer {
         context.register(JavaConfig.class);
 
         servletContext.addListener(new ContextLoaderListener(context));
-
         ServletRegistration.Dynamic dispatcher = servletContext.addServlet("dispatcher", new DispatcherServlet(context));
 
         dispatcher.setLoadOnStartup(1);
@@ -5057,6 +5058,24 @@ To work with global tx you should add to your `pom.xml`
 ```
 
 
+###### DataSource Interceptor and Sql query counter
+You can add these 2 libraries to your `pom.xml` to get ability to count how many queries actually has been sent to db `SQLStatementCountValidator.assertSelectCount(1);` and intercept all queries.
+```
+<dependency>
+    <groupId>com.vladmihalcea</groupId>
+    <artifactId>db-util</artifactId>
+    <version>1.0.4</version>
+</dependency>
+<dependency>
+    <groupId>p6spy</groupId>
+    <artifactId>p6spy</artifactId>
+    <version>3.9.0</version>
+</dependency>
+```
+
+###### @DynamicUpdate/@DynamicInsert and @NamedEntityGraph
+By default when you update entity, even if you set 1 fields, orm will generate sql update with all fields in entity. If you want short update with only your field you should use dynamic update annotations. Same true for dynamic insert.
+Entity graph - can be used to lazy/eager load data
 
 
 #### Spring Testing
