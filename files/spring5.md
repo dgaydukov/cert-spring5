@@ -3017,6 +3017,78 @@ get hooked by tomcat and that's why you implement it, and not directly `ServletC
 
 If you have spring boot project, that you are going to build into war, it has a class `SpringBootServletInitializer` which implements `WebApplicationInitializer`, so you don't have to write your own implementation. You will have main entry point, and spring boot will do this under the hood.
 
+Here is basic example to build web app with pure spring
+```java
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
+
+public class App extends AbstractAnnotationConfigDispatcherServletInitializer {
+    @Override
+    protected Class<?>[] getRootConfigClasses() {
+        return new Class<?>[]{
+            JavaConfig.class
+        };
+    }
+    @Override
+    protected Class<?>[] getServletConfigClasses()  {
+        return new Class<?>[]{
+            JavaConfig.class
+        };
+    }
+    @Override
+    protected String[] getServletMappings() {
+        return new String[]{"/"};
+    }
+}
+
+@EnableWebMvc
+@Configuration
+@ComponentScan
+class JavaConfig implements WebMvcConfigurer {
+}
+
+@RestController("/")
+class MyController {
+    @GetMapping
+    public String handleGet(){
+        return "handleGet => " + ThreadLocalRandom.current().nextInt();
+    }
+}
+```
+
+You can also rewrite your app to implement just `WebApplicationInitializer`
+```java
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRegistration;
+import org.springframework.web.WebApplicationInitializer;
+import org.springframework.web.context.ContextLoaderListener;
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import org.springframework.web.servlet.DispatcherServlet;
+
+public class App implements WebApplicationInitializer {
+    @Override
+    public void onStartup(ServletContext servletContext) throws ServletException {
+        var context = new AnnotationConfigWebApplicationContext();
+        context.register(JavaConfig.class);
+
+        servletContext.addListener(new ContextLoaderListener(context));
+
+        ServletRegistration.Dynamic dispatcher = servletContext.addServlet("dispatcher", new DispatcherServlet(context));
+
+        dispatcher.setLoadOnStartup(1);
+        dispatcher.addMapping("/");
+    }
+}
+```
+
 
 ###### Build .war file with Spring Boot
 If you choose `war` packaging spring boot will create 2 classes one is `ServletInitializer` another is `DemoApplication` with main method. You can rewrite them into one
