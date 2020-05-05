@@ -3019,38 +3019,28 @@ If you have spring boot project, that you are going to build into war, it has a 
 
 
 ###### Build .war file with Spring Boot
-If you choose `war` packaging spring boot will create 2 classes
+If you choose `war` packaging spring boot will create 2 classes one is `ServletInitializer` another is `DemoApplication` with main method. You can rewrite them into one
 For local development
 ```java
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 
 @SpringBootApplication
-public class App {
+public class App extends SpringBootServletInitializer {
+	@Override
+	protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+		return application.sources(App.class);
+	}
+
 	public static void main(String[] args) {
-		/**
-		 * This is for local development, to run from intellij
-		 */
 		SpringApplication.run(App.class, args);
 	}
 }
 ```
 
-For tomcat
-```java
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
-
-/**
- * This is for tomcat deployment. You should add class annotated with @SpringBootApplication to builder
- */
-public class ServletInitializer extends SpringBootServletInitializer {
-	@Override
-	protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
-		return builder.sources(App.class);
-	}
-}
-```
+You can even remove `main` method and have pure war app. For this remove this plugin `spring-boot-maven-plugin`, otherwise `mvn clean install` won't work. And then just copy your war file to tomcat.
 
 You add your class annotated with `@SpringBootApplication`. When you run locally from intellij, it run this App, that has main method. But when you deploy to tomcat, it will just run this class.
 * Change project name to more readable
@@ -4458,9 +4448,9 @@ getById(28) =>DepartmentModel(id=28, name=finance, type=my)
 deleteById(28) => true
 ```
 
-DriverManagerDataSource — Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call.
-SimpleDriverDataSource — Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi.
-SingleConnectionDataSource - (implement SmartDataSource) - use single connection without closing it
+* `DriverManagerDataSource` — Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call.
+* `SimpleDriverDataSource` — Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi.
+* `SingleConnectionDataSource` - (extends `DriverManagerDataSource`, implement `SmartDataSource`) - use single connection without closing it
 
 `SimpleDriverDataSource` - is not pooled, so you can use it only for testing purpose.
 Although you can write your own implementation of `RowMapper` for each entity, if you db columns correspond to your model, you can
@@ -4901,9 +4891,9 @@ If you want to subscribe on events for some repository you can extedn `AbstractR
 * `SUPPORTS` - if transaction exists, run in int, otherwise run as non-transactional
 * `MANDATORY` - throw exception if method was called from non-transactional method
 * `REQUIRES_NEW` - always create and run in new transaction
-* `NOT_SUPPORTED` - stop current transaction, run as non-transactioanl
+* `NOT_SUPPORTED` - stop current transaction, run as non-transactional
 * `NEVER` - throw exception if there is active transaction
-* `NESTED` - if a transaction exists, then if yes, it marks a savepoint. This means if our business logic execution throws an exception, then transaction rollbacks to this savepoint. If there's no active transaction, it works like REQUIRED.
+* `NESTED` - if a transaction exists, create a savepoint. If method throws an exception, then transaction rollbacks to this savepoint. If there's no active transaction, it works like REQUIRED.
              
 `Isolation` =>
 * `READ_UNCOMMITTED` - dirty reads, repeatable reads, phantom reads
@@ -4971,13 +4961,13 @@ public class App{
         DefaultTransactionDefinition params = new DefaultTransactionDefinition();
         // you can set tx name this way
         params.setName("myGoodTx");
-        TransactionStatus status = manager.getTransaction(params);
+        TransactionStatus tx = manager.getTransaction(params);
 
         try{
             template.update("sql query");
-            manager.commit(status);
+            manager.commit(tx);
         }catch (Exception e) {
-            manager.rollback(status);
+            manager.rollback(tx);
         }
     }
 }
@@ -5370,7 +5360,7 @@ First you should add this dependency
     <artifactId>spring-boot-starter-actuator</artifactId>
 </dependency>
 ```
-Then these 2 would be avalilable `/actuator/health` and `/actuator/info
+Then these 2 would be available `/actuator/health` and `/actuator/info
 
 ```java
 import org.springframework.boot.SpringApplication;
@@ -6393,7 +6383,8 @@ Person(age=30, name=Jack)
 Send `curl -H "Content-type: application/json" -d 'ck"}' http://localhost:8080/person`
 
 To set return type of controller or method you can use `@ResponseStatus`.
-There are 2 ways to have map between your exceptions and http status codes
+There are 2 ways to have map between your exceptions and http status codes. You can also add your own implementation of `HandlerExceptionResolver` or use one of the default to map exceptions to http statuses.
+You can also directly throw `ResponseStatusException`
 ```java
 package com.example.logic.ann.misc;
 
