@@ -35,13 +35,13 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
     }
 
     @Override
-    public boolean deleteById(int id) {
-        return false;
-    }
-
-    @Override
     public DepartmentModel save(DepartmentModel model) {
         System.out.println("saving...");
         return null;
+    }
+
+    @Override
+    public void delete(DepartmentModel model) {
+
     }
 }

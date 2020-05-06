@@ -1,7 +1,5 @@
 package com.example.logic.ann.jdbc.hibernate;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.transaction.Transactional;
 import java.util.List;
 
@@ -9,6 +7,7 @@ import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import com.example.logic.ann.jdbc.MyDao;
 import com.example.logic.ann.jdbc.hibernate.entities.DepartmentEntity;
 
 @Transactional

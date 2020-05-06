@@ -52,14 +52,23 @@ public class JdbcJavaConfig {
     }
 
     @Bean
-    public DataSource embeddedDataSource() {
-        EmbeddedDatabaseBuilder builder = new EmbeddedDatabaseBuilder();
-        return builder.setType(EmbeddedDatabaseType.H2).build();
+    public DataSource ds1() {
+        DriverManagerDataSource ds = new DriverManagerDataSource();
+        ds.setDriverClassName(driverClassName);
+        ds.setUrl(url);
+        ds.setUsername(username);
+        ds.setPassword(password);
+        return ds;
+        /**
+         * we can also write just:
+         * return new DriverManagerDataSource(url, username, password);
+         */
     }
 
     @Bean
-    public DataSource dmDataSource() {
-        return new DriverManagerDataSource(url, username, password);
+    public DataSource ds2() {
+        EmbeddedDatabaseBuilder builder = new EmbeddedDatabaseBuilder();
+        return builder.setType(EmbeddedDatabaseType.H2).build();
     }
 
     @Bean

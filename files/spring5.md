@@ -2763,7 +2763,8 @@ I'm AopSimpleBean
 As you see we have 2 beans of the same type, original - not adviced and adviced.
 If you want to have one bean, and you never need original you can remove it from javaconfig, and inject it directly into `ProxyFactoryBean`
 
-You can also use aspecj annotations, you should first enable them `@EnableAspectJAutoProxy(proxyTargetClass = true)` (setting proxyTargetClass force spring aop to use CGLIB)
+You can also use `@AspectJ` annotations, you should first enable them `@EnableAspectJAutoProxy(proxyTargetClass = true)` (setting proxyTargetClass force spring aop to use CGLIB)
+`@AspectJ` refers to a style of declaring aspects as regular Java classes annotated with annotations
 If you are using `@SpringBootApplication` you don't need to explicitly include `@EnableAspectJAutoProxy`, cause it inside include
 `@EnableAutoConfiguration` which with the help of conditional annotations enables aop.
 `AopAnnotatedAdvice.java`
@@ -4311,16 +4312,16 @@ public class App {
 
 But of course we don't want to work with raw data, we would like to work with models. So here example of custom model & dao based on jdk jdbc
 ```java
-import com.example.logic.ann.jdbc.jdk.DepartmentDao;
-import com.example.logic.ann.jdbc.DepartmentModel;
-import com.example.logic.ann.jdbc.jdk.MyConnection;
-import com.example.logic.ann.jdbc.MyDao;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-public class App {
+import com.example.logic.ann.jdbc.DepartmentModel;
+import com.example.logic.ann.jdbc.jdk.DepartmentDao;
+import com.example.logic.ann.jdbc.jdk.JdkJavaConfig;
+
+public class App{
     public static void main(String[] args) {
-        String url = "jdbc:mysql://localhost:3306/spring5?user=root&password=";
-        MyConnection conn = new MyConnection(url);
-        MyDao<DepartmentModel> dao = new DepartmentDao(conn.getConnection());
+        var context = new AnnotationConfigApplicationContext(JdkJavaConfig.class);
+        var dao = context.getBean(DepartmentDao.class);
 
         System.out.println("getAll => " + dao.getAll());
         System.out.println("getById(1) => " + dao.getById(1));
@@ -4329,17 +4330,15 @@ public class App {
         model.setName("New dep");
         model.setType("cool");
         var saved = dao.save(model);
-        int id = saved.getId();
         System.out.println("save => " + saved);
-        System.out.println("deleteById(" + id + ") => " + dao.deleteById(id));
+        dao.delete(saved);
     }
 }
 ```
 ```
 getAll => [DepartmentModel(id=1, name=Exchange, type=IT), DepartmentModel(id=2, name=Solution, type=IT), DepartmentModel(id=3, name=Markets, type=CP), DepartmentModel(id=4, name=New dep, type=cool)]
 getById(1) => DepartmentModel(id=1, name=Exchange, type=IT)
-save => DepartmentModel(id=16, name=New dep, type=cool)
-deleteById(16) => true
+save => DepartmentModel(id=5, name=New dep, type=cool)
 ```
 
 If you take a look into package `com.example.logic.ann.jdbc.jdk` you will see a lot of boilerplate, so it's better to use spring jdbc to handle this
@@ -4571,8 +4570,8 @@ getById(28) =>DepartmentModel(id=28, name=finance, type=my)
 deleteById(28) => true
 ```
 
-* `DriverManagerDataSource` — Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call.
-* `SimpleDriverDataSource` — Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi.
+* `SimpleDriverDataSource` — Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi. We should set driver class with `setDriverClass`.
+* `DriverManagerDataSource` — Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call. We can set just driver class name with `setDriverClassName`.
 * `SingleConnectionDataSource` - (extends `DriverManagerDataSource`, implement `SmartDataSource`) - use single connection without closing it
 
 `SimpleDriverDataSource` - is not pooled, so you can use it only for testing purpose.
@@ -4757,7 +4756,7 @@ import com.example.logic.ann.jdbc.hibernate.entities.DepartmentEntity;
 
 @Transactional
 @Repository
-public class DepartmentDao implements MyDao<DepartmentEntity> {
+public class DepartmentDao implements HibernateDao<DepartmentEntity> {
     @Autowired
     private SessionFactory sessionFactory;
 
@@ -4880,7 +4879,7 @@ import java.util.List;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import com.example.logic.ann.jdbc.hibernate.MyDao;
+import com.example.logic.ann.jdbc.hibernate.HibernateDao;
 import com.example.logic.ann.jdbc.hibernate.entities.DepartmentEntity;
 import com.example.logic.ann.jdbc.hibernate.entities.EmployeeEntity;
 
@@ -4892,7 +4891,7 @@ public class App{
          * NoSuchBeanDefinitionException: No qualifying bean of type 'com.example.logic.ann.jdbc.hibernate.DepartmentDao' available
          * the reason, is since we are using @Transactional, our object is changed with proxy, that's why we should use interfaces
          */
-        MyDao<DepartmentEntity> dao = context.getBean(MyDao.class);
+        HibernateDao<DepartmentEntity> dao = context.getBean(HibernateDao.class);
         System.out.println(dao.getAll());
 
         var dep = new DepartmentEntity();
@@ -4919,7 +4918,7 @@ Lazy loading example
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import com.example.logic.ann.jdbc.hibernate.MyDao;
+import com.example.logic.ann.jdbc.hibernate.HibernateDao;
 import com.example.logic.ann.jdbc.hibernate.entities.DepartmentEntity;
 
 public class App {
@@ -4930,7 +4929,7 @@ public class App {
          * NoSuchBeanDefinitionException: No qualifying bean of type 'com.example.logic.ann.jdbc.hibernate.DepartmentDao' available
          * the reason, is since we are using @Transactional, our object is changed with proxy, that's why we should use interfaces
          */
-        MyDao<DepartmentEntity> dao = context.getBean(MyDao.class);
+        HibernateDao<DepartmentEntity> dao = context.getBean(HibernateDao.class);
         System.out.println("__RUN__");
         var e1 = (DepartmentEntity) dao.getById(1);
         System.out.println(e1.getName());

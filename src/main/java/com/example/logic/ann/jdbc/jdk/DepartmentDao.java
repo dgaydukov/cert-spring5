@@ -8,15 +8,14 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
+
 import com.example.logic.ann.jdbc.DepartmentModel;
 import com.example.logic.ann.jdbc.MyDao;
 
 public class DepartmentDao implements MyDao<DepartmentModel> {
+    @Autowired
     private Connection conn;
-
-    public DepartmentDao(Connection conn){
-        this.conn = conn;
-    }
 
     @Override
     public List<DepartmentModel> getAll() {
@@ -55,17 +54,6 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
         }
     }
 
-
-    @Override
-    public boolean deleteById(int id) {
-        try(PreparedStatement stmt = conn.prepareStatement("delete from department where id=?");){
-            stmt.setInt(1, id);
-            return stmt.executeUpdate() == 1;
-        } catch (SQLException ex){
-            throw new RuntimeException(ex);
-        }
-    }
-
     @Override
     public DepartmentModel save(DepartmentModel model) {
         try(PreparedStatement stmt = conn.prepareStatement("insert into department(name, type) values(?, ?)", Statement.RETURN_GENERATED_KEYS);){
@@ -79,6 +67,16 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
                 }
                 throw new RuntimeException("Can't insert model="+model);
             }
+        } catch (SQLException ex){
+            throw new RuntimeException(ex);
+        }
+    }
+
+
+    @Override
+    public void delete(DepartmentModel model) {
+        try(PreparedStatement stmt = conn.prepareStatement("delete from department where id=?");){
+            stmt.setInt(1, model.getId());
         } catch (SQLException ex){
             throw new RuntimeException(ex);
         }

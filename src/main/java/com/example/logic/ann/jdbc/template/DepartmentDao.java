@@ -82,8 +82,8 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
 
 
     @Override
-    public boolean deleteById(int id) {
-        return jdbcTemplate.update("delete from department where id=?", id) == 1;
+    public void delete(DepartmentModel model) {
+        jdbcTemplate.update("delete from department where id=?", model.getId());
     }
 
     @Override

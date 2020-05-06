@@ -2,3 +2,4 @@
 .mvn
 target
 transaction-logs
+spy.log
