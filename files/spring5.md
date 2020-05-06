@@ -1334,6 +1334,8 @@ public class PropsJavaConfig {
 ```
 
 ###### Profile, Primary, Qualifier, Order, Lazy
+We can have only 1 constructor with `@Aurowired` that is required. Or have many constructor with `@Aurowired(required=false)` - in this case spring will automatically determine which to use.
+
 `@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean
 `@Qualifier("beanName")` - you can inject any bean you want. It's stronger than primary, so it autowired bean by name.
 We have spring qualifier and also jsr-330 `javax.inject.Qualifier`.
@@ -2579,7 +2581,7 @@ import org.springframework.context.annotation.Configuration;
 
 public class App{
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.spring5");
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
         var person = (Person & Printer) context.getBean("person");
         person.sayHello();
         person.print();
@@ -2593,7 +2595,7 @@ class JavaConfig{
         class PrinterAdvice extends DelegatingIntroductionInterceptor implements Printer {
             @Override
             public void print(){
-                System.out.println("hello");
+                System.out.println("printing...");
             }
         }
         
@@ -2617,8 +2619,56 @@ interface Printer{
 ```
 ```
 Hello, I'm Person
-hello
+printing...
 ```
+
+
+We can rewrite it using `@DeclareParents`
+```java
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.DeclareParents;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.stereotype.Component;
+
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        var person = (Person & Printer) context.getBean("person");
+        person.sayHello();
+        person.print();
+    }
+}
+
+@Aspect
+@Component
+@EnableAspectJAutoProxy
+class MyAspect{
+    @DeclareParents(value="com.example.spring5.Person", defaultImpl=PrinterImpl.class)
+    private Printer printer;
+}
+
+@Component
+class Person{
+    public void sayHello(){
+        System.out.println("Hello, I'm Person");
+    }
+}
+
+
+interface Printer{
+    void print();
+}
+
+class PrinterImpl implements Printer{
+    @Override
+    public void print(){
+        System.out.println("printing...");
+    }
+}
+```
+
 
 
 ###### Aop framework
