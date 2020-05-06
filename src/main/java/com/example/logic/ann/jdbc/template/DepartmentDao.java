@@ -1,5 +1,6 @@
 package com.example.logic.ann.jdbc.template;
 
+import javax.transaction.Transactional;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -67,10 +68,10 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
      * Example how we can pass mappers
      */
     public DepartmentModel getByIdSimpleMapper(int id) {
-        return jdbcTemplate.queryForObject("select * from department where id=?", new Object[]{id}, this::mapRowToModel);
+        return jdbcTemplate.queryForObject("select * from department where id=?", new Object[]{id}, DepartmentDao::mapRowToModel);
     }
     public DepartmentModel getByIdSimpleMapperReordered(int id) {
-        return jdbcTemplate.queryForObject("select * from department where id=?", this::mapRowToModel, id);
+        return jdbcTemplate.queryForObject("select * from department where id=?", DepartmentDao::mapRowToModel, id);
     }
 
     /**
@@ -149,7 +150,7 @@ public class DepartmentDao implements MyDao<DepartmentModel> {
     /**
      * We can define mapper like this
      */
-    private DepartmentModel mapRowToModel(ResultSet rs, int rowNumber) throws SQLException {
+    public static DepartmentModel mapRowToModel(ResultSet rs, int rowNumber) throws SQLException {
         DepartmentModel model = new DepartmentModel();
         model.setId(rs.getInt("id"));
         model.setName(rs.getString("name"));
