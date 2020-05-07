@@ -3096,6 +3096,12 @@ public class MyController {
 ###### DispatcherServlet
 `org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests (it extends in the end `HttpServlet`).
 When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`, and has a method `getServletContext`, to get `ServletContext`.
+Each `DispatcherServlet` has its own `WebApplicationContext`, which inherits all the beans already defined in the root `WebApplicationContext`. 
+These inherited beans can be overridden in the servlet-specific scope, and you can define new scope-specific beans local to a given Servlet instance.
+What the above quote from the documentation is saying is that if you have a `<bean>` declaration with the same name or id in both the root context and the servlet context, the servlet context one will overwrite the root context one.
+
+
+
 
 ###### Build .war file with pure java
 You can even build servlet app with pure [java](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#java-servlet-webapp)
@@ -4401,8 +4407,11 @@ For spring jdbc you should add to your `pom.xml`. You also would like embedded d
 </dependency>
 ```
 
-`jdbcTemplate` has only `update` method to run update/inserts. There is no `insert` method.
-`JdbcTemplate` simplify work with jdbc, we also have `HibernateTemplate` that simplify work with hibernate
+`JdbcTemplate` has only `update` method to run update/inserts. There is no `insert` method.
+It executes SQL queries, update statements and stored procedure calls, performs iteration over ResultSets 
+(when you pass `RowMapper` you just pass mapping, but template do all iteration over `ResultSet`, but when you pass `RowCallbackHandler` you do iteration by yourself) 
+and extraction of returned parameter values
+It simplify work with jdbc, we also have `HibernateTemplate` that simplify work with hibernate
 For `update/query` it may take a third param as array of `java.sql.Types`. Setting argument type provides correctness and optimisation (slight) for the underlying SQL statement.
 JdbcTemplate handles creation and release of resources.
 When you test application code that manipulates the state of the Hibernate session, make sure to flush the underlying session within test methods that execute that code.
