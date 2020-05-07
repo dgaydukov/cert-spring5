@@ -3010,7 +3010,54 @@ public class App{
 `@CrossOrigin(origins="*")` - set origin to anybody, by default it same-host
 `PUT` vs. `PATCH`. put - opposite to get, so it to replace whole object for url. Patch - is to replace some fields within the object.
 `@RequestParam` - have field required (default true), so if you don't pass param field you got exception. If you set it to false value would be null (if your value is primitive you got `IllegalStateException: Optional int parameter 'id' is present but cannot be translated into a null value due to being declared as a primitive type. Consider declaring it as object wrapper for the corresponding primitive type.`)
-`ContextLoaderListener` (implements `ServletContextListener`) load root web app context. You can add it to web.xml by `<listener><listener-class>org.springframework.web.context.ContextLoaderListener</listener-class></listener>`
+`ContextLoaderListener` (implements `ServletContextListener`) load root web app context.
+
+
+You can also use `web.xml` to register your web app
+```
+<web-app>
+    <!-- Configure ContextLoaderListener to use AnnotationConfigWebApplicationContext instead of the default XmlWebApplicationContext -->
+    <context-param>
+        <param-name>contextClass</param-name>
+        <param-value>org.springframework.web.context.support.AnnotationConfigWebApplicationContext</param-value>
+    </context-param>
+
+    <!-- Configuration locations must consist of one or more comma- or space-delimited fully-qualified @Configuration classes. Fully-qualified packages may also be specified for component-scanning -->
+    <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>com.acme.AppConfig</param-value>
+    </context-param>
+
+    <!-- Bootstrap the root application context as usual using ContextLoaderListener -->
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+
+    <!-- Declare a Spring MVC DispatcherServlet as usual -->
+    <servlet>
+        <servlet-name>dispatcher</servlet-name>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+        <!-- Configure DispatcherServlet to use AnnotationConfigWebApplicationContext instead of the default XmlWebApplicationContext -->
+        <init-param>
+            <param-name>contextClass</param-name>
+            <param-value>org.springframework.web.context.support.AnnotationConfigWebApplicationContext</param-value>
+        </init-param>
+        <!-- Again, config locations must consist of one or more comma- or space-delimited and fully-qualified @Configuration classes -->
+        <init-param>
+            <param-name>contextConfigLocation</param-name>
+            <param-value>com.acme.web.MvcConfig</param-value>
+        </init-param>
+    </servlet>
+
+    <!-- map all requests for /app/* to the dispatcher servlet -->
+    <servlet-mapping>
+        <servlet-name>dispatcher</servlet-name>
+        <url-pattern>/app/*</url-pattern>
+    </servlet-mapping>
+</web-app>
+```
+
+As you see, we have 2 types of params `context-param` - common for whole app, and `init-param` - common for current servlet. So both `contextClass/contextConfigLocation` can be either under `context-/init-param` section.
 
 
 It's important to return correct value
@@ -3049,7 +3096,6 @@ public class MyController {
 ###### DispatcherServlet
 `org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests (it extends in the end `HttpServlet`).
 When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`, and has a method `getServletContext`, to get `ServletContext`.
-You can register it in `web.xml` by `<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>`
 
 ###### Build .war file with pure java
 You can even build servlet app with pure [java](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#java-servlet-webapp)
