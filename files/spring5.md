@@ -75,6 +75,7 @@
 * 10.17 [Spring Boot Starter](#spring-boot-starter)
 * 10.18 [Spring bean scopes (singleton vs. application)](#spring-bean-scopes-singleton-vs-application)
 * 10.19 [Spring Context Indexer)](#spring-context-indexer)
+* 10.20 [SPEL - Spring Expression Language](#spel---spring-expression-language)
 
 
 
@@ -1343,6 +1344,8 @@ myValue
 ```
 
 `PropertySourcesPlaceholderConfigurer` (extends `PlaceholderConfigurerSupport`) is special BFPP that is equivalent ot annotation `@PropertySource`
+* resolves ${...} placeholders within bean definition property values in xml config (like `<property name="username" value="${user.name}" />`)
+* Value annotations against the current Spring `Environment` and its set of `PropertySources` (like `@Value("${user.name}")`).
 ```java
 @Configuration
 @EnableConfigurationProperties
@@ -1365,7 +1368,9 @@ We can have only 1 constructor with `@Aurowired` that is required. Or have many 
 
 `@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean
 `@Qualifier("beanName")` - you can inject any bean you want. It's stronger than primary, so it autowired bean by name.
-We have spring qualifier and also jsr-330 `javax.inject.Qualifier`.
+We have spring qualifier and also jsr-330 from `javax.inject` package
+`@Qualifier` - same as spring `@Qualifier`
+`@Named` - same as spring `@Component`
 Spring support both of them. Moreover you can create your own qualifiers based on any of these 2.
 To add JSR-330 you should add to your `pom.xml`
 ```
@@ -2306,7 +2311,7 @@ done
 
 If we want filter only by method name (without signature), we can use `NameMatchMethodPointcut` or `JdkRegexpMethodPointcut`.
 We can also use `AspectJExpressionPointcut` for native aspectJ patterns.
-If we want to use specific aspectJ pointcuts we have to add to `pom.xml`
+If we want to use specific aspectJ pointcuts we have to add to `pom.xml`. But if you are using spring-boot, these are already included into `spring-core`.
 ```
 <dependency>
     <groupId>org.aspectj</groupId>
@@ -2791,7 +2796,8 @@ As you see we have 2 beans of the same type, original - not adviced and adviced.
 If you want to have one bean, and you never need original you can remove it from javaconfig, and inject it directly into `ProxyFactoryBean`
 
 You can also use `@AspectJ` annotations, you should first enable them `@EnableAspectJAutoProxy(proxyTargetClass = true)` (setting proxyTargetClass force spring aop to use CGLIB)
-`@AspectJ` refers to a style of declaring aspects as regular Java classes annotated with annotations
+`@AspectJ` refers to a style of declaring aspects as regular Java classes annotated with annotations.
+The `@AspectJ` support can be enabled with XML or Java style configuration. In either case you will also need to ensure that AspectJ’s aspectjweaver.jar library is on the classpath of your application (version 1.6.8 or later)
 If you are using `@SpringBootApplication` you don't need to explicitly include `@EnableAspectJAutoProxy`, cause it inside include
 `@EnableAutoConfiguration` which with the help of conditional annotations enables aop.
 `AopAnnotatedAdvice.java`
@@ -6855,6 +6861,31 @@ If you need to scan your project to search for some components, it may take some
 </dependency>
 ```
 And it will generate during compile time file `/META-INF/spring.components` in your jar with all your stereotype components.
+
+
+
+###### SPEL - Spring Expression Language
+It is separate language from `OGNL` (Object-Graph Navigation Language - open-source Expression Language for Java)
+It supports regular expression
+'hello world' - is valid `SPEL` expression
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
