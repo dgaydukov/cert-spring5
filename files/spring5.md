@@ -3727,7 +3727,7 @@ import org.springframework.context.annotation.ComponentScan;
  * is open, and no security filter blocking us
  * otherwise we won't be able to open localhost:8080/ws.html (would be redirected to login page)
  */
-@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
 @ComponentScan("com.example.logic.ann.ws")
 public class App {
     public static void main(String[] args) {
@@ -4017,7 +4017,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 
-@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
 @ComponentScan("com.example.logic.ann.validation")
 public class App{
     public static void main(String[] args) {
@@ -4324,7 +4324,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 
-@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
 @ComponentScan("com.example.logic.ann.web")
 public class App{
     public static void main(String[] args) {
@@ -4367,6 +4367,8 @@ class JavaConfig{
 You can go to `curl http://localhost:8080/test`.
 
 #### DB
+
+
 ###### Spring JDBC
 Before using spring jdbc, we can use standarc jdk jdbc.
 Add this to your `pom.xml`
@@ -4459,7 +4461,7 @@ It executes SQL queries, update statements and stored procedure calls, performs 
 and extraction of returned parameter values
 It simplify work with jdbc, we also have `HibernateTemplate` that simplify work with hibernate
 For `update/query` it may take a third param as array of `java.sql.Types`. Setting argument type provides correctness and optimisation (slight) for the underlying SQL statement.
-JdbcTemplate handles creation and release of resources.
+`JdbcTemplate` handles creation and release of resources.
 When you test application code that manipulates the state of the Hibernate session, make sure to flush the underlying session within test methods that execute that code.
 
 Spring nicely translate all checked sql exceptions into runtime exceptions with clear names.
@@ -5601,7 +5603,7 @@ First you should add this dependency
     <artifactId>spring-boot-starter-actuator</artifactId>
 </dependency>
 ```
-Then these 2 would be available `/actuator/health` and `/actuator/info
+Then these 2 would be available `/actuator/health` and `/actuator/info`
 
 ```java
 import org.springframework.boot.SpringApplication;
@@ -6269,7 +6271,7 @@ There are several building blocks of integration
 * Filter (Bean annotated with `@Filter`) - can be placed between channels to determine should message go further
 * Transformer (Bean with `@Transformer` returning `GenericTransformer<S, T>`) - can transform data 
 * Router (Bean with `@Router`, returning `AbstractMessageRouter`) - direct messages to different channels based on some criteria
-* Splitter (Bean with `@Splitter`) - split message into several submessages. (You can combine it with router and split message from one channel and send 2 message to 2 other channels)
+* Splitter (Bean with `@Splitter`) - split message into several sub-messages. (You can combine it with router and split message from one channel and send 2 message to 2 other channels)
 * Service activator (Bean with `@ServiceActivator` returning `MessageHandler`) - receive message from channel and handle it
 * Gateway (interface with `@MessagingGateway`) - entry point to which third-party app send data for spring integration
 * Channel Adapter (Bean with `@InboundChannelAdapter` returning `MessageSource<T>`) - entry point
@@ -6377,12 +6379,12 @@ And then also use auto-complete to tune your starter from main project
 
 ###### Spring Cloud
 Spring Cloud - allows easy production deployment. It consist of
-* Eureka (service discovery from Netflix) - distinct service that store all services by name and provide them to other services
-* Ribbon (client-side load balancer) - client library that help to work with eureka server
-* Config server - distinct service that pull configuration from git or vault service and provide it to your microservices
-* Spring Cloud Bus - automatic update of configuration in the Config Server, once they has been committed to git server
-* Spring Cloud Stream - inter-service communacation with rabbitmq or kafka (can be used to propagate changes from config server to all microservices)
-* Hystrix (Cirbuit Breaker) - netflix library to handle bad responses from other microservices
+* `Eureka` (service discovery from Netflix) - distinct service that store all services by name and provide them to other services
+* `Ribbon` (client-side load balancer) - client library that help to work with eureka server
+* `Config server` - distinct service that pull configuration from git or vault service and provide it to your microservices
+* `Spring Cloud Bus` - automatic update of configuration in the Config Server, once they has been committed to git server
+* `Spring Cloud Stream` - inter-service communication with rabbitmq or kafka (can be used to propagate changes from config server to all microservices)
+* `Hystrix (Circuit Breaker)` - netflix library to handle bad responses from other microservices
 
 To work with eureka add this to your `pom.xml`
 ```
