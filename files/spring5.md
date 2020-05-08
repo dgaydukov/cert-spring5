@@ -313,6 +313,33 @@ class JavaConfig{
 `@Required` - used with xml config, and indicate that property is required, throws `BeanInitializationException` if property not set in xml (deprecated of spring 5).
 
 ###### Xml, Groovy, Properties example
+Before XML Spring used `DTD` - Document Type Definition. An example of dtd xml
+```
+<?xml version="1.0"?> 
+
+<!DOCTYPE bookstore [ 
+  <!ELEMENT bookstore (name,topic+)> 
+  <!ELEMENT topic (name,book*)> 
+  <!ELEMENT name (#PCDATA)> 
+  <!ELEMENT book (title,author)> 
+  <!ELEMENT title (#CDATA)> 
+  <!ELEMENT author (#CDATA)> 
+  <!ELEMENT isbn (#PCDATA)> 
+  <!ATTLIST book isbn CDATA "0"> 
+  ]> 
+
+<bookstore> 
+  <name>Mike's Store</name> 
+  <topic> 
+    <name>XML</name> 
+    <book isbn="123-456-789"> 
+      <title>Mike's Guide To DTD's and XML Schemas<</title> 
+      <author>Mike Jervis</author> 
+    </book> 
+  </topic> 
+</bookstore>
+```
+
 If we have same bean in xml, java config, and @Component => xml wins
 Here is quick example to demonstrate how to use di in practice.
 Notice, that `BeanDefinitionReader` takes `BeanDefinitionRegistry` instance, so our factory should be both `BeanFactory & BeanDefinitionRegistry`.
@@ -3013,7 +3040,13 @@ public class App{
 `ContextLoaderListener` (implements `ServletContextListener`) load root web app context.
 
 
-You can also use `web.xml` to register your web app
+You can also use `web.xml` to register your web app. Here you can register 
+* root web app context
+* dispatcher servlet
+* config classes
+* context loader listener
+* filters (like `MultipartFilter`)
+but not custom beans like `ViewResolver/MultipartResolver`. DispatcherServlet looks for an instance of `MultipartResolver` registered as a bean by the name of DispatcherServlet.MULTIPART_RESOLVER_BEAN_NAME ("multipartResolver"). By default it's `StandardServletMultipartResolver`
 ```
 <web-app>
     <!-- Configure ContextLoaderListener to use AnnotationConfigWebApplicationContext instead of the default XmlWebApplicationContext -->
@@ -3042,7 +3075,7 @@ You can also use `web.xml` to register your web app
             <param-name>contextClass</param-name>
             <param-value>org.springframework.web.context.support.AnnotationConfigWebApplicationContext</param-value>
         </init-param>
-        <!-- Again, config locations must consist of one or more comma- or space-delimited and fully-qualified @Configuration classes -->
+        <!-- Again, config locations must consist of one or more comma- or space-delimited and fully-qualified @Configuration classes. Beans declared here will override beans from root app context -->
         <init-param>
             <param-name>contextConfigLocation</param-name>
             <param-value>com.acme.web.MvcConfig</param-value>
@@ -5322,7 +5355,7 @@ By default this starter come with junit4 and junit-vintage. If you want to use n
 </dependency>
 ```
 
-RunWith vs ExtendWith:
+RunWith vs ExtendWith. They both are `junit` annotations, not spring
 If you are using Junit version < 5, so you have to use @RunWith(SpringRunner.class) or @RunWith(MockitoJUnitRunner.class) etc.
 If you are using Junit version = 5, so you have to use @ExtendWith(SpringExtension.class) or @ExtendWith(MockitoExtension.class) etc.
 
