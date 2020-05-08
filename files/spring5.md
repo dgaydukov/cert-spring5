@@ -3564,7 +3564,7 @@ Old way to configure security was in xml files
 ```
 security.xml:
 
-<intercept-url pattern="/myrul" access="hasRole('ROLE_ADMIN')" method="POST" requires-channel="https"/>
+<intercept-url pattern="/myrul" access="hasRole('ROLE_ADMIN')" method="POST" requires-channel="https" filters="none"/>
 
 MyController.java:
 
@@ -3572,7 +3572,14 @@ MyController.java:
 @PreAuthorize("hasRole('ROLE_ADMIN')")
 public void doWork(){}
 ```
-`intercept-url` ready in order in which they are defined, once match if found, the search is stopped. It's recommended to set more specific rules at the top
+`intercept-url` are read in order in which they are defined, once match if found, the search is stopped. It's recommended to set more specific rules at the top
+
+<intercept-url> Attributes
+* `access` Lists the access attributes which will be stored in the FilterInvocationSecurityMetadataSource for the defined URL pattern/method combination. This should be a comma-separated list of the security configuration attributes (such as role names).
+* `filters` Can only take the value "none". This will cause any matching request to bypass the Spring Security filter chain entirely. None of the rest of the <http> configuration will have any effect on the request and there will be no security context available for its duration. Access to secured methods during the request will fail.
+* `method` The HTTP Method which will be used in combination with the pattern to match an incoming request. If omitted, any method will match. If an identical pattern is specified with and without a method, the method-specific match will take precedence.
+* `pattern` The pattern which defines the URL path. The content will depend on the request-matcher attribute from the containing http element, so will default to ant path syntax.
+* `requires-channel` Can be "http" or "https" depending on whether a particular URL pattern should be accessed over HTTP or HTTPS respectively. Alternatively the value "any" can be used when there is no preference. If this attribute is present on any <intercept-url> element, then a ChannelProcessingFilter will be added to the filter stack and its additional dependencies added to the application context.
 
 There are couple of other security tags inside JSP
 First you should enable them in jsp `<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>`
@@ -5125,7 +5132,7 @@ Don't confuse
 `javax.transaction.Transactional` - java EE7 annotation, but since spring3 also supported, 
 with `org.springframework.transaction.annotation.Transactional` - has more options and will always execute the right way.
 
-If for some reason you don't want to use this annotation (for example you have a method that takes too long to run and if you put `@Transactional` on it, you will use all available connections), you can use programmatic transaction with `TransactionTemplate`
+If for some reason you don't want to use this annotation (for example you have a method that takes too long to run and if you put `@Transactional` on it, you will use all available connections), you can use programmatic transaction with `TransactionTemplate` (it's thread-safe)
 ```java
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
