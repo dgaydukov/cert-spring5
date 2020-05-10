@@ -20,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.*;
 import javax.sql.DataSource;
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 public class App{
@@ -41,10 +42,19 @@ class MyRepository{
         User user = new User();
         user.setName("Jack");
         user.setAge(30);
+
+        Account usdAccount = new Account();
+        usdAccount.setCurrency("USD");
+        Account euroAccount = new Account();
+        euroAccount.setCurrency("EUR");
+
+        user.setAccounts(List.of(usdAccount, euroAccount));
         session.save(user);
 
-        System.out.println("createQuery => " + session.createQuery("FROM User u").list());
-        System.out.println("find => " + session.find(User.class, user.getId()));
+        System.out.println("createQuery => " + session.createQuery("FROM Account u where id=1").uniqueResult());
+
+        //System.out.println("createQuery => " + session.createQuery("FROM User u").list());
+        //System.out.println("find => " + session.find(User.class, user.getId()));
     }
 }
 
@@ -83,8 +93,25 @@ class JavaConfig{
 class User{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    String id;
+    private String id;
 
-    String name;
-    int age;
+    private String name;
+    private int age;
+
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name = "userId")
+    private List<Account> accounts = new ArrayList<>();
+
+}
+
+@Entity
+@Data
+class Account{
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private String id;
+
+    private String currency;
+    @ManyToOne
+    private User user;
 }
