@@ -44,6 +44,7 @@
 * 4.4 [JTA - java transaction API](#jta---java-transaction-api)
 * 4.5 [DataSource Interceptor and Sql query counter](#datasource-interceptor-and-sql-query-counter)
 * 4.6 [@DynamicUpdate/@DynamicInsert and @NamedEntityGraph](#datasource-interceptor-and-sql-query-counter)
+* 4.7 [Cascade types](#cascade-types)
 5. [Spring Testing](#spring-testing)
 * 5.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
 * 5.2 [OutputCaptureRule](#outputcapturerule)
@@ -76,7 +77,6 @@
 * 10.18 [Spring bean scopes (singleton vs. application)](#spring-bean-scopes-singleton-vs-application)
 * 10.19 [Spring Context Indexer)](#spring-context-indexer)
 * 10.20 [SPEL - Spring Expression Language](#spel---spring-expression-language)
-
 
 
 
@@ -5229,6 +5229,149 @@ You can add these 2 libraries to your `pom.xml` to get ability to count how many
 By default when you update entity, even if you set 1 fields, orm will generate sql update with all fields in entity. If you want short update with only your field you should use dynamic update annotations. Same true for dynamic insert.
 Entity graph - can be used to lazy/eager load data
 
+
+###### Cascade types
+When one entity A depends on entity B, we can either, first save B, and then A, or set `cascade` for Entity A, and just save A, and B would be saved automatically
+```java
+import lombok.Data;
+import lombok.SneakyThrows;
+import lombok.ToString;
+
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
+import org.springframework.orm.hibernate5.HibernateTransactionManager;
+import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.*;
+import javax.sql.DataSource;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+import java.util.stream.Collectors;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        context.getBean(MyRepository.class).save();
+    }
+}
+
+@Component
+@Transactional
+class MyRepository{
+    @Autowired
+    private SessionFactory sessionFactory;
+
+    public void save(){
+        Session session = sessionFactory.getCurrentSession();
+        User user = new User();
+        user.setName("Jack");
+
+        Account account = new Account();
+        account.setCurrency("USD");
+        account.setUser(user);
+
+        user.setAccounts(List.of(account));
+        session.save(account);
+
+        User savedUser = (User) session.createQuery("FROM User u WHERE u.id=:id").setParameter("id", "1").uniqueResult();
+        System.out.println("user => " + savedUser.getString());
+        Account savedAccount = (Account) session.createQuery("FROM Account a WHERE a.id=:id").setParameter("id", "1").uniqueResult();
+        System.out.println("account => " + savedAccount.getString());
+
+        account.setUser(savedUser);
+        account.setAmount(100);
+        session.save(account);
+
+        savedUser = (User) session.createQuery("FROM User u WHERE u.id=:id").setParameter("id", "1").uniqueResult();
+        System.out.println("user => " + savedUser.getString());
+        savedAccount = (Account) session.createQuery("FROM Account a WHERE a.id=:id").setParameter("id", "1").uniqueResult();
+        System.out.println("account => " + savedAccount.getString());
+    }
+}
+
+@Configuration
+@EnableTransactionManagement
+class JavaConfig{
+    @Bean
+    public DataSource dataSource() {
+        EmbeddedDatabaseBuilder builder = new EmbeddedDatabaseBuilder();
+        return builder.setType(EmbeddedDatabaseType.H2).build();
+    }
+
+    @Bean
+    @SneakyThrows
+    public SessionFactory sessionFactory() {
+        LocalSessionFactoryBean sessionBean = new LocalSessionFactoryBean();
+        sessionBean.setDataSource(dataSource());
+        sessionBean.setPackagesToScan(App.class.getPackageName());
+        var props = new Properties();
+        // create tables in db from entities
+        props.put("hibernate.hbm2ddl.auto", "create");
+        sessionBean.setHibernateProperties(props);
+        // initialize factory, if not called, `getObject` would return null
+        sessionBean.afterPropertiesSet();
+        return sessionBean.getObject();
+    }
+
+    @Bean
+    public PlatformTransactionManager platformTransactionManager(){
+        return new HibernateTransactionManager(sessionFactory());
+    }
+}
+
+@Entity
+@Data
+class User{
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private String id;
+
+    private String name;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<Account> accounts = new ArrayList<>();
+
+    /**
+     * Since user has a list of account and every account has an associated user, if we just stringify them, we would get StackOverFlow error
+     * cause they would try to call toString from each other. That's why we exclude them from toString, and write another function to stringify
+     */
+    public String getString(){
+        return "User[id=" + id + ", name=" + name + " accounts=[" + accounts.stream().map(Account::toString).collect(Collectors.joining(", ")) + "]]";
+    }
+}
+
+@Entity
+@Data
+class Account{
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private String id;
+
+    private String currency;
+    private int amount;
+
+    @ManyToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "userId")
+    @ToString.Exclude
+    private User user;
+
+    public String getString(){
+        return "Account=[id="+id+", currency="+currency+", amount="+amount+", user="+user+"]";
+    }
+}
+```
 
 #### Spring Testing
 When you add spring test starter `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.
