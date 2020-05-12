@@ -2068,11 +2068,10 @@ Spring aop keywords
 * `Advice` - piece of code that executes at particular jointpoint
 * `Pointcut` - jointpoint with applied advice
 * `Aspect` - advice + pointcut
-* `Weaving` - process of inserting aspect into code (2 types => compile(AspectJ) & dynamic(Spring AOP))
+* `Weaving` - process of inserting aspect into code (3 types => compile(AspectJ), LTW(load-time weaving AspecJ, done during class loading), dynamic(Spring AOP))
 * `Target` - object whose flow is modified by aspect
 * `Introduction` - modification of code on the fly (e.g. add interface to a class)
 * `AOP proxy` - an object created by the AOP framework in order to implement the aspect contracts (advise method executions and so on). In the Spring Framework, an AOP proxy will be a JDK dynamic proxy or a CGLIB proxy.
-* `Weaving` - linking aspects with other application types or objects to create an advised object. This can be done at compile time (using the AspectJ compiler, for example), load time, or at runtime. Spring AOP, like other pure Java AOP frameworks, performs weaving at runtime.
 
 Spring aop can be applied only to public methods. If you want advice protected/private or constructors you should use compile-time weaving from AspectJ.
 
@@ -3134,6 +3133,11 @@ public class MyController {
 }
 ```
 
+
+In Spring Web MVC you can use any object as a command or form-backing object; you do not need to implement a framework-specific interface or base class
+The type-level @SessionAttributes annotation declares session attributes used by a specific handler. This will typically list the names of model attributes or 
+types of model attributes which should be transparently stored in the session or some conversational storage, serving as form-backing beans between subsequent requests
+
 ###### DispatcherServlet
 `org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests (it extends in the end `HttpServlet`).
 When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`, and has a method `getServletContext`, to get `ServletContext`.
@@ -3576,8 +3580,8 @@ public void doWork(){}
 ```
 `intercept-url` are read in order in which they are defined, once match if found, the search is stopped. It's recommended to set more specific rules at the top
 
-<intercept-url> Attributes
-* `access` Lists the access attributes which will be stored in the FilterInvocationSecurityMetadataSource for the defined URL pattern/method combination. This should be a comma-separated list of the security configuration attributes (such as role names).
+`<intercept-url>` Attributes
+* `access` Lists the access attributes which will be stored in the FilterInvocationSecurityMetadataSource for the defined URL pattern/method combination. This should be a comma-separated list of the security configuration attributes (such as role names) or `access="authenticated"`.
 * `filters` Can only take the value "none". This will cause any matching request to bypass the Spring Security filter chain entirely. None of the rest of the <http> configuration will have any effect on the request and there will be no security context available for its duration. Access to secured methods during the request will fail.
 * `method` The HTTP Method which will be used in combination with the pattern to match an incoming request. If omitted, any method will match. If an identical pattern is specified with and without a method, the method-specific match will take precedence.
 * `pattern` The pattern which defines the URL path. The content will depend on the request-matcher attribute from the containing http element, so will default to ant path syntax.
@@ -4176,7 +4180,9 @@ Response
 `org.springframework.web.client.RestTemplate` - synchronous web client to interact with REST (Representational state transfer) API
 `org.springframework.web.reactive.function.client.WebClient` - reactive asynchronous web client to interact with REST API
 
+
 `RestTemplate` just like `JdbcTemplate` frees you from low level http boiler-place (create client, send request, handle response ...).
+It automatically encodes passed url so `http://test.com/my list` => would be encoded into `my%20list`. 
 3 examples to get object. 
 ```java
 package com.example.logic.ann.hateoas;
