@@ -779,45 +779,79 @@ We can have nested application contexts. `GenericApplicationContext` have `setPa
 
 ###### BFPP, BPP, ApplicationListener
 If you want to implement some custom logic during app lifecycle you should have classes that implement following interfaces
-* `BeanFactoryPostProcessor` - fires when no bean definitions has been accumulated from xml or annotations, but none bean has been created
+* `BeanFactoryPostProcessor` - fires when bean definitions has been loaded from xml/javaConfig/annotations, but none bean has been created
 * `BeanPostProcessor` - fires when beans has been created, it has 2 methods
     * `postProcessBeforeInitialization` - fires before initialization, we can be sure that in this method we have original beans
     * `postProcessAfterInitialization` - fires after init, usually here we can substitute our bean with dynamic proxy
 * `ApplicationListener<E extends ApplicationEvent>` - fires after bfpp and bpp, when we got some events
 
-Since app context is also `ApplicationEventPublisher`, you can use context to publish `ApplicationEvent`.
-
-`@Order` - not working for BPP, if you want them ordered, they should implement `Ordered`.
-
-When you create a bean with java config
+Since app context is also `ApplicationEventPublisher`, you can use context to publish `ApplicationEvent`. `start/stop` events can be called only from app context, spring will never issue them, inside they just called `publishEvent`.
 ```java
-package com.example.logic.ann.postprocessors.beans;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.stereotype.Component;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        context.stop();
+        context.start();
+        context.close();
+    }
+}
 
-@Configuration
-public class MyBeanJavaConfig {
-    @Bean
-    public MyPrinter mySecondPrinter(){
-        return new MyPrinterImpl();
+@Component
+class MyAppListener implements ApplicationListener<ApplicationEvent> {
+    @Override
+    public void onApplicationEvent(ApplicationEvent event) {
+        System.out.println("event => " + event);
     }
 }
 ```
-And later try to get classname from BFPP
-```java
-package com.example.logic.ann.postprocessors;
+```
+event => org.springframework.context.event.ContextRefreshedEvent[source=org.springframework.context.annotation.AnnotationConfigApplicationContext@4cc0edeb, started on Tue May 12 16:56:08 HKT 2020]
+event => org.springframework.context.event.ContextStoppedEvent[source=org.springframework.context.annotation.AnnotationConfigApplicationContext@4cc0edeb, started on Tue May 12 16:56:08 HKT 2020]
+event => org.springframework.context.event.ContextStartedEvent[source=org.springframework.context.annotation.AnnotationConfigApplicationContext@4cc0edeb, started on Tue May 12 16:56:08 HKT 2020]
+16:56:08.192 [main] DEBUG org.springframework.context.annotation.AnnotationConfigApplicationContext - Closing org.springframework.context.annotation.AnnotationConfigApplicationContext@4cc0edeb, started on Tue May 12 16:56:08 HKT 2020
+event => org.springframework.context.event.ContextClosedEvent[source=org.springframework.context.annotation.AnnotationConfigApplicationContext@4cc0edeb, started on Tue May 12 16:56:08 HKT 2020]
+```
 
+`@Order` - not working for BPP, if you want them ordered, they should implement `Ordered/PriorityOrdered`.
+
+When you create a bean with java config and try to get class from BFPP you got null. The reason, is that spring can't determine method return type before executing methods.
+```java
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
+public class App{
+    public static void main(String[] args) {
+        new AnnotationConfigApplicationContext(App.class.getPackageName());
+    }
+}
+
 @Component
-public class MyBFPP implements BeanFactoryPostProcessor {
+class MyService{}
+
+class Printer{}
+
+@Configuration
+class JavaConfig {
+    @Bean
+    public Printer printer(){
+        return new Printer();
+    }
+}
+
+@Component
+class MyBFPP implements BeanFactoryPostProcessor {
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory factory) {
-        System.out.println("__MyBFPP");
         for(String beanName: factory.getBeanDefinitionNames()){
             BeanDefinition beanDefinition = factory.getBeanDefinition(beanName);
             String className = beanDefinition.getBeanClassName();
@@ -826,26 +860,14 @@ public class MyBFPP implements BeanFactoryPostProcessor {
     }
 }
 ```
-```
-myPrinterImpl => com.example.logic.ann.postprocessors.beans.MyPrinterImpl
-mySecondPrinter => null
-```
-As you see for bean created with `@Component` - you have name and class, but with javaconfig class is null.
-The reason, is that spring can't determine method return type before executing methods.
+
 
 When working with `BeanPostProcessor` or aspects the common problem is nested calls.
 If you have logging through custom annotation @TimeLogging (that handles by custom BPP), and you have 2 methods annotated with it
-if you call them separately both would be wrapped into time-logging
-But if you call one from another, only one logging would be displayed
-To fix this you can do self-injection like
-```
-@Resouce
-private MyService proxy;
-```
-And call one method from another, not with `this`, but with `proxy`.
-Or you can also create your own annotation `@SelfAutowired` and custom BPP to inject proxy.
+if you call them separately both would be wrapped into time-logging. But if you call one from another, only one logging would be displayed To fix this you can do self-injection like `private @Autowired MyService proxy;`
+And call one method from another, not with `this`, but with `proxy`. Or you can also create your own annotation `@SelfAutowired` and custom BPP to inject proxy.
 
-To activate your BPP you can either add `@Component` to it, or add it as static bean to java config file (bean should be static so it would be executed first, before config class is loaded), or you can do it manually by code.
+To activate your BFPP/BPP you can either add `@Component` to it, or add it as static bean to java config file (bean should be static so it would be executed first, before config class is loaded), or you can do it manually by code.
 `DefaultListableBeanFactory => ConfigurableListableBeanFactory => ConfigurableBeanFactory`
 `ConfigurableBeanFactory.addBeanPostProcessor` - method to programatically add BPP
 here is example
@@ -871,27 +893,105 @@ beanFactory => org.springframework.beans.factory.support.DefaultListableBeanFact
 beanFactory instanceof ConfigurableBeanFactory => true
 ```
 
+
 ###### Prototype into Singleton
-You can create you custom scope by implementing `org.springframework.beans.factory.config.Scope`
-To register your scope, you have to implement BFPP and register it there
+You can create you custom scope by implementing `org.springframework.beans.factory.config.Scope`. To register your scope, you have to implement BFPP and register it there.
+Below is example how to get scope from app context, and how to create your own scope.
 ```java
-public class NewScopeBFPP implements BeanFactoryPostProcessor {
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.ObjectFactory;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println("MyService => " + getScopeByClass(context, MyService.class));
+        System.out.println("MyPrinter => " + getScopeByClass(context, MyPrinter.class));
+        System.out.println("MyBean => " + getScopeByClass(context, MyBean.class));
+    }
+
+    private static String getScopeByClass(ConfigurableApplicationContext context, Class<?> cls){
+        ConfigurableListableBeanFactory factory = context.getBeanFactory();
+        for(String name: factory.getBeanNamesForType(cls)){
+            return factory.getBeanDefinition(name).getScope();
+        }
+        return null;
+    }
+}
+
+@Component
+class MyService{}
+
+@Component
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+class MyPrinter{}
+
+@Component
+@Scope(scopeName = GlobalScope.SCOPE_GLOBAL)
+class MyBean{}
+
+/**
+ * Custom scope implementation
+ */
+class GlobalScope implements org.springframework.beans.factory.config.Scope {
+    public static final String SCOPE_GLOBAL = "global";
+
+    private Map<String, Object> objects = new ConcurrentHashMap<>();
+    private Map<String, Runnable> destructionCallbacks = new ConcurrentHashMap<>();
+
+    @Override
+    public Object get(String s, ObjectFactory<?> objectFactory) {
+        objects.putIfAbsent(s, objectFactory.getObject());
+        return objects.get(s);
+    }
+
+    @Override
+    public void registerDestructionCallback(String s, Runnable runnable) {
+        destructionCallbacks.putIfAbsent(s, runnable);
+    }
+
+    @Override
+    public Object remove(String s) {
+        destructionCallbacks.remove(s);
+        return objects.remove(s);
+    }
+
+    @Override
+    public String getConversationId() {
+        return SCOPE_GLOBAL;
+    }
+
+    @Override
+    public Object resolveContextualObject(String s) {
+        return null;
+    }
+}
+
+/**
+ * Registering custom scope
+ */
+@Component
+class GlobalScopeBFPP implements BeanFactoryPostProcessor {
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory factory) throws BeansException {
-        factory.registerScope("newscope", new NewScope());
+        factory.registerScope(GlobalScope.SCOPE_GLOBAL, new GlobalScope());
     }
 }
 ```
-
-You can use following code to get scope of any class in your app context
-```java
-private static String getScope(ApplicationContext context, Class<?> cls){
-    ConfigurableListableBeanFactory factory = ((ConfigurableApplicationContext)context).getBeanFactory();
-    for(String name: factory.getBeanNamesForType(cls)){
-        return factory.getBeanDefinition(name).getScope();
-    }
-    return null;
-}
+```
+MyService => singleton
+MyPrinter => prototype
+MyBean => global
 ```
 
 If prototype bean is dependency of singleton, then it would be eagerly created once, and stay inside container until close.
@@ -919,14 +1019,16 @@ PrototypePrinter constructor...
 ```
 As you see for every call new object is created inside proxy.
 
-In case of xml configuration, we would need to make singleton abstract, and add abstract method to get prototype instance, and add it to xml like `<lookup-method name="getPrinter" bean="prototypePrinter"/>`
-Thrird way is to use 
+In case of xml configuration, we would need to make singleton abstract, and add abstract method to get prototype instance, and add it to xml like `<lookup-method name="getPrinter" bean="prototypePrinter"/>`.
+You can also use `Supplier` or `Provider` interface.
 ```java
 @Bean
 public Supplier<MyService> getMyService(){
-return this::myService;
+    return this::myService;
 }
 ```
+
+
 ```java
 import com.example.logic.ann.prototypeintosingleton.lookup.SingletonBean;
 
@@ -990,7 +1092,7 @@ public class App {
 ```
 
 If you don't want to manually create a bean and override abstract method, you can add `@Lookup` annotation on it, and spring will use cglib to create such a bean and will override your abstract method.
-The same way you can delcare your method as non-abstract and return null, but anyway when you add `@Lookup` spring will use cglib to override it.
+The same way you can declare your method as non-abstract and return null, but anyway when you add `@Lookup` spring will use cglib to override it.
 
 If you declare BFPP with `@Bean`, you should make your method static
 ```java
@@ -1000,38 +1102,40 @@ public static MyBFPP myBFPP(){
 }
 ```
 Otherwise you will get error `@Bean method JavaConfig.myBFPP is non-static and returns an object assignable to Spring's BeanFactoryPostProcessor interface. This will result in a failure to process annotations such as @Autowired, @Resource and @PostConstruct within the method's declaring @Configuration class. Add the 'static' modifier to this method to avoid these container lifecycle issues; see @Bean javadoc for complete details.`
-BeanFactoryPostProcessor-returning @Bean methods
-Special consideration must be taken for @Bean methods that return Spring BeanFactoryPostProcessor (BFPP) types. 
 Because BFPP objects must be instantiated very early in the container lifecycle, they can interfere with processing of annotations such as `@Autowired`, `@Value`, and `@PostConstruct` within @Configuration classes. To avoid these lifecycle issues, mark BFPP-returning @Bean methods as static. 
 
 
 If you want to use both annotation and xml config you can do
-* In case of `AnnotationConfigApplicationContext`, add `@ImportResource("app.xml")` to your `@Configuration` class. This annotation also helpful with you have `@SpringBootApplication` and want to import xml config
+* In case of `AnnotationConfigApplicationContext`, add `@ImportResource("app.xml")` to your `@Configuration` class. This annotation also helpful if you have `@SpringBootApplication` and want to import xml config
 * In case of `GenericXmlApplicationContext`, add `<context:annotation-config/>` to your xml file
 
-If you have multiple confugurations annotated with `@Configuration` you can use `@Import` to import one into another. 
-Since now we are using component scanning, we don't need to explicitly define it. But is still can be usefule in testing where you can have multiple configs.
+If you have multiple configs annotated with `@Configuration` you can use `@Import` to import one into another. 
+Since now we are using component scanning, we don't need to explicitly define it. But is still can be useful in testing where you can have multiple configs.
 `@Import` - take list of classes, `@ImportResource` - take list of paths to xml or packages.
 
+
+
 ###### PostConstruct and PreDestroy
+
 You have 4 options to hook to post construct event (when spring has set all properties)
-* 1. Define init method in xml config `init-method=init`
-* 2. Bean should implement `InitializingBean` interface with one method `afterPropertiesSet`, and put init logic there. (If we add `@PostConstruct` to this method, it would be called only once).
-* 3. add `@PostConstruct` annotation above any method you would like to be called (in this case you can annotate as many methods as you want, in previous 2 works only with one method)
-* 4. set `@Bean(initMethod = "init")` in java config file
+* add `@PostConstruct` annotation above any method you would like to be called (in this case you can annotate as many methods as you want, in previous 2 works only with one method)
+* Bean should implement `InitializingBean` interface with one method `afterPropertiesSet`, and put init logic there. (If we add `@PostConstruct` to this method, it would be called only once)
+* Define init method in xml config `init-method=init`
+* set `@Bean(initMethod = "init")` in java config file
+
 In case of 1 and 3, you can add `private` to init method (spring still would be able to call it via reflection), but nobody outside will be able to call it second time.
 But in case of implementing interface, `afterPropertiesSet` - is public, and can be called directly from your bean. More over in this case you are coupling your logic with spring.
 If you set all 4 the order is this: 
-`@PostConstruct` (registered with `CommonAnnotationBeanPostProcessor`)'=>`afterPropertiesSet`=>`xml config init` => `Bean config init`
+`@PostConstruct` (registered with `CommonAnnotationBeanPostProcessor`) => `afterPropertiesSet` => `xml config init` => `@Bean config init`
 
 
 
 The same way you can hook up to destroy event
-* `destroy-method=destory` in xml config
-* Implement `DisposableBean` interface with `destroy` method
 * Add `@PreDestroy` annotation
+* Implement `DisposableBean` interface with `destroy` method
+* `destroy-method=destory` in xml config
 * Add `@Bead(destoryMethod=destroy)` to java config
-Destroy events are not fired automatically, you have to call `((AbstractApplicationContext)context).close();`. 
+Destroy events are not fired automatically, you have to call `((ConfigurableApplicationContext)context).close();`. 
 Method `destroy` in context is deprecated, and inside just make a call to `close`.
 
 
@@ -1102,7 +1206,7 @@ destroy
 destroyMethod
 ```
 
-close - close context right now, registerShutdownHook - close context when jvm exit
+`close` - close context right now, `registerShutdownHook` - close context when jvm exit. Both method in `ConfigurableApplicationContext`.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import com.example.logic.ann.beans.JavaConfig;
@@ -1122,8 +1226,9 @@ public class App {
 }
 ```
 
-Since parent init is private, and child-public, it's not overriding. So when we create child bean parent init also called.
-If it was public, it wouldn't be called.
+Overriding `@PostConstruct/@PreDestroy`. 
+Since parent init is private, and child - public, it's not overriding. So when we create child bean parent init also called. 
+If it was public, it would be valid overridning and it won't be called.
 ```java
 import org.springframework.stereotype.Component;
 
@@ -1148,6 +1253,7 @@ class Child extends Parent {
 Parent
 Child
 ```
+
 
 ###### BeanNameAware, BeanFactoryAware, ApplicationContextAware
 If you want to have bean name or app context to be injected into your bean you can implement this interfaces
@@ -1194,13 +1300,16 @@ setApplicationContext => org.springframework.context.annotation.AnnotationConfig
 
 
 ###### BeanFactory and FactoryBean<?>
+
 Don't confuse the 2 interfaces
-* `BeanFactory` - basic di interface, `ApplicationContext` is inhereted from it
+* `BeanFactory` - basic di interface, `ApplicationContext` is inherited from it
 * `FactoryBean<?>` - helper interface to create factory objects (used when you need to implement factory pattern)
+
 There are 3 ways we can use factory 
-1. Use any class, just add static method to get other class
-2. Use singleton (private constructor, static method to get oneself), add non-static method to get other class
-3. Implement `FactoryBean`
+* Use any class, just add static method to get other class
+* Use singleton (private constructor, static method to get oneself), add non-static method to get other class
+* Implement `FactoryBean`. In this case we can omit `factory-method` in xml config
+
 `factorybean.xml`
 ```
 <?xml version="1.0" encoding="UTF-8"?>
@@ -1266,6 +1375,23 @@ class SpringUserFactory implements FactoryBean<User> {
 
 ###### Spring i18n
 Internationalization based on `MessageSource` interface. Since `ApplicationContext` extends this interface you can get i18n directly from context.
+If we don't explicitly set message source, spring will create it's own empty `DelegatingMessageSource`
+```java
+import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        var source = context.getBean(MessageSource.class);
+        System.out.println(source.getClass().getName() + " => " + source);
+    }
+}
+```
+```
+org.springframework.context.support.DelegatingMessageSource => Empty MessageSource
+```
+
 To be able to read messages, app context use bean with name `messageSource` and type `MessageSource`.
 Suppose we have 2 bundles
 ```
@@ -1307,22 +1433,6 @@ English Resource
 French Resource
 ```
 
-If we don't explicitly set message source, spring will create it's own empty `DelegatingMessageSource`
-```java
-import org.springframework.context.MessageSource;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-
-public class App{
-    public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
-        var source = context.getBean(MessageSource.class);
-        System.out.println(source.getClass().getName() + " => " + source);
-    }
-}
-```
-```
-org.springframework.context.support.DelegatingMessageSource => Empty MessageSource
-```
 
 
 
@@ -1330,8 +1440,16 @@ org.springframework.context.support.DelegatingMessageSource => Empty MessageSour
 ###### Resource interface
 Since `ApplicationContext` extends `ResourceLoader`, that has method `getResource`, you can load resources using context
 ```java
-Resource resource = context.getResource("app.xml");
-System.out.println(resource);
+import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.core.io.Resource;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new GenericApplicationContext();
+        Resource resource = context.getResource("app.xml");
+        System.out.println(resource);
+    }
+}
 ```
 ```
 class path resource [app.xml]
@@ -1339,7 +1457,7 @@ class path resource [app.xml]
 
 
 ###### Environment and PropertySource
-Since `ApplicationContext` extends `EnvironmentCapable` interface with 1 method `getEnvironment()`, you can get env object from context.
+Since `ApplicationContext` extends `EnvironmentCapable` interface with single method `getEnvironment()`, you can get env object from context.
 ```java
 import java.util.HashMap;
 import java.util.Map;
@@ -1365,9 +1483,9 @@ public class App{
 myValue
 ```
 
-`PropertySourcesPlaceholderConfigurer` (extends `PlaceholderConfigurerSupport`) is special BFPP that is equivalent ot annotation `@PropertySource`
+`PropertySourcesPlaceholderConfigurer` (extends `PlaceholderConfigurerSupport`) is special BFPP that is equivalent to annotation `@PropertySource`
 * resolves ${...} placeholders within bean definition property values in xml config (like `<property name="username" value="${user.name}" />`)
-* Value annotations against the current Spring `Environment` and its set of `PropertySources` (like `@Value("${user.name}")`).
+* resolves `@Value` annotations against the current Spring `Environment` and its set of `PropertySources` (like `@Value("${user.name}")`).
 ```java
 @Configuration
 @EnableConfigurationProperties
@@ -1384,6 +1502,8 @@ public class PropsJavaConfig {
     }
 }
 ```
+
+
 
 ###### Profile, Primary, Qualifier, Order, Lazy
 We can have only 1 constructor with `@Aurowired` that is required. Or have many constructor with `@Aurowired(required=false)` - in this case spring will automatically determine which to use.
