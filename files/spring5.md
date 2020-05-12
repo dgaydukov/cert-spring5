@@ -93,43 +93,52 @@
 
 #### DI and IoC
 ###### Dependency injection
-Rewrite filed injection with `@Autowired` (performed by `AutowiredAnnotationBeanPostProcessor`, has one filed `boolean required`, default true
-- will fail if no dep found, if set false - will set null) to constructor injection. The pros are
+Rewrite filed injection with `@Autowired` (performed by `AutowiredAnnotationBeanPostProcessor`), has one filed `boolean required default true`. If no dep found will throw `NoSuchBeanDefinitionException`, if set `required = false`, null will be injected.
+
+Pros of constructor injection
 - you can use `final` keyword with constructor injection, can’t be done with filed injection
-- it’s easy to see when you break S in SOLID. If your class has more than 10 dependencies, your constructor would be bloated, and it’s easily to spot
-- works with unit tests (without di support) without problems`
-Generally `@Autowired` is a bad design. If you don’t want to write constructor code use lobmok `@AllArgsConstructor` it will generate constructor based on all private fields in your class and spring automatically will inject them.
-- now interfaces can have static, default and private methods, so you can use them as first class citizens.
-Use Interfaces for every class, at least for every Service class. The naming convention is `MyService` for interface and `MyServiceImpl` or `DefaultMyService` for implementation itself. The pros are:
+- it’s easy to see when you break S in SOLID. If your class has more than 10 dependencies, your constructor would be bloated, and it’s easy to spot
+- works with unit tests without di support (generally it's best practice to use app context in integration tests only, not in unit tests)
+
+Generally `@Autowired` is a bad design. If you don’t want to write constructor code use lombok's `@AllArgsConstructor/@RequiredArgsConstructor` it will generate constructor based on all/final fields in your class and spring automatically will inject them.
+
+Use Interfaces for every class, at least for every Service class. The naming convention is `MyService` for interface and `MyServiceImpl` or `DefaultMyService` for implementation itself.
+Pros of using interfaces
 - Interface clear defines contract. Who knows why developer made the method public (maybe he just forget to rename it to private). Classes generally unclear and cluttered to define public contract.
 - interfaces allow di and mocking without use of reflection (don’t need to parse class implementation)
 - JDK dynamic proxy can work only with interfaces (if class implement any it use it), otherwise java switch to CGLIB to create proxies
+- now interfaces can have static, default and private methods, so you can use them as first class citizens.
+- If you have a class and you add advice to it it would work fine. But if later you will add any interface with 1 method (like `AutoClosable`) you lookup by class name would fail.
 
-
-You must use interface for every class. The reason is that later somebody can add aspect or custom BPP to some methods of your class
-and if you are using injection by class, in this case you got exception, cause there is no such class anymore (it was replaced by proxy)
-so that's why it's better to use interface.
-
+Xml constructor injection (`value` - inject value directly, `ref` - inject other bean, in this case bean with such a name should exist in app context)
 ```
 <bean id="" type="MyService">
 <constructor-arg type="java.lang.String" name="arg1" index="0" value="1"/>
-<constructor-arg type="java.lang.String" name="arg1" index="1" ref="myNewClass"/>
+<constructor-arg type="java.lang.String" name="arg2" index="1" ref="myNewClass"/>
 </bean>
 ```
 * for name debug-mode should be enabled
 * constructor modifier can be any (private/protected) spring will create it anyway
-If we have a bean with private constructor and static method creation we can use
-```
-<bean id="" class="" factory-method=""/>
-```
-Since `@Component` doesn't have a property for factory method, if you do just this
+If we have a bean with private constructor and static method creation we can use `<bean id="" class="" factory-method=""/>`
+
+Since `@Component` doesn't have a property for factory method, if you create factory bean with `@Component` it will create it with private constructor call.
+If you have custom factory method, you should remove `@Component` and create bean with `@Bean`.
 ```java
-package com.example.logic.ann.di;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-import org.springframework.stereotype.Component;
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        context.getBean(MyStaticBean.class).sayHello();
+    }
+}
 
-@Component
-public class MyStaticBean {
+/**
+ * We should disable @Component, cause it overrides @Bean
+ */
+class MyStaticBean {
     private MyStaticBean(){
         System.out.println("private constructor");
     }
@@ -143,32 +152,12 @@ public class MyStaticBean {
         System.out.println("hello");
     }
 }
-```
-Spring will call private constructor, cause it's not aware about factory method. If you want to use it, you need to add it with config
-```java
-package com.example.logic.ann.di;
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class DiJavaConfig {
+class JavaConfig {
     @Bean
     public MyStaticBean myStaticBean(){
         return MyStaticBean.getInstance();
-    }
-}
-```
-Pay attention that java config `@Bean` overwrite `@Component`.
-Fo if you run
-```java
-import com.example.logic.ann.di.MyStaticBean;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-
-public class App {
-    public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.di");
-        context.getBean(MyStaticBean.class).sayHello();
     }
 }
 ```
@@ -178,26 +167,55 @@ private constructor
 hello
 ```
 
-If we have 1 class extends other, and we want to call all it's props (init, destory, constructor-arg) we can add
-`<bean id="" class="" parent=""`
-Parent - doesn't mean that they should be java classes parent-child. They can be unrelated beans, just have same constror signature
+In spring, the `parent` in bean configuration signifies `configuration inheritance` and not related to Java inheritance.
+The `configuration inheritance` saves a lot of code as you do away with repeated XML code.
+For example, you have following bean with attributes
+```java
+import lombok.Data;
 
-If we want to init one bean only after other we can use `<bean id="" class="" depends-on="bean1, bean2"/>`
-We can do the same with `@DependsOn("yourBeanId")`
+@Data
+class MyBean {
+    private String attr1;
+    private String attr2;
+    private String attr3;
+    private String attr4;
+} 
+```
+Say one instance of bean say bean1 just needs attr1 and attr2 whereas another say bean2 instance needs all four the attributes.
+```
+<bean id="bean1" class="MyBean">
+    <property name="attrib1" value="val1" />
+    <property name="attrib2" value="val2" />
+</bean>
+
+<bean id="bean2" parent="bean1">
+    <property name="attrib3" value="val3" />
+    <property name="attrib4" value="val4" />
+</bean>
+```
+
+
+
+If we want to init one bean only after other we can use `<bean id="" class="" depends-on="bean1, bean2"/>`. We can do the same with `@DependsOn({"bean1", "bean2"})`.
 
 `@Autowired` => `@Inject`
 `@Autowired + @Qualifier("myName")` => `@Resource("myName")` (resource - only on fields and setters)
+`@Required` - used with xml config, and indicate that property is required, throws `BeanInitializationException` if property not set in xml (deprecated of spring 5).
 
-If you put annotation into interface or it's abstract methods => those annotations are stripped
-But if you add to default methods, they are executed
+If you put annotation into abstract methods => those annotations are stripped when you override these methods. But on `default` methods it would work fine.
 ```java
-package com.example.logic.ann.misc;
-
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 
-public interface Printer {
+public class App{
+    public static void main(String[] args) {
+        new AnnotationConfigApplicationContext(App.class.getPackageName());
+    }
+}
+
+interface Printer {
     @PostConstruct
     void print();
 
@@ -207,7 +225,7 @@ public interface Printer {
     }
 }
 
-@ComponentQualifier
+@Component
 class MyPrinter implements Printer {
     @Override
     public void print() {
@@ -249,10 +267,10 @@ com.example.spring5.Printer@4ec4f3a0
 com.example.spring5.Printer@4ec4f3a0
 Exception in thread "main" org.springframework.beans.factory.NoSuchBeanDefinitionException: No bean named 'printer' available
 ```
-Since we override bean names, there is no name `printer`
+Since we override bean names, there is no name `printer`.
 
 
-`@Configuration` - create proxy, so it can't be final, as well as `@Bean` methods can't be final. Even if your config file extends interface, spring still will use cglib.
+`@Configuration` - create proxy, so it can't be final, as well as `@Bean` methods can't be final. Even if your config class extends interface, spring still will use cglib.
 The reason for the Spring container subclassing `@Configuration` classes is to control bean creation, for singleton beans, subsequent requests to the method creating the bean 
 should return the same bean instance as created at the first invocation of the @Bean annotated method.
 ```java
@@ -311,7 +329,6 @@ class JavaConfig{
 ```
 
 
-`@Required` - used with xml config, and indicate that property is required, throws `BeanInitializationException` if property not set in xml (deprecated of spring 5).
 
 ###### Xml, Groovy, Properties example
 Before XML Spring used `DTD` - Document Type Definition. An example of dtd xml
@@ -496,8 +513,7 @@ printer => I'm SimpleBean, my name is goodBean
 
 
 
-Generally you should prefer `ApplicationContext` over `BeanFactory`, cause it adds bpp, bfpp, aop, i18n and so on do di.
-Remember that you need to call `refresh()` on context.
+Generally you should prefer `ApplicationContext` over `BeanFactory`, cause it adds di, bpp, bfpp, aop, i18n and so on... Remember that you need to call `refresh()` of `ConfigurableApplicationContext` after context update.
 ```java
 package com.example.spring5;
 
@@ -529,7 +545,6 @@ public class App {
 
 	private static void loadBeanDefinitions(ApplicationContext context, String fileName, Type type){
 		BeanDefinitionRegistry registry = (BeanDefinitionRegistry) context;
-		ConfigurableApplicationContext ctx = (ConfigurableApplicationContext) context;
 		BeanDefinitionReader reader;
 		switch (type) {
 			case XML:
@@ -545,7 +560,7 @@ public class App {
 				throw new IllegalArgumentException("Unknown type: " + type);
 		}
 		reader.loadBeanDefinitions(fileName + "." + type.toString().toLowerCase());
-		ctx.refresh();
+		((ConfigurableApplicationContext) context).refresh();
 	}
 }
 ```
@@ -553,10 +568,9 @@ public class App {
 If we want to add annotation support to xml file we should add `<context:component-scan base-package="your.package"/>`. This will scan package `your.package` for all annotated with `@Component` and related to it.
 
 By default there is no `BeanDefinitionReader` implementation for annotations. But we can use 2 other classes
-`AnnotatedBeanDefinitionReader` (you can register config class with it) and
-`ClassPathBeanDefinitionScanner` - you don't even need config, just scan package with annotations like `@Component`.
-If you register only config file and it has annotation `@ComponentScan("yourPackage")`, internally it uses `ClassPathBeanDefinitionScanner`
-here is example
+* `AnnotatedBeanDefinitionReader` (compare to other readers, it not implements `BeanDefinitionReader`) - with method `register` - to register a list of java config classes
+* `ClassPathBeanDefinitionScanner` - with method `scan` - to scan package with annotations like `@Component`.
+If you register only config file and it has annotation `@ComponentScan("yourPackage")`, internally it uses `ClassPathBeanDefinitionScanner`.
 ```java
 import com.example.logic.ann.beans.JavaConfig;
 import com.example.logic.ann.beans.SimpleBean;
@@ -585,9 +599,15 @@ public class App {
 ```
 Notice that `AnnotationConfigApplicationContext` use these 2 classes inside, and you can call them like
 ```java
-var ctx = new AnnotationConfigApplicationContext();
-ctx.register();
-ctx.scan();
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext();
+        context.register();
+        context.scan();
+    }
+}
 ```
 
 We can also use `GenericApplicationContext` to load data, cause it's both `ApplicationContext and BeanDefinitionRegistry`.
@@ -749,11 +769,13 @@ initializing SimpleBean...
 printer => I'm SimpleBean, my name is goodBean
 ```
 
-We can have nested application contexts. `GenericApplicationContext` have `setParent` method, where you can pass parent context. And you can get all beans in child context from parent context.
+We can have nested application contexts. `GenericApplicationContext` have `setParent` method, where you can pass parent context. And you can get all beans in child context from parent context
+* `ClassPathXmlApplicationContext` - load context from xml file that is located in the class path
+* `FileSystemXmlApplicationContext` - load context from xml file located anywhere in the file system
+* `XmlWebApplicationContext` - load web context from xml file
 
-`ClassPathXmlApplicationContext` - load context from xml file that is located in the class path
-`FileSystemXmlApplicationContext` - load context from xml file located anywhere in the file system
-`XmlWebApplicationContext` - load web context from xml file
+
+
 
 ###### BFPP, BPP, ApplicationListener
 If you want to implement some custom logic during app lifecycle you should have classes that implement following interfaces
