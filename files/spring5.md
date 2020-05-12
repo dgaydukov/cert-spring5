@@ -2064,13 +2064,15 @@ m2
 ###### Aop basics
 
 Spring aop keywords
-* Jointpoint - well-defined point during code execution (e.g. method call, object instantiation). In Spring AOP it's always method call. 
-* Advice - piece of code that executes at particular jointpoint
-* Pointcut - jointpoint with applied advice
-* Aspect - advice + pointcut
-* Weaving - process of inserting aspect into code (2 types => compile(AspectJ) & dynamic(Spring AOP))
-* Target - object whose flow is modified by aspect
-* Introduction - modification of code on the fly (e.g. add interface to a class)
+* `Join point` - well-defined point during code execution (e.g. method call, object instantiation). In Spring AOP it's always method call. 
+* `Advice` - piece of code that executes at particular jointpoint
+* `Pointcut` - jointpoint with applied advice
+* `Aspect` - advice + pointcut
+* `Weaving` - process of inserting aspect into code (2 types => compile(AspectJ) & dynamic(Spring AOP))
+* `Target` - object whose flow is modified by aspect
+* `Introduction` - modification of code on the fly (e.g. add interface to a class)
+* `AOP proxy` - an object created by the AOP framework in order to implement the aspect contracts (advise method executions and so on). In the Spring Framework, an AOP proxy will be a JDK dynamic proxy or a CGLIB proxy.
+* `Weaving` - linking aspects with other application types or objects to create an advised object. This can be done at compile time (using the AspectJ compiler, for example), load time, or at runtime. Spring AOP, like other pure Java AOP frameworks, performs weaving at runtime.
 
 Spring aop can be applied only to public methods. If you want advice protected/private or constructors you should use compile-time weaving from AspectJ.
 
