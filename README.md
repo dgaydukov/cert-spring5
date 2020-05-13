@@ -19,17 +19,3 @@ There are 2 main reasons to get it.
 * [mock/280/80](https://www.certification-questions.com/spring-exam/professional-dumps.html)
 * [mobile mock](https://play.google.com/store/apps/details?id=com.springqcm)
 * [Official study guide](https://www.amazon.com/Pivotal-Certified-Professional-Spring-Developer/dp/1484251350)
-
-
-
-когда создаём класс напрямую без di
-1. мы должны знать какую имплементацию выбрать (у интерфейса может быть много имплементаций)
-2. мы должны знать через какой конструктор создать (сегодня пустой, завтра с двумя параметрами)
-3. мы должны знать как настроить (какие сеттеры вызвать после создания)
-т.о. на каждую созданную через new зависимость наш класс приобретает 3 responsibilities
-
-пример фреймворка с
-1. созданием обьекта
-2. настройкой конфигурации (inject) (pre configurator - object-configurator)
-3. postconstruct
-4. замена на прокси (post configurator - proxy-configurator with jdk proxy & cglib)

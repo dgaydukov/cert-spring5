@@ -77,6 +77,7 @@
 * 10.18 [Spring bean scopes (singleton vs. application)](#spring-bean-scopes-singleton-vs-application)
 * 10.19 [Spring Context Indexer)](#spring-context-indexer)
 * 10.20 [SPEL - Spring Expression Language](#spel---spring-expression-language)
+* 10.21 [Custom Framework Impl](#custom-framework-impl)
 
 
 
@@ -7176,11 +7177,206 @@ It supports regular expression
 
 
 
+###### Custom Framework Impl
+To better understand how spring works you should implement your own micro-framework, to get the idea, how it works and why it works this way and not another.
+
+Why do we need di. Imagine that you create your dependencies with the `new` keyword inside your classes. Suppose you  have a code
+```java
+interface Paint{
+    String getColor();
+}
+
+class BlackPaint implements Paint{
+    @Override
+    public String getColor() {
+        return "black";
+    }
+}
+
+interface Printer{
+    void print(String msg);
+}
+
+class SimplePrinter implements Printer{
+    private Paint paint = new BlackPaint();
+    
+    @Override
+    public void print(String msg) {
+        System.out.println("msg => " + msg + ", paint => " + paint.getColor());
+    }
+}
+```
+SimplePrinter - breaks `S` in `SOLID`. Cause it's not single responsibility class anymore. By creating dependencies this way we introduce 3 new responsibility:
+* We should know which implementation of Paint to use. We can have multiple implementation and we tightly couple exact implementation.
+* We should know how to create object (which constructor to use or use factory)
+* We should know how to configure object (after we have created object maybe we need to configure it by setting some properties or run some init functions)
+
+So `di` solves these 3 problems. To simplify work with reflections you can use [reflections](https://github.com/ronmamo/reflections) library. Add to your `pom.xml`
+```
+<dependency>
+    <groupId>org.reflections</groupId>
+    <artifactId>reflections</artifactId>
+    <version>0.9.12</version>
+</dependency>
+```
+
+Here is code
+```java
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.Proxy;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import org.reflections.Reflections;
 
 
+import lombok.SneakyThrows;
+
+public class App{
+    @SneakyThrows
+    public static void main(String[] args) {
+        var context = new AppContext(App.class.getPackageName(), new ConcurrentHashMap<>());
+        var printer = context.getObject(Printer.class);
+        printer.print("hello");
+    }
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@interface Inject{}
+@Retention(RetentionPolicy.RUNTIME)
+@interface Init{}
+@Retention(RetentionPolicy.RUNTIME)
+@interface Singleton{}
+@Retention(RetentionPolicy.RUNTIME)
+@interface Logging{}
+
+interface Paint{
+    String getColor();
+}
+
+interface Printer{
+    void print(String msg);
+}
+@Singleton
+class BlackPaint implements Paint{
+    // since class is not public, constructor also not public, that's why we should declare it as public
+    public BlackPaint(){
+        System.out.println("constructing BlackPaint...");}
+
+    @Override
+    public String getColor() {
+        return "black";
+    }
+}
+@Singleton
+class SimplePrinter implements Printer{
+    // since class is not public, constructor also not public, that's why we should declare it as public
+    public SimplePrinter(){
+        System.out.println("constructing SimplePrinter...");
+    }
+
+    @Inject
+    private Paint paint;
 
 
+    @Init
+    public void init(){
+        System.out.println("configuring printer...");
+    }
 
+    @Override
+    @Logging
+    public void print(String msg) {
+        System.out.println("msg => " + msg + ", paint => " + paint.getColor());
+    }
+}
+
+
+class AppContext{
+    private Reflections reflections;
+    private Map<Class, Object> beans = new ConcurrentHashMap<>();
+    private Map<Class, Class> implementations;
+
+    /**
+     * We pass map here in case we want to have our custom implementation of some interface
+     */
+    public AppContext(String packageToScan, Map<Class, Class> implementations){
+        reflections = new Reflections(packageToScan);
+        this.implementations = implementations;
+    }
+    public Class getImpl(Class impl){
+        if(impl.isInterface()){
+            if(implementations.containsKey(impl)) {
+                impl = implementations.get(impl);
+            } else {
+                var subtypes = reflections.getSubTypesOf(impl);
+                int size = subtypes.size();
+                if(size != 1) {
+                    throw new RuntimeException("Found " + size + " implementations of " + impl);
+                }
+                Class exactImpl = (Class) subtypes.iterator().next();
+                implementations.put(impl, exactImpl);
+                impl = exactImpl;
+            }
+        }
+        return impl;
+    }
+    @SneakyThrows
+    public <T> T getObject(Class<T> impl){
+        if (beans.containsKey(impl)){
+            return (T) beans.get(impl);
+        }
+        impl = getImpl(impl);
+
+        T obj = impl.getConstructor().newInstance();
+
+        //TODO: rewrite pre & post init to Bean Initializers
+        // pre init
+        for(var field: impl.getDeclaredFields()){
+            var ann = field.getAnnotation(Inject.class);
+            if(ann != null){
+                field.setAccessible(true);
+                field.set(obj, getObject(field.getType()));
+            }
+        }
+
+        for(var method: impl.getDeclaredMethods()){
+            var ann = method.getAnnotation(Init.class);
+            if(ann != null){
+                method.invoke(obj);
+            }
+        }
+
+        // post init
+        for(var field: impl.getDeclaredMethods()){
+            var ann = field.getAnnotation(Logging.class);
+            if(ann != null){
+                var target = obj;
+                obj = (T) Proxy.newProxyInstance(impl.getClassLoader(), impl.getInterfaces(), (proxy, method, args) -> {
+                    System.out.println("calling => " + method.getName());
+                    Object retVal = method.invoke(target, args);
+                    System.out.println("done => " + method.getName());
+                    return retVal;
+                });
+            }
+        }
+
+        if (impl.getAnnotation(Singleton.class) != null) {
+            beans.put(impl, obj);
+        }
+        return obj;
+    }
+}
+```
+```
+constructing SimplePrinter...
+constructing BlackPaint...
+configuring printer...
+calling => print
+msg => hello, paint => black
+done => print
+```
 
 
 
