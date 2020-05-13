@@ -1485,7 +1485,7 @@ myValue
 ```
 
 `PropertySourcesPlaceholderConfigurer` (extends `PlaceholderConfigurerSupport`) is special BFPP that is equivalent to annotation `@PropertySource`
-* resolves ${...} placeholders within bean definition property values in xml config (like `<property name="username" value="${user.name}" />`)
+* resolves `${...}` placeholders within bean definition property values in xml config (like `<property name="username" value="${user.name}" />`)
 * resolves `@Value` annotations against the current Spring `Environment` and its set of `PropertySources` (like `@Value("${user.name}")`).
 ```java
 @Configuration
@@ -1510,12 +1510,8 @@ public class PropsJavaConfig {
 We can have only 1 constructor with `@Aurowired` that is required. Or have many constructor with `@Aurowired(required=false)` - in this case spring will automatically determine which to use.
 
 `@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean
-`@Qualifier("beanName")` - you can inject any bean you want. It's stronger than primary, so it autowired bean by name.
-We have spring qualifier and also jsr-330 from `javax.inject` package
-`@Qualifier` - same as spring `@Qualifier`
-`@Named` - same as spring `@Component`
-Spring support both of them. Moreover you can create your own qualifiers based on any of these 2.
-To add JSR-330 you should add to your `pom.xml`
+`@Qualifier("beanName")` - you can inject any bean you want. It's stronger than primary, so it injects bean by name.
+We have spring qualifier and also `JSR-330` from `javax.inject` package. You cad add to your `pom.xml` this dependency
 ```
 <dependency>
     <groupId>javax.inject</groupId>
@@ -1524,15 +1520,102 @@ To add JSR-330 you should add to your `pom.xml`
 </dependency>
 ```
 
+`@Qualifier` - same as spring `@Qualifier`
+Spring support both of them. Moreover you can create your own qualifiers based on any of these 2.
+
+Another `JSR-330` annotation is `@Named` - same as spring `@Component`
+
 If you inject list of interfaces, spring will try to find all beans that implement this interface, and will inject them in default order (sorted by names).
 If you need custom order you can add `@Order(1)` on beans, and by this you will create custom order of injection.
-If you have many beans, and some have this annotation, other not, those with annotation goes first. 
-Those without it goes last with default sort.
+If you have many beans, and some have this annotation, other not, those with annotation goes first, those without goes last with default sort.
 
-If you have list of implementation and bean that return also list of implementations, when injected spring will collect list of impl, not your bean.
-To use your bean, you have to add `Qualifier`
+If you have list of implementations and bean that return also list of implementations, when injected spring will collect list of impl, not your bean. To use your bean, you have to add `Qualifier`.
+```java
+import javax.annotation.Resource;
+import java.util.ArrayList;
+import java.util.List;
 
-When you use `@Autowired` and have 2 or more beans(and not Primary/Qualifier) it will try to autowire it by variable name.
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        context.getBean(TestListInjection.class).test();
+    }
+}
+
+interface Car{}
+@Component
+class SportCar implements Car{
+    @Override
+    public String toString(){
+        return "SportCar";
+    }
+}
+@Component
+class SuvCar implements Car{
+    @Override
+    public String toString(){
+        return "SuvCar";
+    }
+}
+
+@Configuration
+class JavaConfig{
+    @Bean
+    public List<Car> carList(){
+        return new ArrayList<>(List.of(
+            new Car() {
+                @Override
+                public String toString(){
+                    return "car1";
+                }
+            },
+            new Car() {
+                @Override
+                public String toString(){
+                    return "car2";
+                }
+            },
+            new Car() {
+                @Override
+                public String toString(){
+                    return "car3";
+                }
+            }
+        ));
+    }
+}
+
+@Component
+class TestListInjection{
+    @Autowired
+    private List<Car> cars;
+    /**
+     * @Resource - is short for @Autowired + @Qualifier("name")
+     */
+    @Resource(name = "carList")
+    private List<Car> qualifierCars;
+
+    public void test(){
+        System.out.println("cars => " + cars);
+        System.out.println("qualifierCars => " + qualifierCars);
+    }
+}
+```
+```
+cars => [SuvCar, SportCar]
+qualifierCars => [car1, car2, car3]
+```
+As you see without qualifier spring injects single beans that implement our interface, but with qualifier we can inject list bean itself.
+* If no single beans found then list bean would be injected. 
+
+
+When you use `@Autowired` and have 2 or more beans(and not Primary/Qualifier) it will try to inject it by variable name.
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -1572,9 +1655,9 @@ class SimpleBean {
     }
 }
 ```
-Since variable name is `newPrinter`, it autowire it as `NewPrinter` bean. If you change it to `oldPrinter` then `OldPrinter` would be injected. If you change it anything else, you got `NoUniqueBeanDefinitionException`.
+Since variable name is `newPrinter`, it injects it as `NewPrinter` bean. If you change it to `oldPrinter` then `OldPrinter` would be injected. If you change it anything else, you got `NoUniqueBeanDefinitionException`.
 
-`@Qualifier` work as and. So if we have bean with multiple qualifiers only those that are include both would be autowired
+`@Qualifier` work as and. So if we have bean with multiple qualifiers only those that are include both would be injected
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -1640,7 +1723,7 @@ class AnyCar extends Car{}
 ```
 [SportSuvCar]
 ```
-First since qualifier - not repetable it's better to create custom qualifiers and add them
+First since qualifier - not repeatable it's better to create custom qualifiers and add them
 Second - as you see only bean that satisfy both qualifier got injected.
 
 If you need `or` qualifier - you have to write your custom BPP. Here is example
@@ -1778,7 +1861,7 @@ class AnyCar extends Car{}
 As you see it took all 3
 
 
-`@Lazy` - works in 2 ways
+`@Lazy` (same as xml `<bean id="demo" class="Demo" lazy-init="true"/>`, by default if you don't specify it `false`) works in 2 ways
 * When it's declared on bean it would defer bean instantiation, until you first request it
 * When declared inside constructor, it can help fix circular dependencies. 
 ```java
@@ -1841,8 +1924,8 @@ As you see it first create instance of a with proxy, and later when you request 
 
 ###### PropertySource and ConfigurationProperties
 We can load properties from `.properties/.yml` files.
-`@PropertySource` - repetable, so we can load several files. If keys are the same => those declared after will overwrite those declared before.
-You can use `@Value("${propName}")` on every field, or use `ConfigurationProperties` with public setter methods for every field.
+`@PropertySource` - repeatable, so we can load several files. If keys are the same => those declared after will overwrite those declared before.
+You can use `@Value("${propName}")` on every field, or use `@ConfigurationProperties` with public setter methods for every field (in this case spring would inject values with public setters).
 You can also use this annotation on methods. In this case spring will call this methods and set all params to this value
 ```java
 import org.springframework.beans.factory.annotation.Value;
@@ -1873,9 +1956,9 @@ class MyService{
 }
 ```
 
-`${expr} --> Immediate Evaluation`
-`#{expr} --> Deferred Evaluation`
-Immediate evaluation means that the expression is evaluated and the result returned as soon as the page is first rendered. Deferred evaluation means that the technology using the expression language can use its own machinery to evaluate the expression sometime later during the page’s lifecycle, whenever it is appropriate to do so.
+`${expr} --> Immediate Evaluation`  `#{expr} --> Deferred Evaluation`
+Immediate evaluation means that the expression is evaluated and the result returned as soon as the page is first rendered. Deferred evaluation means that the technology using the expression 
+language can use its own machinery to evaluate the expression sometime later during the page’s lifecycle, whenever it is appropriate to do so.
 
 `Person1.java`
 ```java
@@ -1966,7 +2049,7 @@ Person2(id=2, name=John, age=20)
 
 ###### Task scheduling
 `java.util.concurrent` Provides a lot of standard classes to manage concurrent execution. Although you can use spring default classes (they are just wrappers around jdk classes) you either can use jdk classes directly.
-In spring there are 2 useful annotations `@Scheduled` and `@Async`
+In spring there are 2 useful annotations `@Scheduled` and `@Async`. To use them you should enable scheduling with `@EnableScheduling`.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -2059,6 +2142,7 @@ public class WebAppConfig {
     }
 }
 ```
+
 On the caller you create bean
 ```java
 import org.springframework.context.annotation.Bean;
@@ -2083,43 +2167,14 @@ Of course you should share code for `MyService` between 2 apps.
 
 
 ###### Conditional Annotation
-There are several annotaions that can help you determine should you create a bean or not. 
+There are several annotations that can help you determine should you create a bean or not. 
 `@Profile` - can be used to determine should bean be created for certain profile. Can be used on class and methods (in case method is a `@Bean`)
 But there also class of `@Conditional` annotations.
-`@ConditionalOnClass(MyService.class)` - bean would be created if MyService bean exists
+`@ConditionalOnClass(MyService.class)` - bean would be created if bean of type MyService exists
 `@ConditionalOnBean(name = "myService")` - bean would be created if bean with name myService exists
-`@ConditionalOnMissingBean` - bean would be created if bean with this name doesn't exist
-`@ConditionalOnProperty(prefix = "my.starter", name = "show", matchIfMissing = true)` - bean would be created if value
-of `my.starter.show` not false, or it doesn't exist in configuration.
+`@ConditionalOnMissingClass/@ConditionalOnMissingBean` - bean would be created if bean of type/name doesn't exist
+`@ConditionalOnProperty(prefix = "my.starter", name = "show", matchIfMissing = true)` - bean would be created if value of `my.starter.show` not false, or it doesn't exist in configuration.
 `@ConditionalOnResource(resources = "classpath:my.properties")` - bean would be created only if my.properties exist
-
-
-
-You can use expressions inside profile like:
-`@Profile({"!dev"})` - any profile except dev
-`@Profile({"!dev & !qa"})` - any profile except dev and qa
-```java
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.Profile;
-import org.springframework.core.env.AbstractEnvironment;
-import org.springframework.stereotype.Component;
-
-public class App{
-    public static void main(String[] args) {
-        System.setProperty(AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME, "dev, qa");
-        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
-        System.out.println(context.getBean(MyService.class));
-    }
-}
-
-/**
- * If we declare @Profile({"dev", "qa"}) - it would mean if we have either dev or qa
- * But using expression we can say that both at the same time
- */
-@Profile({"dev & qa"})
-@Component
-class MyService{}
-```
 
 We can create custom condition by extending `SpringBootCondition`
 ```java
@@ -2146,10 +2201,40 @@ class MyService{
 }
 ```
 
+You can use expressions inside profile like:
+`@Profile({"!dev"})` - any profile except dev
+`@Profile({"!dev", "!qa"})` - if we have at least one profile that is not dev or qa (for example it will work if we have 2 profiles like `test & dev`)
+`@Profile({"!dev & !qa"})` - If both profiles dev & qa are not present
+`@Profile({"dev", "qa"})` - any profile either dev or qa
+`@Profile({"dev & qa"})` - both profiles at the same time present
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.env.AbstractEnvironment;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        System.setProperty(AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME, "dev, qa");
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println(context.getBean(MyService.class));
+    }
+}
+
+@Profile({"dev & qa"})
+@Component
+class MyService{}
+```
+
+
+
+
+
+
 ### AOP
 
 * spring aspects fire before custom BPP
-* if class implements at least 1 interface with 1 method, aspect will create dynamic proxy, otherwise will use cglib
+* if class implements at least 1 interface with 1 method, aspect will create dynamic proxy (until forced to use cglib by setting `proxyTargetClass` to true), otherwise will use cglib
 * spring aop can work only with public methods for jdk proxies and with public/protected/package-private for cglib
 ```java
 import org.aspectj.lang.JoinPoint;
@@ -2208,24 +2293,23 @@ m2
 
 Spring aop keywords
 * `Join point` - well-defined point during code execution (e.g. method call, object instantiation). In Spring AOP it's always method call. 
-* `Advice` - piece of code that executes at particular jointpoint
-* `Pointcut` - jointpoint with applied advice
+* `Pointcut` - join point with applied advice
+* `Advice` - piece of code that executes at particular join point
 * `Aspect` - advice + pointcut
-* `Weaving` - process of inserting aspect into code (3 types => compile(AspectJ), LTW(load-time weaving AspecJ, done during class loading), dynamic(Spring AOP))
-* `Target` - object whose flow is modified by aspect
-* `Introduction` - modification of code on the fly (e.g. add interface to a class)
+* `Weaving` - process of inserting aspect into code (3 types => compile(AspectJ), LTW(load-time weaving AspecJ, done during class loading), dynamic(Spring AOP)). Using compile or load-time weaving we can intercept internal calls and private methods.
+* `Target` - original object whose flow is modified by aspect
 * `AOP proxy` - an object created by the AOP framework in order to implement the aspect contracts (advise method executions and so on). In the Spring Framework, an AOP proxy will be a JDK dynamic proxy or a CGLIB proxy.
+* `Introduction` - modification of code on the fly (e.g. add interface to a class)
 
-Spring aop can be applied only to public methods. If you want advice protected/private or constructors you should use compile-time weaving from AspectJ.
 
 
 Spring supports 6 types of advices
-* `org.springframework.aop.MethodBeforeAdvice` (@Before) - before method execution. has access to params. In case of exception, jointpoint is not called
-* `org.springframework.aop.AfterReturningAdvice` (@AfterReturning) -  after method executed, has access to params & return value. If method execution throws exception, not called. If advice throws exception, code won't proceed further (so you can implement some after validation)
-* `org.springframework.aop.AfterAdvice` (@After) - cause would be executed no matter what
-* `org.aopalliance.intercept.MethodInterceptor` (@Around) - has full control over method execution
-* `org.springframework.aop.ThrowsAdvice` (@AfterThrowing) run if execution method throws exception
-* `org.springframework.aop.IntroductionAdvisor` (no annotation, have to manuaaly create such a bean with ProxyFactoryBean) add special logic to class
+* `org.springframework.aop.MethodBeforeAdvice/@Before` - before method execution. has access to params. In case of exception, join point is not called
+* `org.springframework.aop.AfterReturningAdvice/@AfterReturning` -  after method executed, has access to params & return value. If method execution throws exception, not called. If advice throws exception, code won't proceed further (so you can implement some after validation)
+* `org.springframework.aop.AfterAdvice/@After` - cause would be executed no matter what
+* `org.aopalliance.intercept.MethodInterceptor/@Around` - has full control over method execution
+* `org.springframework.aop.ThrowsAdvice/@AfterThrowing` run if execution method throws exception
+* `org.springframework.aop.IntroductionAdvisor/@DeclareParents` (no annotation, have to manually create such a bean with `ProxyFactoryBean`) add special logic to class
 
 3 advices example (before, after, around). Notice that proxy is changed object, not original
 ```java
