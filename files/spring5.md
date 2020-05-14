@@ -2745,7 +2745,7 @@ Hello, I'm Person
 before => sayHello, [], com.example.spring5.Person@3ecd23d9
 Hello, I'm Person
 ```
-As you see, first time aspect didin't apply, but second time it applied (cause our flow pointct will apply aspect only when called from specific class and method).
+As you see, first time aspect didn't apply, but second time it applied (cause our flow pointcut will apply aspect only when called from specific class and method).
 You can also use `ComposablePointcut` with 2 methods `union` and `intersection` if you want to pass several `methodMatchers`.
 If you need to combine only pointcuts you can use `PointCut` class, but if you want to combine pointcut/methodmatcher/classfilter you should use `ComposablePointcut`.
 
@@ -2777,9 +2777,6 @@ public class App{
         proxy.sayHello();
         System.out.println(proxy.isCalled());
 
-    }
-    public static void print(Person p){
-        p.sayHello();
     }
 }
 
@@ -3020,14 +3017,15 @@ aroundAdvice => null
 
 I'm AopSimpleBean
 ```
-As you see we have 2 beans of the same type, original - not adviced and adviced.
-If you want to have one bean, and you never need original you can remove it from javaconfig, and inject it directly into `ProxyFactoryBean`
+As you see we have 2 beans of the same type, original (not adviced) and proxy (adviced).
+If you want to have one bean, and you never need original you can remove it from java config, and inject it directly into `ProxyFactoryBean`
 
 You can also use `@AspectJ` annotations, you should first enable them `@EnableAspectJAutoProxy(proxyTargetClass = true)` (setting proxyTargetClass force spring aop to use CGLIB)
 `@AspectJ` refers to a style of declaring aspects as regular Java classes annotated with annotations.
-The `@AspectJ` support can be enabled with XML or Java style configuration. In either case you will also need to ensure that AspectJ’s aspectjweaver.jar library is on the classpath of your application (version 1.6.8 or later)
-If you are using `@SpringBootApplication` you don't need to explicitly include `@EnableAspectJAutoProxy`, cause it inside include
-`@EnableAutoConfiguration` which with the help of conditional annotations enables aop.
+The `@AspectJ` support can be enabled with XML or Java style configuration. In either case you will also need to ensure that AspectJ’s `aspectjweaver.jar` library is on the classpath of your application (version 1.6.8 or later)
+If you are using `@SpringBootApplication` you don't need to explicitly include `@EnableAspectJAutoProxy`, cause it would be configured with `@EnableAutoConfiguration` which with the help of conditional annotations enables aop.
+
+
 `AopAnnotatedAdvice.java`
 ```java
 package com.example.logic.ann.aop;
@@ -3053,7 +3051,8 @@ public class AopAnnotatedAdvice {
     }
 }
 ```
-As you see we apply before advice only if bean name starts with `original` and methodname is `sayHello`.
+
+As you see we apply before advice only if bean name starts with `original` and method name is `sayHello`.
 ```java
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -3079,16 +3078,16 @@ printing...
 
 Pointcut Designators
 
-* execution - for matching method execution join points, this is the primary pointcut designator you will use when working with Spring AOP
-* within - limits matching to join points within certain types (simply the execution of a method declared within a matching type when using Spring AOP)
-* this - limits matching to join points (the execution of methods when using Spring AOP) where the bean reference (Spring AOP proxy) is an instance of the given type
-* target - limits matching to join points (the execution of methods when using Spring AOP) where the target object (application object being proxied) is an instance of the given type
-* args - limits matching to join points (the execution of methods when using Spring AOP) where the arguments are instances of the given types
-* @target - limits matching to join points (the execution of methods when using Spring AOP) where the class of the executing object has an annotation of the given type
-* @args - limits matching to join points (the execution of methods when using Spring AOP) where the runtime type of the actual arguments passed have annotations of the given type(s)
-* @within - limits matching to join points within types that have the given annotation (the execution of methods declared in types with the given annotation when using Spring AOP)
-* @annotation - limits matching to join points where the subject of the join point (method being executed in Spring AOP) has the given annotation
-* bean - limits matching to join points (method being executed in Spring AOP) to beans with provided name
+* `execution` - for matching method execution join points, this is the primary pointcut designator you will use when working with Spring AOP
+* `within` - limits matching to join points within certain types (simply the execution of a method declared within a matching type when using Spring AOP)
+* `this` - limits matching to join points (the execution of methods when using Spring AOP) where the bean reference (Spring AOP proxy) is an instance of the given type
+* `target` - limits matching to join points (the execution of methods when using Spring AOP) where the target object (application object being proxied) is an instance of the given type
+* `args` - limits matching to join points (the execution of methods when using Spring AOP) where the arguments are instances of the given types
+* `@target` - limits matching to join points (the execution of methods when using Spring AOP) where the class of the executing object has an annotation of the given type
+* `@args` - limits matching to join points (the execution of methods when using Spring AOP) where the runtime type of the actual arguments passed have annotations of the given type(s)
+* `@within` - limits matching to join points within types that have the given annotation (the execution of methods declared in types with the given annotation when using Spring AOP)
+* `@annotation` - limits matching to join points where the subject of the join point (method being executed in Spring AOP) has the given annotation
+* `bean` - limits matching to join points (method being executed in Spring AOP) to beans with provided name
 
 Example
 ```java
@@ -3242,29 +3241,14 @@ isJdkDynamicProxy => true
 
 
 ###### Native AspectJ
-You can also write your aspects in native aspectj language. For this you first need to add `AspectJ Weaver` plugin to your ide.
-You can create a class with extension `*.aj`
+You can also write your aspects in native aspectj language. For this you first need to add `AspectJ Weaver` plugin to your IDE. You can create a class with extension `*.aj`
 
-```java
-import com.example.logic.ann.aop.AopSimpleBean;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-
-public class App{
-    public static void main(String[] args) {
-        /**
-         * There are 2 ways we can add aspects
-         * create bean and add them explicitly from config with ProxyFactoryBean
-         * create them implicitly with @Aspect
-         */
-        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.aop");
-        context.getBean("originalBean", AopSimpleBean.class).print();
-    }
-}
-```
 
 
 
 ### Spring MVC
+
+
 `@RestController` - convenience annotation => `@Controller` + `@ResponseBody` (convert response into json)
 `@RequestMapping(path = "/api")` - can add it to controller, so all methods would have this url as base
 `@SessionAttributes` - post request gets the same instance of the model attribute object that was placed into the get request.
