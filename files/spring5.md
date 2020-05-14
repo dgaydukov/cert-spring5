@@ -4637,10 +4637,12 @@ You can go to `curl http://localhost:8080/test`.
 
 
 
+
+
 #### DB
 
 ###### Spring JDBC
-Before using spring jdbc, we can use standarc jdk jdbc.
+Before using spring jdbc, we can use standard jdk jdbc.
 Add this to your `pom.xml`
 ```
 <dependency>
@@ -4725,17 +4727,13 @@ For spring jdbc you should add to your `pom.xml`. You also would like embedded d
 </dependency>
 ```
 
-`JdbcTemplate` has only `update` method to run update/inserts. There is no `insert` method.
-It executes SQL queries, update statements and stored procedure calls, performs iteration over ResultSets 
-(when you pass `RowMapper` you just pass mapping, but template do all iteration over `ResultSet`, but when you pass `RowCallbackHandler` you do iteration by yourself) 
-and extraction of returned parameter values
-It simplify work with jdbc, we also have `HibernateTemplate` that simplify work with hibernate
-For `update/query` it may take a third param as array of `java.sql.Types`. Setting argument type provides correctness and optimisation (slight) for the underlying SQL statement.
-`JdbcTemplate` handles creation and release of resources.
+`JdbcTemplate` has only `update` method to run `DML/DDL` (data manipulation(create, alter, drop)/definition(insert, update, delete) language). There is no `insert` method.
+`JdbcTemplate` handles creation and release of resources, executes SQL queries, update statements and stored procedure calls, performs iteration over ResultSets (when you pass `RowMapper` you just pass mapping, but template do all iteration over `ResultSet`, but when you pass `RowCallbackHandler` you do iteration by yourself), 
+and extraction of returned parameter values It simplify work with jdbc, we also have `HibernateTemplate` that simplify work with hibernate.
+`update/query` methods may take a third param as array of `java.sql.Types`. Setting argument type provides correctness and optimisation (slight) for the underlying SQL statement.
 When you test application code that manipulates the state of the Hibernate session, make sure to flush the underlying session within test methods that execute that code.
 
-Spring nicely translate all checked sql exceptions into runtime exceptions with clear names.
-But you can also add logic there, by creating your own translator
+Spring nicely translate all checked sql exceptions into runtime exceptions with clear names. But you can also add logic there, by creating your own translator.
 ```java
 package com.example.logic.ann.jdbc.template;
 
@@ -4759,6 +4757,7 @@ public class MySqlExTranslator extends SQLErrorCodeSQLExceptionTranslator {
     }
 }
 ```
+
 Before use it, you should register it in your jdbc template
 ```java
 @Bean
@@ -4773,7 +4772,7 @@ public JdbcTemplate jdbcTemplate(){
 }
 ```
 
-We can pass params in 2 ways: `Object[]` or `Map`. If you want to use map you should use `NamedParameterJdbcTemplate` and put all params into hashmap.
+We can pass params in 2 ways: `Object[]` or `Map`. If you want to use map you should use `NamedParameterJdbcTemplate` and put all params into map.
 ```java
 var r1 = jdbcTemplate.queryForObject("select * from department where id=?", new Object[]{id}, new DepartmentModelMapper());
 NamedParameterJdbcTemplate template = new NamedParameterJdbcTemplate(jdbcTemplate);
@@ -4943,17 +4942,15 @@ getById(28) =>DepartmentModel(id=28, name=finance, type=my)
 deleteById(28) => true
 ```
 
-* `SimpleDriverDataSource` — Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi. We should set driver class with `setDriverClass`.
-* `DriverManagerDataSource` — Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call. We can set just driver class name with `setDriverClassName`.
+There are several implementations of `DataSource`
+* `SimpleDriverDataSource` (pooled, so you can use it only for testing purpose.) - Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi. We should set driver class with `setDriverClass`.
+* `DriverManagerDataSource` - Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call. We can set just driver class name with `setDriverClassName`.
 * `SingleConnectionDataSource` - (extends `DriverManagerDataSource`, implement `SmartDataSource`) - use single connection without closing it
 
-`SimpleDriverDataSource` - is not pooled, so you can use it only for testing purpose.
-Although you can write your own implementation of `RowMapper` for each entity, if you db columns correspond to your model, you can
-use one of default impl like `BeanPropertyRowMapper`, or if you need to get a map (key - columns, value- values)
-you can use `ColumnMapRowMapper`.
+Although you can write your own implementation of `RowMapper` for each entity, if your db columns correspond to your model, you can
+use one of default impl like `BeanPropertyRowMapper`, or if you need to get a map (key - columns, value- values) you can use `ColumnMapRowMapper`.
 
-If you want to manipulate the whole result set you can use `ResultSetExtractor`.
-`RowCallbackHandler` can be used in `query`, but you have to manually regulate state
+If you want to manipulate the whole result set you can use `ResultSetExtractor`. `RowCallbackHandler` can be used in `query`, but you have to manually regulate state.
 ```java
 private DepartmentModel resultSetToModel(ResultSet rs) throws SQLException {
     DepartmentModel model = new DepartmentModel();
@@ -4991,10 +4988,11 @@ spring jdbc also provides several classes
 `SqlFunction<T>` - work with functions and stored procedure
 You usually create your class by extending one of these and implement one abstract method.
 
+
+
 ###### Hibernate
-`JPA` (java persistence API) - specification how to write orm. `Hibernate` - concrete example of such orm based on JPA.
-Jpa specification is inside `javax.persistence` package.
-To use hibernate you need to add these into your `pom.xml`
+`JPA` (java persistence API) - specification how to write orm. `Hibernate/EclipseLink` - concrete examples of such orm based on JPA.
+Jpa specification is inside `javax.persistence` package. To use hibernate you need to add these into your `pom.xml`
 ```
 <dependency>
     <groupId>org.hibernate</groupId>
@@ -5021,9 +5019,11 @@ To use `org.springframework.orm` package add this too
 ```
 
 If you don't want to persist field into db, but to have it in entity, you should add `@Transient`
-If you have a image in db with big size and want to get it lazy (load from db only when you request it), you should add `@Basic(fetch=  FetchType.LAZY)` to your column
+If you have a image in db with big size and want to get it lazy (load from db only when you request it), you should add `@Basic(fetch = FetchType.LAZY)` to your column
 
-In hibernate we will show how to work with persistance objects
+`@Entity vs @Table` - both have name attribute. For entity - name is a name of entity that you can use in `JPQL/HQL` queries. By default it's class name. For table - it's actual name of table in database.
+
+Simple query example with hibernate
 `DepartmentEntity.java`
 ```java
 package com.example.logic.ann.jdbc.hibernate.entities;
@@ -5316,8 +5316,8 @@ public class App {
 
 
 ###### Spring Data
-Jpa `EntityManagerFactory` resembles `SessionFactory`. You can call `entityManagerFactory.createEntityManager()` to get current `EntityManager` on which you can run queries like `update/remove/save`
-You can also autowire it like that. Types should match exactly.
+`SessionFactory` extends `EntityManagerFactory`. You can call `entityManagerFactory.createEntityManager()` to get current `EntityManager` on which you can run queries like `update/remove/save`
+You can also inject it like that. Types should match exactly.
 ```java
 @PersistenceUnit
 EntityManagerFactory factory;
@@ -5325,16 +5325,24 @@ EntityManagerFactory factory;
 EntityManager manager;
 ```
 
-`@PersistenceContext` takes care to create a unique EntityManager for every thread. So you shouldn't use `@Autowired` in this case.
-`@PersistenceUnit` - to auwowire EntityManagerFactory
-PersistenceUnit injects an EntityManagerFactory, and PersistenceContext injects an EntityManager. It's generally better to use PersistenceContext unless you really need to manage the EntityManager lifecycle manually.
+`@PersistenceUnit` - injects EntityManagerFactory (no need to use `@Autowired`)
+`@PersistenceContext` takes care to create a unique EntityManager for every thread (no need to use `@Autowired`)
+
+`@PersistenceUnit` injects an `EntityManagerFactory`, and `@PersistenceContext` injects an `EntityManager`. It's generally better to use `@PersistenceContext` unless you really need to manage the `EntityManager` lifecycle manually.
 Although you can use `EntityManager` to manually create queries, it's better to use spring data repository pattern, that wrap entity manager inside and provide many default queries out of the box.
-There are 2 interfaces `CrudRepository` & `JpaRepository` from which you can extend your repository interface (spring will create class automatically) and have many default queries already implemented.
-You can also add `@RepositoryDefinition` to your interface, and spring will create crud repository implementation for you (no need to extends other interfaces).
-To enable work with repository add this to your config `@EnableJpaRepositories("com.example.logic.ann.jdbc.spring.repository")`.
-But if you want some custom query (like fine user by first and last name) you just need to add abstract method `findByFirstNameAndLastName(String firstName, String lastName)` 
+
+There are 2 interfaces `CrudRepository` & `JpaRepository` from which you can extend your repository interface (spring will generate class automatically) and have many default queries already implemented.
+`JpaRepository` extends `PagingAndSortingRepository` which in turn extends `CrudRepository`.
+Their main functions are:
+* `CrudRepository` mainly provides CRUD functions. Ffor `findAll` return `Iterable`.
+* `PagingAndSortingRepository` provides methods to do pagination and sorting records.
+* `JpaRepository` provides some JPA-related methods such as flushing the persistence context and deleting records in a batch. For `findAll` return `List`.
+
+You can also add `@RepositoryDefinition` to your interface, and spring will create crud repository implementation for you (no need to extends other interfaces), basically it the same as extending Repository.
+To enable work with repository add to your config `@EnableJpaRepositories("com.example.logic.ann.jdbc.spring.repository")`.
+But if you want some custom query (like find user by first and last name) you just need to add abstract method `findByFirstNameAndLastName(String firstName, String lastName);`
 and it would work (spring automatically build query based on it's name). The valid names are: `read...By, get...By, find...By`
-In case you want to have your own query for the method, just add `@Query("your query")`. By default it take JPL(java persistence language) query, but you can set `nativeQuery` to true and add pure sql query (in this case no support for sorting & pagination)
+In case you want to have your own query for the method, just add `@Query("your query")`. By default it take `JPL`(java persistence language) query, but you can set `nativeQuery` to true and add pure sql query (in this case no support for sorting & pagination)
 If we have a named query for repo `@NamedQuery(name = "MyEntity.myQuery", query="...")` and we have 
 ```java
 public interface MyEntityRepository extends JpaRepository <MyEntity, Long> {
@@ -5342,7 +5350,7 @@ public interface MyEntityRepository extends JpaRepository <MyEntity, Long> {
 }
 ```
 This query will use named query automatically. But if we add `@Query` it will override named query.
-It takes precedence over named queries, which are annotated with `@NamedQuery` or defined in an orm.xml file. For native queries paginatin can be enabled by setting `countQuery` to some native sql.
+It takes precedence over named queries, which are annotated with `@NamedQuery` or defined in an orm.xml file. For native queries pagination can be enabled by setting `countQuery` to some native sql.
 
 
 Also spring data can build all api endpoint for your repos. For this just add following to your `pom.xml`
@@ -5355,7 +5363,7 @@ Also spring data can build all api endpoint for your repos. For this just add fo
 Internally it create new controller with `@RepositoryRestController` for every repository. So if you need some customization you can create new controller with this annotation.
 You can go `curl localhost:8080/api` and see all endpoints created. By default it will pluralize all names, so person would be persons. But if you want custom names you should add to your repository `@RestResource(rel="person", path="people")`
 
-You can easily add auditing to any entity by adding `@EntityListeners(AuditingEntityListener.class)`
+You can easily add auditing to any entity by adding `@EntityListeners(AuditingEntityListener.class)` - we are adding spring data auditor, you can also create your own auditors.
 And then have 4 columns with following annotations `@CreatedDate/@CreatedBy/@LastModifiedBy/@LastModifiedDate`
 You should add to your config `@EnableJpaAuditing(auditorAwareRef =  "auditorAwareBean")` and finally
 ```java
@@ -5370,18 +5378,19 @@ public class AuditorAwareBean implements AuditorAware<String>  {
 We can also add `Entity Versioning`, so whenever update/delete happens, old versions would be stored in history table.
 To enable versioning on entity just add `@Audited`.
 
-Generally you should prefer `EntityManager` over `Session`, cause it jpa standard while `Session` is hibernate. Under the hood `EntityManager` using `Session`, and if you need some specific features
-you can always get session like `Session current = (Session) entityManager.getDelegate();`;
+Generally you should prefer `EntityManager` over `Session`, cause it jpa standard while `Session` is hibernate. `Session` extends `EntityManager`. You can always get session like `Session current = (Session) entityManager.getDelegate();`.
 
-By default delete return void, but you still can verify that row was deleted. If row didn't exist `EmptyResultDataAccessException` would be thrown. So you can catch it and do something.
+By default `delete` return void, but you still can verify that row was deleted. If row doesn't exist, `EmptyResultDataAccessException` would be thrown. So you can catch it and do something.
 
-If you want to subscribe on events for some repository you can extedn `AbstractRepositoryEventListener<YourRepo>` and implements methods like `afterCreate` and have some custom logic there.
+If you want to subscribe on events for some repository you can extend `AbstractRepositoryEventListener<YourRepo>` and implements methods like `afterCreate` and have some custom logic there.
+
+
 
 ###### JTA - java transaction API
-`@Transactional`
+
+`@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into transactions.
 
 `Propagation` => 
-
 * `REQUIRED` - default value, if no transaction exists, create new, otherwise run in current
 * `SUPPORTS` - if transaction exists, run in int, otherwise run as non-transactional
 * `MANDATORY` - throw exception if method was called from non-transactional method
@@ -5397,12 +5406,12 @@ If you want to subscribe on events for some repository you can extedn `AbstractR
 * `SERIALIZABLE` - no reads available
 
 By default all `RuntimeException` and `Error` rollback transaction whereas checked exceptions don't. This is an EJB legacy. You can configure this by using `rollbackFor()` and `noRollbackFor()` annotation parameters `@Transactional(rollbackFor=Exception.class)`
-You can also pass array of strings for `rollbackForClassName` or `noRollbackForClassName
+You can also pass array of strings for `rollbackForClassName/noRollbackForClassName`.
 In test framework you have `@Rollback/@Commit`. Rollback - by default true, can set to false (same as set just `@Commit`). If you don't specify anything, for all integration tests all transactions would be rollbacked after test run.
 
 Don't confuse 
-`javax.transaction.Transactional` - java EE7 annotation, but since spring3 also supported, 
-with `org.springframework.transaction.annotation.Transactional` - has more options and will always execute the right way.
+* `javax.transaction.Transactional` - java EE7 annotation, but since spring3 also supported by spring framework, 
+* `org.springframework.transaction.annotation.Transactional` - has more options and will always execute the right way.
 
 If for some reason you don't want to use this annotation (for example you have a method that takes too long to run and if you put `@Transactional` on it, you will use all available connections), you can use programmatic transaction with `TransactionTemplate` (it's thread-safe)
 ```java
@@ -5417,7 +5426,7 @@ public class App{
         PlatformTransactionManager manager = new JpaTransactionManager();
         TransactionTemplate template = new TransactionTemplate(manager);
         /**
-         * with some return value, takes TransactionCallback functioan interface with method doInTransaction
+         * with some return value, takes TransactionCallback functional interface with method doInTransaction
          */
         template.execute(status -> {
             // you can rollback by 
@@ -5426,7 +5435,7 @@ public class App{
             return "done";
         });
         /**
-         * Without return value
+         * Without return value, or you can use lambda that return null
          */
         template.execute(new TransactionCallbackWithoutResult() {
             @Override
@@ -5438,7 +5447,6 @@ public class App{
     }
 }
 ```
-`@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into transactions.
 
 You can even work without this template and use tx manager directly
 ```java
@@ -5495,9 +5503,10 @@ You can add these 2 libraries to your `pom.xml` to get ability to count how many
 </dependency>
 ```
 
+
 ###### @DynamicUpdate/@DynamicInsert and @NamedEntityGraph
 By default when you update entity, even if you set 1 fields, orm will generate sql update with all fields in entity. If you want short update with only your field you should use dynamic update annotations. Same true for dynamic insert.
-Entity graph - can be used to lazy/eager load data
+Entity graph - can be used to lazy/eager data loading.
 
 
 ###### Cascade types
@@ -5642,6 +5651,9 @@ class Account{
     }
 }
 ```
+
+
+
 
 #### Spring Testing
 When you add spring test starter `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.
