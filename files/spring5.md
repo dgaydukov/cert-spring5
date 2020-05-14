@@ -3249,12 +3249,12 @@ You can also write your aspects in native aspectj language. For this you first n
 ### Spring MVC
 
 
-`@RestController` - convenience annotation => `@Controller` + `@ResponseBody` (convert response into json)
+`@RestController` - convenience annotation => `@Controller` + `@ResponseBody` (convert method return type into http response using `HttpMessageConverter` implementations)
 `@RequestMapping(path = "/api")` - can add it to controller, so all methods would have this url as base
-`@SessionAttributes` - post request gets the same instance of the model attribute object that was placed into the get request.
+`@SessionAttributes` (class level only) - post request gets the same instance of the model attribute object that was placed into the get request.
 `@CrossOrigin(origins="*")` - set origin to anybody, by default it same-host
 `PUT` vs. `PATCH`. put - opposite to get, so it to replace whole object for url. Patch - is to replace some fields within the object.
-`@RequestParam` - have field required (default true), so if you don't pass param field you got exception. If you set it to false value would be null (if your value is primitive you got `IllegalStateException: Optional int parameter 'id' is present but cannot be translated into a null value due to being declared as a primitive type. Consider declaring it as object wrapper for the corresponding primitive type.`)
+`@RequestParam/@PathVariable` - have field required (default true), so if you don't pass param field you got exception. If you set it to false value would be null (if your value is primitive you got `IllegalStateException: Optional int parameter 'id' is present but cannot be translated into a null value due to being declared as a primitive type. Consider declaring it as object wrapper for the corresponding primitive type.`)
 `ContextLoaderListener` (implements `ServletContextListener`) load root web app context.
 
 
@@ -3264,7 +3264,7 @@ You can also use `web.xml` to register your web app. Here you can register
 * config classes
 * context loader listener
 * filters (like `MultipartFilter`)
-but not custom beans like `ViewResolver/MultipartResolver`. DispatcherServlet looks for an instance of `MultipartResolver` registered as a bean by the name of DispatcherServlet.MULTIPART_RESOLVER_BEAN_NAME ("multipartResolver"). By default it's `StandardServletMultipartResolver`
+but not custom beans like `ViewResolver/MultipartResolver`. DispatcherServlet looks for an instance of `MultipartResolver` registered as a bean by the name of `DispatcherServlet.MULTIPART_RESOLVER_BEAN_NAME = "multipartResolver"`. By default it's `StandardServletMultipartResolver`.
 ```
 <web-app>
     <!-- Configure ContextLoaderListener to use AnnotationConfigWebApplicationContext instead of the default XmlWebApplicationContext -->
@@ -3308,13 +3308,15 @@ but not custom beans like `ViewResolver/MultipartResolver`. DispatcherServlet lo
 </web-app>
 ```
 
-As you see, we have 2 types of params `context-param` - common for whole app, and `init-param` - common for current servlet. So both `contextClass/contextConfigLocation` can be either under `context-/init-param` section.
+As you see, we have 2 types of params `context-param` - common for whole app, and `init-param` - common for current servlet. So both `contextClass/contextConfigLocation` can be in both sections.
 
 
 It's important to return correct value
-curl http://localhost:8080/m1 - javax.servlet.ServletException: Circular view path [m1]
-curl http://localhost:8080/m2 - m2
-curl http://localhost:8080/m3 - m3
+```
+curl http://localhost:8080/m1  # => javax.servlet.ServletException: Circular view path [m1]
+curl http://localhost:8080/m2  # => m2
+curl http://localhost:8080/m3  # => m3
+```
 ```java
 package com.example.logic.ann.web;
 
@@ -3346,15 +3348,18 @@ public class MyController {
 
 
 In Spring Web MVC you can use any object as a command or form-backing object; you do not need to implement a framework-specific interface or base class
-The type-level @SessionAttributes annotation declares session attributes used by a specific handler. This will typically list the names of model attributes or 
+The type-level `@SessionAttributes` annotation declares session attributes used by a specific handler. This will typically list the names of model attributes or 
 types of model attributes which should be transparently stored in the session or some conversational storage, serving as form-backing beans between subsequent requests
 
+
+
+
 ###### DispatcherServlet
-`org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests (it extends in the end `HttpServlet`).
+`org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests (it extends in the end `HttpServlet` which itself in the end implements `Servlet`).
 When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`, and has a method `getServletContext`, to get `ServletContext`.
-Each `DispatcherServlet` has its own `WebApplicationContext`, which inherits all the beans already defined in the root `WebApplicationContext`. 
-These inherited beans can be overridden in the servlet-specific scope, and you can define new scope-specific beans local to a given Servlet instance.
-What the above quote from the documentation is saying is that if you have a `<bean>` declaration with the same name or id in both the root context and the servlet context, the servlet context one will overwrite the root context one.
+Each `DispatcherServlet` has its own `WebApplicationContext`, which inherits all the beans already defined in the root `WebApplicationContext`.
+Beans inherited from root app context can be overridden in the servlet-specific scope, and you can define new scope-specific beans local to a given Servlet instance.
+If you have a `<bean>` declaration with the same name or id in both the root context and the servlet context, the servlet context one will overwrite the root context one.
 
 
 
@@ -3362,23 +3367,22 @@ What the above quote from the documentation is saying is that if you have a `<be
 ###### Build .war file with pure java
 You can even build servlet app with pure [java](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#java-servlet-webapp)
 
+
+
 ###### Build .war file with Spring
 Before the advent of spring boot for building web app we were using `.war` files (web archive).
 Inside we had web.xml were all configs are stores, then we put this file into `tomcat` directory, and when tomcat 
-starts, it takes with file and run it. That's why we didn't have any `main` method inside web app for spring.
+starts, it takes with file and run it. That's why we didn't have any `main` method inside web app for spring, tomcat itself build jar path and run our app.
 
-If you work without spring, you should implement `WebApplicationInitializer` (but usually you just extends from `AbstractAnnotationConfigDispatcherServletInitializer`) and build war and put war into tomcat
+To build web app you should implement `WebApplicationInitializer`, but usually you just extends some class like `AbstractAnnotationConfigDispatcherServletInitializer`.
 
 `WebApplicationInitializer vs ServletContainerInitializer`
-Tomcat 3.0+ search for `javax.servlet.ServletContainerInitializer` through the SPI and load class.
-Spring has default implementation `org.springframework.web.SpringServletContainerInitializer` with annotation
-`@HandlesTypes({WebApplicationInitializer.class})`.
-So when you create a class from `WebApplicationInitializer` it get hooked by `SpringServletContainerInitializer` which in turn
-get hooked by tomcat and that's why you implement it, and not directly `ServletContainerInitializer`.
+Tomcat 3.0+ search for `javax.servlet.ServletContainerInitializer` through the SPI and load that class.
+Spring has default implementation `org.springframework.web.SpringServletContainerInitializer` with annotation `@HandlesTypes({WebApplicationInitializer.class})`.
+So when you create a class from `WebApplicationInitializer` it get hooked by `SpringServletContainerInitializer` which in turn get hooked by tomcat and that's why you implement it, and not directly `ServletContainerInitializer`.
 
-If you have spring boot project, that you are going to build into war, it has a class `SpringBootServletInitializer` which implements `WebApplicationInitializer`, so you don't have to write your own implementation. You will have main entry point, and spring boot will do this under the hood.
 
-Here is basic example to build web app with pure spring
+Example using `AbstractAnnotationConfigDispatcherServletInitializer`
 ```java
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -3451,8 +3455,9 @@ public class App implements WebApplicationInitializer {
 
 
 ###### Build .war file with Spring Boot
-If you choose `war` packaging spring boot will create 2 classes one is `ServletInitializer` another is `DemoApplication` with main method. You can rewrite them into one
-For local development
+If you have spring boot project, that you are going to build into war, it has a class `SpringBootServletInitializer` which implements `WebApplicationInitializer`, so you don't have to write your own implementation. You will have main entry point, and spring boot will do this under the hood.
+If you choose `war` packaging spring boot will create 2 classes one is `ServletInitializer` another is `DemoApplication` with main method. You can rewrite them into one. 
+
 ```java
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -3461,11 +3466,13 @@ import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 
 @SpringBootApplication
 public class App extends SpringBootServletInitializer {
+    // for tomcat deployment
 	@Override
 	protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
 		return application.sources(App.class);
 	}
 
+	// for local development
 	public static void main(String[] args) {
 		SpringApplication.run(App.class, args);
 	}
@@ -3473,8 +3480,7 @@ public class App extends SpringBootServletInitializer {
 ```
 
 You can even remove `main` method and have pure war app. For this remove this plugin `spring-boot-maven-plugin`, otherwise `mvn clean install` won't work. And then just copy your war file to tomcat.
-
-You add your class annotated with `@SpringBootApplication`. When you run locally from intellij, it run this App, that has main method. But when you deploy to tomcat, it will just run this class.
+To run `.war` in tomcat do:
 * Change project name to more readable
 ```
 <build>
@@ -3484,14 +3490,14 @@ You add your class annotated with `@SpringBootApplication`. When you run locally
 * Run `mvn clean install`
 * Download [tomcat](https://tomcat.apache.org/download-80.cgi) and extract in into `tomcat` directory
 * Run `chmod +x ./bin/catalina.sh` and then just run `./bin/catalina.sh run`
-* Copy your file `target/spring-boot-app.war` to `/tomcat/webapps`. This will force tomcat to exctract `.war` file into folder
+* Copy your file `target/spring-boot-app.war` to `/tomcat/webapps`. This will force tomcat to extract `.war` file into folder
 * Navigate to `http://localhost:8080/spring-boot-app/` - here your app.
 
 
 
 
 ###### Spring Boot
-In spring boot you have 2 new events. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
+In spring boot you have 2 new lifecycle stages. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
 ```
 org.springframework.boot.env.EnvironmentPostProcessor=com.example.logic.ann.postprocessors.MyEPP
 org.springframework.context.ApplicationContextInitializer=com.example.logic.ann.postprocessors.MyACI
@@ -3545,19 +3551,39 @@ public class FilterJavaConfig {
 
 ###### Http security
 
-antMatcher(String antPattern) - Allows configuring the HttpSecurity to only be invoked when matching the provided ant pattern.
-mvcMatcher(String mvcPattern) - Allows configuring the HttpSecurity to only be invoked when matching the provided Spring MVC pattern.
+* `antMatcher(String antPattern)` - allows configuring the `HttpSecurity` to only be invoked when matching the provided ant pattern.
+* `mvcMatcher(String mvcPattern)` - allows configuring the `HttpSecurity` to only be invoked when matching the provided Spring MVC pattern.
 
 Generally mvcMatcher is more secure than an antMatcher. As an example:
-antMatchers("/secured") matches only the exact /secured URL
-mvcMatchers("/secured") matches /secured as well as /secured/, /secured.html, /secured.xyz
+`antMatchers("/secured")` matches only the exact `/secured` URL
+`mvcMatchers("/secured")` matches `/secured` as well as `/secured/`, `/secured.html`, `/secured.xyz`
 
 Servlet has a concept of filters, where each request first goes through a list of filters
-One of the filter is `DelegatingFilterProxy` - it build a link between servlet lifecycly and app context, by including filters from context to servlet
+One of the filter is `DelegatingFilterProxy` - builds a link between servlet lifecycle and app context, by including filters from context to servlet
 Internally it uses `FilterChainProxy` that internally has a list of `SecurityFilterChain`.
-The idea is that `FilterChainProxy` can have a list of `SecurityFilterChain` each applied to unique url and each consisting fo unique filters
-thus you can divide your logic to multiply layer security
-It creates `javax.servlet.Filter` with name `springSecurityFilterChain`.
+The idea is that `FilterChainProxy` (spring security creates `javax.servlet.Filter` with name `springSecurityFilterChain`) can have a list of `SecurityFilterChain` each applied to unique url and each consisting of unique filters, so you can divide your logic to multiple layer security.
+```java
+import javax.annotation.Resource;
+import javax.servlet.Filter;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class App {
+    @Resource(name = "springSecurityFilterChain")
+    private Filter filter;
+
+    public static void main(String[] args) {
+        var context = SpringApplication.run(App.class, args);
+        var app = context.getBean(App.class);
+        System.out.println("springSecurityFilterChain => " + app.filter);
+    }
+}
+```
+```
+springSecurityFilterChain => FilterChainProxy[Filter Chains: [[ any request, [org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@15ecde52, org.springframework.security.web.context.SecurityContextPersistenceFilter@770b5cd2, org.springframework.security.web.header.HeaderWriterFilter@6aed3675, org.springframework.security.web.csrf.CsrfFilter@e9c4c2d, org.springframework.security.web.authentication.logout.LogoutFilter@1175070a, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@51d5c50f, org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter@2b023506, org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter@3d39d68, org.springframework.security.web.authentication.www.BasicAuthenticationFilter@148f6fd5, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@295cb28f, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@34002c3d, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@401d9586, org.springframework.security.web.session.SessionManagementFilter@29a62c48, org.springframework.security.web.access.ExceptionTranslationFilter@9d3851, org.springframework.security.web.access.intercept.FilterSecurityInterceptor@2954b177]]]]
+```
 
 There are 4 ways to specify user storage. For all of them you must create configuration class that implements `WebSecurityConfigurerAdapter`
 1. In-memory storage
@@ -3583,6 +3609,7 @@ public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
     }
 }
 ```
+
 2. Database storage
 ```java
 import javax.sql.DataSource;
@@ -3724,7 +3751,7 @@ public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
 For every controller you can inject current user like `@AuthenticationPrincipal UserEntity entity`
 
 
-For servlet we configure `HttpSecurity`, for reactive we configure `ServerHttpSecurity`.
+For servlet-based security we configure `HttpSecurity`, for reactive we configure `ServerHttpSecurity`.
 ```java
 package com.example.logic.ann.reactive;
 
@@ -3768,12 +3795,12 @@ public class ReactiveJavaConfig {
 
 ###### Aop security
 To work with aop security add following annotation to your config `@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)`
-* prePostEnabled => pre/post annotations
-* securedEnabled => determines if the `@Secured` annotation should be enabled
-* jsr250Enabled =>  allows us to use the `@RoleAllowed` annotation
+* `prePostEnabled` => pre/post annotations
+* `securedEnabled` => determines if the `@Secured` annotation should be enabled
+* `jsr250Enabled` =>  allows us to use the `@RoleAllowed` annotation
 
 If we want to allow only certain roles to access some method, add this to any method `@Secured({"ROLE_USER", "ROLE_ADMIN"})` or `@RolesAllowed({"ROLE_USER", "ROLE_ADMIN"})` from jsr250
-`@PreAuthorize/@PostAuthorize` - can take spel expressions (first check before entering the method, second - check after method execution)
+`@PreAuthorize/@PostAuthorize` - can take `SPEL` expressions (first check before entering the method, second - check after method execution)
 `@PreAuthorize("isAuthenticated()")` - check if user authenticated
 `@PreFilter/@PostFilter` - can be used to filter requests
 
@@ -3827,19 +3854,32 @@ public interface IBookService {
 
 Basically these 3 annotations are the same
 `@RolesAllowed({"ROLE_ADMIN"})` - can be checked only against role
-`@Secured("ADMIN")` - can checked more than role, but doesn't support SPEL
-`@PreAuthorize("hasRole('ADMIN')")` - the most versatile, can use SPEL
+`@Secured("ADMIN")` - can checked more than role, but doesn't support `SPEL`
+`@PreAuthorize("hasRole('ADMIN')")` - the most versatile, can use `SPEL`
 
 `@PreFilter` - filter a list as param to a function (if we have only 1 param as list, we can omit `filterTarget`)
 `@PostFilter` - filter returned list
-```java
-@PreFilter(value = "filterObject != authentication.principal.username", filterTarget = "usernames")
-public String joinUsernamesAndRoles(List<String> usernames, List<String> roles) {
-}
 
-@PostFilter("filterObject != authentication.principal.username")
-public List<String> getAllUsernamesExceptCurrent() {
-    return userRoleRepository.getAllUsernames();
+```java
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.security.access.prepost.PostFilter;
+import org.springframework.security.access.prepost.PreFilter;
+
+public class App{
+    @Autowired
+    private JpaRepository userRoleRepository;
+    
+    @PreFilter(value = "filterObject != authentication.principal.username", filterTarget = "usernames")
+    public void joinUsernamesAndRoles(List<String> usernames, List<String> roles) {
+    }
+
+    @PostFilter("filterObject != authentication.principal.username")
+    public List<String> getAllUsernamesExceptCurrent() {
+        return userRoleRepository.findAll();
+    }
 }
 ```
 
@@ -3858,8 +3898,9 @@ To work with spring websocket we should add to `pom.xml`. Since we most likely t
     <version>2.2.6.RELEASE</version>
 </dependency>
 ```
-Working example
-This file should be places in `main/resources/static/ws.html` and it would be accessible on `http://localhost:8080/ws.html`
+
+Working example. This file should be places in `main/resources/static/ws.html` and it would be accessible on `http://localhost:8080/ws.html`
+
 `ws.html`
 ```
 <html>
@@ -3901,6 +3942,7 @@ document.getElementById("send").addEventListener("click", (event) => {
 });
 </script>
 ```
+
 `WsJavaConfig.java`
 ```java
 package com.example.logic.ann.ws;
@@ -3932,6 +3974,7 @@ public class WsJavaConfig implements WebSocketConfigurer {
     }
 }
 ```
+
 `App.java`
 ```java
 import org.springframework.boot.SpringApplication;
@@ -3956,8 +3999,11 @@ public class App {
 If `WebSocket` is not supported by browser we call fallback to SockJs. For client take a [sockjs](https://github.com/sockjs/sockjs-client#getting-started).
 For server add this `withSockJS()` to `registry.addHandler().`
 
+
+
 ###### Reactive WebFlux
-In java reactive api is 4 nested interfaces in `java.util.concurrent.Flow` class. `Publisher` produces data that it sends to a `Subscriber` per a `Subscription`.
+
+For java reactive api there are 4 nested interfaces in  `java.util.concurrent.Flow` class. `Publisher` produces data that it sends to a `Subscriber` per a `Subscription`. And `Processor` is both publisher & subscriber to create pipes.
 Since in java we have only interfaces of reactive, you should use either Reactor (spring use it) or RxJava
 Here is short example to compare Reactor with Java Stream/Optional
 ```java
@@ -3984,23 +4030,24 @@ public class App {
     }
 }
 ```
+
 Useful functions:
-`fromArray/fromIterable/fromStream` to consume array/list/stream
-`range(to, from)` (from value is inclusive) to generate flow of data.
-`mergeWith` - combine flux with another (`concat` in stream api)
-`zip` - combine flux with another and produce tuples (where one element from first flux, another from second) - so you can handle both flux at the same time (no alternative in stream api)
-`skip` - skip first n elements (`skip` in stream api)
-`take` - take first n elements (`take` in stream api)
-`filter` - filter elements based on Predicate (`filter` in stream api)
-`distinct` - filter only distinct elements (`distinct` in stream api)
-`map/flatMap` - transform value (`map/flatMap` in stream api)
-`subscribe` - terminal operation (`forEach` in stream api)
-`subscribeOn` - how we should handle flow (takes `reactor.core.scheduler.Scheduler`, usually from `Schedulers` you call `single/immediate/parallel`)
-`buffer` - create buffers of size n `Flux<List<T>>` (kind of `collect` in stream api)
-`collectList` - create `Mono<List<T>>` (`collect(Collectors.toList())` in stream api)
-`collectMap` - create `Mono<Map<K, V>>` (`collect(Collectors.toMap())` in stream api)
-`all` - take predicate, verify that all elements comply to it (`allMatch` in stream api)
-`yan` - take predicate, verify that at least one element comply to it (`anyMatch` in stream api)
+* `fromArray/fromIterable/fromStream` to consume array/list/stream
+* `range(to, from)` (from value is inclusive) to generate flow of data.
+* `mergeWith` - combine flux with another (`concat` in stream api)
+* `zip` - combine flux with another and produce tuples (where one element from first flux, another from second) - so you can handle both flux at the same time (no alternative in stream api)
+* `skip` - skip first n elements (`skip` in stream api)
+* `take` - take first n elements (`take` in stream api)
+* `filter` - filter elements based on Predicate (`filter` in stream api)
+* `distinct` - filter only distinct elements (`distinct` in stream api)
+* `map/flatMap` - transform value (`map/flatMap` in stream api)
+* `subscribe` - terminal operation (`forEach` in stream api)
+* `subscribeOn` - how we should handle flow (takes `reactor.core.scheduler.Scheduler`, usually from `Schedulers` you call `single/immediate/parallel`)
+* `buffer` - create buffers of size n `Flux<List<T>>` (kind of `collect` in stream api)
+* `collectList` - create `Mono<List<T>>` (`collect(Collectors.toList())` in stream api)
+* `collectMap` - create `Mono<Map<K, V>>` (`collect(Collectors.toMap())` in stream api)
+* `all` - take predicate, verify that all elements comply to it (`allMatch` in stream api)
+* `yan` - take predicate, verify that at least one element comply to it (`anyMatch` in stream api)
 
 
 
@@ -4032,11 +4079,11 @@ public class App {
 }
 ```
 
-First we need to build reactive repository. It's done very simple, just add new layer above your crud repository, and wrap all calls to Flux/Mono.
-Controller stay the same, but it returns not values but also Flux/Mono, and media type should be `MediaType.TEXT_EVENT_STREAM_VALUE` (server will create a response with `Content-Type: text/event-stream`)
 
-If you want to work with reactive spring data, your repo should extends from `ReactiveCrudRepository`. Notice that only cassandra and mongodb support true reactive programming.
-Relational databases don't support reactive, due to blocking nature of JDBC. Although you can use `ReactiveCrudRepository` for relational db, it just wrap all calls to jdbc into `Flux/Mono`.
+If you want to work with reactive spring data, your repo should extends from `ReactiveCrudRepository` where all calls return `Flux/Mono`. Notice that only cassandra and mongodb support true reactive programming.
+Controller stay the same, but it returns not values but also Flux/Mono, and media type should be `MediaType.TEXT_EVENT_STREAM_VALUE` (server will create a response with `Content-Type: text/event-stream`).
+Relational databases don't support reactive, due to blocking nature of `JDBC`. Although you can use `ReactiveCrudRepository` for relational db, it just wrap all calls to `JDBC` into `Flux/Mono`.
+
 To work with cassandra you should add to your `pom.xml`
 ```
 <dependency>
@@ -4066,17 +4113,15 @@ import reactor.core.publisher.Mono;
 public class MyFunctionalController {
     @Bean
     RouterFunction<ServerResponse> routes() {
-        return
-            route(GET("/employee"), req -> ok().body(Flux.just("a", "b"), String.class))
+        return route(GET("/employee"), req -> ok().body(Flux.just("a", "b"), String.class))
                 .and(route(GET("/employee/{id}"), req -> ok().body(Mono.just("a"), String.class)));
     }
 }
 ```
 
-When you add webflux starter, it also add Reactor IPC to work with reactive servers like netty.
-Netty - framework for asyncronous operations. Comparing to tomcat, whick for every request create new thread and block it until work is done
-netty has 1 process, when it get request it use ChannelOperation to pass reqeust to `DispatcherHandler` which pass request to spring controllers.
-When conroller done it's work it call publisher to ChannelOperation where subscribe is called and netty returns result.
+When you add `webflux` starter, it also add `Reactor IPC` to work with reactive servers like `ne.tty` (framework for asynchronous operations)
+Comparing to tomcat, which for every request create new thread and block it until work is done netty has 1 process, when it get request it use ChannelOperation to pass request to `DispatcherHandler` which pass request to spring controllers.
+When controller done his work, it calls publisher to `ChannelOperation` where subscribe is called and netty returns result.
 
 
 ###### Data Validation
@@ -4252,6 +4297,7 @@ HATEOAS (Hypermedia as the Engine of Application State) - when response return a
     <artifact`Id>spring-boot-starter-hateoas</artifactId>
 </dependency>
 ```
+
 Data model should be extended from `RepresentationModel`
 ```java
 package com.example.logic.ann.hateoas;
@@ -4422,7 +4468,7 @@ public class RestApiCall {
 }
 ```
 
-If you have api with hypermedia (hateoas) you can use traverson library
+If you have api with hypermedia (hateoas) you can use [traverson](https://github.com/traverson/traverson)
 ```java
 Traverson traverson = new Traverson(URI.create("http://localhost:8080/api"), MediaTypes.HAL_JSON);
 ```
@@ -4433,11 +4479,11 @@ Traverson traverson = new Traverson(URI.create("http://localhost:8080/api"), Med
 
 
 ###### Custom HttpMessageConverter
+
 When we receive request with `Content-type` header, we must parse it according to this content-type.
 And when we send response, we should send it according to `Accept` header. 
 To convert between java objects and response/request body we must use `HttpMessageConverter`.
-Here a quick example how to implement custom converter
-Custom request body converter. We implement 2 methods - one for handle request payload, other to convert response body
+Here a quick example how to implement custom converter. We implement 2 methods - one for handle request payload, other to convert response body
 ```java
 package com.example.logic.ann.web;
 
@@ -4557,15 +4603,19 @@ curl -H "Accept: text/person" http://localhost:8080/person
 curl -H "Content-Type: text/person" -d "30/Jack" http://localhost:8080/person
 ```
 
+
+
 ###### Spring ViewResolver
 `ViewResolver` - special interface to determine which view to show. There are several implementation:
-`InternalResourceViewResolver extends UrlBasedViewResolver` - allows to set prefix & suffix to view name
-`BeanNameViewResolver` - resolves views declared as beans
+* `InternalResourceViewResolver extends UrlBasedViewResolver` - allows to set prefix & suffix to view name
+* `BeanNameViewResolver` - resolves views declared as beans
+
+
 
 ###### HandlerMapping, HandlerAdapter, HttpRequestHandler
-`HttpRequestHandler` - special interface to handle requests
-`HandlerMapping` - define a mapping between request and `HandlerAdapter`
-`HandlerAdapter` - handler that executed when some url called
+* `HttpRequestHandler` - special interface to handle requests
+* `HandlerMapping` - define a mapping between request and `HandlerAdapter`
+* `HandlerAdapter` - handler that executed when some url called
 
 ```java
 import javax.servlet.http.HttpServletRequest;
@@ -4585,8 +4635,9 @@ class JavaConfig{
 ```
 You can go to `curl http://localhost:8080/test`.
 
-#### DB
 
+
+#### DB
 
 ###### Spring JDBC
 Before using spring jdbc, we can use standarc jdk jdbc.
