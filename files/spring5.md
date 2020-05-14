@@ -5656,12 +5656,12 @@ class Account{
 
 
 #### Spring Testing
-When you add spring test starter `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.
+When you add spring test starter (`spring-boot-starter-test`), `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.
 
 ###### TestPropertySource and TestPropertyValues
-In testing you can add custom properties in 2 ways. `@TestPropertySource` - to pass test source. If you don't pass anything it will search for  default property file with name of your test class. 
-If such filed doesn't exist you got `IllegalStateException: Could not detect default properties file for test class [com.example.spring5.JavaConfigTest]: class path resource [com/example/spring5/JavaConfigTest.properties] does not exist`.
-You can also use `TestPropertyValues` to change properties on the fly.
+In testing you can add custom properties in 2 ways
+* `@TestPropertySource` - to pass test source. If you don't pass anything it will search for  default property file with name of your test class. If such filed doesn't exist you got `IllegalStateException: Could not detect default properties file for test class [com.example.spring5.JavaConfigTest]: class path resource [com/example/spring5/JavaConfigTest.properties] does not exist`.
+* `TestPropertyValues` to change properties on the fly.
 ```java
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -5702,6 +5702,7 @@ public class JavaConfigTest {
 
 You can also use `MockEnvironment` and `MockPropertySource`
 
+
 ###### OutputCaptureRule
 This class helps to test what has been logged to console
 ```java
@@ -5736,6 +5737,7 @@ public class MySimpleTest {
 ```
 
 
+
 ###### TestExecutionListener
 This is special interface that helps to manage test lifecycle. kind of `@BeforeEach, @AfterEach, @BeforeAll, and @AfterAll`
 There are default impl, but you can create your own impl. To add it to your class use 
@@ -5747,10 +5749,6 @@ There are default impl, but you can create your own impl. To add it to your clas
 ```
 Pay attention that adding it like that remove all default listeners, that's why we explicitly add `DI` listener.
 To preserve default listener add `mergeMode = MergeMode.MERGE_WITH_DEFAULTS`
-
-
-
-
 
 
 
@@ -5795,16 +5793,16 @@ By default this starter come with junit4 and junit-vintage. If you want to use n
 </dependency>
 ```
 
-RunWith vs ExtendWith. They both are `junit` annotations, not spring
-If you are using Junit version < 5, so you have to use @RunWith(SpringRunner.class) or @RunWith(MockitoJUnitRunner.class) etc.
-If you are using Junit version = 5, so you have to use @ExtendWith(SpringExtension.class) or @ExtendWith(MockitoExtension.class) etc.
+`RunWith vs ExtendWith`. They both are `junit` annotations, not spring
+If you are using Junit version < 5, so you have to use `@RunWith(SpringRunner.class)` or `@RunWith(MockitoJUnitRunner.class)` etc.
+If you are using Junit version = 5, so you have to use `@ExtendWith(SpringExtension.class)` or `@ExtendWith(MockitoExtension.class)` etc.
 
 If we want to load context or use `@Autowired` we should annotate test class with
 ```java
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = JavaConfig.class)
 ```
-But this 2 can be simplified to `@SpringJUnitConfig`. For web we should use `@SpringJUnitWebConfig`.
+But this 2 can be simplified to `@SpringJUnitConfig(JavaConfig.class)`. For web we should use `@SpringJUnitWebConfig(JavaConfig.class)`.
 Here is full example
 ```java
 import org.junit.jupiter.api.Test;
@@ -5836,7 +5834,7 @@ There are a few useful annotations you can use inside your test framework
 `@Before/@After` - run some logic before all tests starts
 `@ActiveProfiles("")"` - set up profiles for which tests would run
 
-If we are using spring boot without profile it by default loads `application.properties/yml` files
+If we are using spring boot without profile, it by default loads `application.properties/yml` files
 If we set profile, it loads `application{you_profile}.properties/yaml`. Or you can have one config file divided by `---`, like
 ```
 logging:
@@ -5850,12 +5848,12 @@ logging:
     tacos: WARN
 ```
 Order of property loading: `JVM system props`=>`OS env vars`=>`Command-line args`=>`application.properties`=>`application.yml`
-If you set `server.port=0` app will start on any randomly selected port.
+If you set `server.port=0`, app will start on any randomly selected port.
 
-`@SpringBootTest` - if we don't pass anything it will create full web context. If we pass custom configuration
-it will run only small part of total context. It also caching contexts for config.
-So if you have one config for 10 tests, spring boot won't recreate context for all tests 10 time, instead it will create context
-once and then will just use cached version. If we have several config file we should use `@ContextHierarchy`
+`@SpringBootTest` - if we don't pass anything it will create full web context. 
+If we pass custom configuration it will run only small part of total context. It also caching contexts for config.
+So if you have one config for 10 tests, spring boot won't recreate context for all tests 10 time, instead it will create context once and then will just use cached version. 
+* If we have several config file we should use `@ContextHierarchy`
 * If you don't pass anything spring boot test will search for `@SpringBootConfiguration`
 * If we want to clear context for some test or after it, we should use `@DirtiesContext`. You can add it to class/method, you can modify context as you want, but after execution, spring will reload context.
 * If we want to have custom configuration that won't be used by spring boot test we should annotate it with `@TestConfiguration`
@@ -5863,7 +5861,6 @@ once and then will just use cached version. If we have several config file we sh
 * If you want to test controllers you should use `@WebMvcTest` (loads all beans, but throw away everything except `@Controller`)
 * If you need mock inside your test you should add `@MockBean` to property and use it later. But if you need mock only to build other objects, you can add them to class level like `@MockBean(MyService.class)`, it works since it repeatable.
 * You can also test web flux with `WebTestClient`
-* If you need web app context you can add class level annotation `@WebAppConfiguration`, or you can use `@SpringJUnitWebConfig` which is the same as `@SpringJUnitConfig + @WebAppConfiguration`
 
 
 
@@ -5895,13 +5892,12 @@ public class ControllerTest {
 }
 ```
 
-You can use `@ContextConfiguration(locations="classpath:config.xml" ,classes=Config.class)` and pass either list of xml configs or java configs.
-To get access to shared context you can also extend your class from abstract `AbstractJUnit4SpringContextTests` or directly implement `ApplicationContextAware`.
-This annotation is `@Inherited`, so you can create base test config class and extend all other classes from it to use same context.
+You can use `@ContextConfiguration(locations={"classpath:config.xml"}, classes={Config.class})` and pass either list of xml configs or java configs.
+To get access to shared context you can also extend your class from abstract `AbstractJUnit4SpringContextTests` (which implements `AbstractJUnit4SpringContextTests`) or directly implement this interface to get context injected.
+`@ContextConfiguration` is `@Inherited`, so you can create base test config class and extend all other classes from it to use same context.
 If you don't specify any data to this annotation, it will load inner classes marked with `@Configuration`
-If you use this annotation across multiple test, spring will automatically cache context, when you use the same `locations`.
-This will enable to speed up your tests.
-If you want to have separate contexts for different tests you should use. Order of configuration is important, if A depends on B, then B should go first.
+If you use this annotation across multiple test, spring will automatically cache context, when you use the same `locations`. This will enable to speed up your tests.
+If you want to have separate contexts for different tests you should use `@ContextHierarchy`. Order of configuration is important, if A depends on B, then B should go first.
 ```java
 @ContextHierarchy({
     @ContextConfiguration("/parent-config.xml"),
