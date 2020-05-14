@@ -16,6 +16,7 @@
 * 1.13 [Task scheduling](#task-scheduling)
 * 1.14 [Remoting](#remoting)
 * 1.15 [Conditional Annotation](#conditional-annotation)
+* 1.16 [Spring bean scopes (singleton vs. application)](#spring-bean-scopes-singleton-vs-application)
 2 [AOP](#aop)
 * 2.1 [Aop basics](#aop-basics)
 * 2.2 [Aop framework](#aop-framework)
@@ -37,6 +38,7 @@
 * 3.11 [Custom HttpMessageConverter](#custom-httpmessageconverter)
 * 3.12 [Spring ViewResolver](#spring-viewresolver)
 * 3.13 [HandlerMapping, HandlerAdapter, HttpRequestHandler](#handlermapping-handleradapter-httprequesthandler)
+* 3.14 [Controller's method params](#controllers-method-params)
 4. [DB](#db)
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
@@ -69,15 +71,13 @@
 * 10.10 [Spring Cloud](#spring-cloud)
 * 10.11 [Spring Utils](#spring-utils)
 * 10.12 [Spring Boot Logging](#spring-boot-logging)
-* 10.13 [Controller's method params](#controllers-method-params)
-* 10.14 [Spring Caching](#spring-caching)
-* 10.15 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
-* 10.16 [Maven scope](#maven-scope)
-* 10.17 [Spring Boot Starter](#spring-boot-starter)
-* 10.18 [Spring bean scopes (singleton vs. application)](#spring-bean-scopes-singleton-vs-application)
-* 10.19 [Spring Context Indexer)](#spring-context-indexer)
-* 10.20 [SPEL - Spring Expression Language](#spel---spring-expression-language)
-* 10.21 [Custom Framework Impl](#custom-framework-impl)
+* 10.13 [Spring Caching](#spring-caching)
+* 10.14 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
+* 10.15 [Maven scope](#maven-scope)
+* 10.16 [Spring Boot Starter](#spring-boot-starter)
+* 10.17 [Spring Context Indexer)](#spring-context-indexer)
+* 10.18 [SPEL - Spring Expression Language](#spel---spring-expression-language)
+* 10.19 [Custom Framework Impl](#custom-framework-impl)
 
 
 
@@ -2231,6 +2231,23 @@ class MyService{}
 
 
 
+###### Spring bean scopes (singleton vs. application)
+There are 6 scopes for spring beans, you can also create your own by implementing `Scope` interface.
+2 are common for all apps
+* `singleton` - one instance per app context
+* `prototype` - new instance every time other bean call it
+4 are for web only
+* `request` - instance per http request
+* `session` - instance per http session
+* `application` - instance per `ServletContext`
+* `websocket` - instance per web socket connection
+
+`application` is somewhat similar to a Spring `singleton` bean but differs in two important ways: It is a singleton per ServletContext, not per Spring 'ApplicationContext' (or which there may be several in any given web application), 
+and it is actually exposed and therefore visible as a ServletContext attribute
+
+
+
+
 ### AOP
 
 * spring aspects fire before custom BPP
@@ -3497,6 +3514,8 @@ To run `.war` in tomcat do:
 
 
 ###### Spring Boot
+`@SpringBootApplication` - by default use component scanning of base package (where it was defined) and all subpackages. You can change this behavior by setting `scanBasePackages/scanBasePackageClasses` by setting other packages or java config classes.
+
 In spring boot you have 2 new lifecycle stages. You can register them in `resources/META-INF/spring.factories`. Just add these 2 lines
 ```
 org.springframework.boot.env.EnvironmentPostProcessor=com.example.logic.ann.postprocessors.MyEPP
@@ -4634,6 +4653,133 @@ class JavaConfig{
 }
 ```
 You can go to `curl http://localhost:8080/test`.
+
+
+###### Controller's method params
+Method of controller can take following params
+* `HttpSession`
+* `HttpServletRequest (or ServletRequest since it's super interface)
+* `HttpServletResponse` (or ServletResponse since it's super interface)
+```java
+package com.example.logic.ann.misc;
+
+import lombok.Data;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.context.request.WebRequest;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+@Controller
+@RequestMapping("/person")
+public class MyController {
+    @PostMapping
+    @ResponseBody
+    public Person postPerson(@RequestBody Person p, HttpServletRequest req, HttpServletResponse res, HttpSession session, WebRequest webReq){
+        System.out.println(req);
+        System.out.println(res);
+        System.out.println(session);
+        System.out.println(webReq);
+        System.out.println(p);
+        return p;
+    }
+}
+
+@Data
+class Person{
+    private int age;
+    private String name;
+}
+```
+```
+org.apache.catalina.connector.RequestFacade@3bf9b57e
+org.apache.catalina.connector.ResponseFacade@141ae951
+org.apache.catalina.session.StandardSessionFacade@28ebc7f6
+ServletWebRequest: uri=/person;client=127.0.0.1;session=FEF5F030027934B5366BF585FD50342D
+Person(age=30, name=Jack)
+```
+Send `curl -H "Content-type: application/json" -d 'ck"}' http://localhost:8080/person`
+
+To set return type of controller or method you can use `@ResponseStatus`.
+There are 2 ways to have map between your exceptions and http status codes. You can also add your own implementation of `HandlerExceptionResolver` or use one of the default to map exceptions to http statuses.
+You can also directly throw `ResponseStatusException`
+```java
+package com.example.logic.ann.misc;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/")
+public class MyController {
+    @GetMapping("/a")
+    public void handleGet(){
+        System.out.println("handleGet");
+        throw new MyException1();
+    }
+    @GetMapping("/b")
+    public void handleGet2(){
+        System.out.println("handleGet2");
+        throw new MyException2();
+    }
+}
+
+
+
+@ResponseStatus(value = HttpStatus.NOT_FOUND, reason = "oops 400")
+class MyException1 extends RuntimeException{}
+
+class MyException2 extends RuntimeException{}
+
+
+@ControllerAdvice
+class MyExceptionHandler{
+    @ExceptionHandler(MyException2.class)
+    public ResponseEntity<String> handleMyException2(){
+        System.out.println("handleException");
+        return new ResponseEntity<>("oops 400", HttpStatus.NOT_FOUND);
+    }
+}
+```
+`curl http://localhost:8080/a` => `{"timestamp":"2020-04-21T05:29:59.165+0000","status":404,"error":"Not Found","message":"oops 400","path":"/a"}`
+`curl http://localhost:8080/b` => `oops 400`
+* If you have `spring-boot-devtools` with `@ResponseStatus` or `ResponseStatusException` it will also include long trace into response
+
+`@MatrixVariable` - get path variables of special format like `;a=1;b=2;c=3;`
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.util.UrlPathHelper;
+
+@RestController
+@RequestMapping("/")
+public class MyController {
+    @GetMapping("/a/{pathId}/{matrixId}")
+    public void handleGet(@PathVariable String pathId, @RequestParam("id") String paramId, @MatrixVariable String matrixId){
+        System.out.println("pathId => " + pathId + ", paramId => " + paramId + ", matrixId => " + matrixId);
+    }
+}
+
+
+@Configuration
+class WebConfig implements WebMvcConfigurer {
+    @Override
+    public void configurePathMatch(PathMatchConfigurer configurer) {
+        UrlPathHelper urlPathHelper = new UrlPathHelper();
+        urlPathHelper.setRemoveSemicolonContent(false);
+        configurer.setUrlPathHelper(urlPathHelper);
+    }
+}
+```
+If we hit ` curl http://localhost:8080/a/1/matrixId=2?id=3` we got `pathId => 1, paramId => 3, matrixId => 2`
 
 
 
@@ -5966,8 +6112,12 @@ public class BeansIntegrationTest {
 
 
 #### Spring Monitoring
+
 ###### Jmx monitoring
-If we want to import spring beans to jmx we would need to add. Spring will try to find running `MBeanServer`, and in case of web app it would be tomcat.
+
+You can use jmx console with pure [java](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#jmx---java-management-extension)
+
+If we want to import spring beans to jmx we would need to add them to `MBeanExporter`. Spring will try to find running `MBeanServer`, and in case of web app it would be tomcat.
 ```java
 import java.util.HashMap;
 import java.util.Map;
@@ -6002,9 +6152,10 @@ interface MyService{
 }
 ```
 
-You can add `@EnableMBeanExport` to config bean to enable support for registering mbeans with annotations.
-You can also add `@ManagedResource(description = "JMX managed resource", objectName = "jmxDemo:name=myService")` to your bean directly.
-And add `@ManagedOperation` to any method you want to be able to call from jmx console. If you want to expose property add `@ManagedAttribute(description = "myProp")`
+You can also use declarative approach to register beans with jmx console using following annotations:
+* `@EnableMBeanExport` to config bean to enable support for registering mbeans with annotations.
+* `@ManagedResource(description = "JMX managed resource", objectName = "jmxDemo:name=myService")` to your bean directly.
+* `@ManagedOperation` to any method you want to be able to call from jmx console. If you want to expose property add `@ManagedAttribute(description = "myProp")`
 
 
 You can also add hibernate to jmx console by adding following props
@@ -6024,7 +6175,7 @@ First you should add this dependency
     <artifactId>spring-boot-starter-actuator</artifactId>
 </dependency>
 ```
-Then these 2 would be available `/actuator/health` and `/actuator/info`
+By default these 2 would be available `/actuator/health` and `/actuator/info`
 
 ```java
 import org.springframework.boot.SpringApplication;
@@ -6045,38 +6196,40 @@ By default all mapping are `/actuator/health` and so on, so base path is `actuat
 management.endpoints.web.base-path = /
 management.endpoints.web.path-mapping.health = apphealth
 ```
-By default only `/health` & `/info` are enabled, cause actuator doesn't have any security. You can secure it with spring security, and enable other features by adding `management.endpoints.web.exposure.include = health,info,beans,conditions`, or set it to `*` to include all endpoints.
+By default only `/health` & `/info` are enabled, cause actuator doesn't have any security. 
+You can secure it with spring security, and enable other features by adding `management.endpoints.web.exposure.include = health,info,beans,conditions`, or set it to `*` to include all endpoints.
 If you want to include all, except a few you can add `include=*` and `management.endpoints.web.exposure.exclude = info, beans`.
 
-If you want to work with `jmx` rather than with web, that you should add to config like `management.endpoints.jmx.`
+If you want to work with `jmx` rather than with web, than you should add to config like `management.endpoints.jmx.`
 
-`/info` - empty by default, but you can add anything there, by adding properties with prefix `info`, like
+`/info` - empty by default, but you can add whatever you want there, by adding properties with prefix `info`, like
 ```
 info.my.v1=100
 info.my.v2=200
 ```
+
 Health by default just show status (`up/down/unknown/out_of_service`), but if you want more details you can add `management.endpoint.health.show-details=always`
-If you want change the severity you should changed `management.health.status.order` props
-If you want to add new status you should add `anagement.health.status.order=FATAL, DOWN, OUT_OF_SERVICE, UNKNOWN, UP` to your props file.
+If you want to add new status you should add `anagement.health.status.order=FATAL, DOWN, OUT_OF_SERVICE, UNKNOWN, UP` to your props file (order also change severity).
 If you want to map health status to http status you should add `management.health.status.http-mapping.FATAL=422` (this would map FATAL status to http 422 unproccessible entity)
 
-`/beans` - view context configuration
-`/conditions` - view autoconfiguration rules (which beans has been autoconfigured)
-`/env` - info about env variables. It's not only GET, but calling POST with valid json, you can create/update env vars on the fly (they would apply to current running instance, and would be lost once we restart app)
-`/mappings` - info about current http endpoints
-`/loggers` - view logging level for every component (like with env, you can change logging level with POST request)
-`/heapdump` - download gzip heap dump file with info about heap, memory and so on (useful in debugging memory leaks or heap problems)
-`/metrics` - view all metrics of running app
+List of default endpoints
+* `/beans` - view context configuration
+* `/conditions` - view autoconfiguration rules (which beans has been autoconfigured)
+* `/env` - info about env variables. It's not only GET, but calling POST with valid json, you can create/update env vars on the fly (they would apply to current running instance, and would be lost once we restart app)
+* `/mappings` - info about current http endpoints
+* `/loggers` - view logging level for every component (like with env, you can change logging level with POST request)
+* `/heapdump` - download gzip heap dump file with info about heap, memory and so on (useful in debugging memory leaks or heap problems)
+* `/metrics` - view all metrics of running app
 
 Customizing actuator
-`/info` - you should implement `InfoContributor`
-`/health` - you should implement `HealthIndicator`
-`/metics` - you can inject `MeterRegistry` into any bean, and add info into it.
+* `/info` - you should implement `InfoContributor`
+* `/health` - you should implement `HealthIndicator`
+* `/metics` - you can inject `MeterRegistry` into any bean, and add info into it
 
 You can also create custom endpoint. For this annotate class with `@Endpoint`, method should be annotated with `@ReadOperation/@WriteOperation/@DeleteOperation`.
-The reason actuator use it's own annotation instead of `@Controller`, is that actuator is not just controller, it's also expose data to JMX console. So that's why create only controller not enough.
+The reason actuator use it's own annotation instead of `@Controller`, is that actuator is not just controller, it's also expose data to JMX console. So that's why adding only ``@Controller` not enough.
 
-To secure actuator you should use spring security. Since `/actuator` path can be changes from config file, it's better to use `EndpointRequest` like
+To secure actuator you should use spring security. Since `/actuator` path can be changed from config file, it's better to use `EndpointRequest` like
 ```java
 protected void configure(HttpSecurity http) throws Exception {
     http
@@ -6116,7 +6269,7 @@ To work with jms you should add to `pom.xml`
     <artifactId>spring-boot-starter-artemis</artifactId>
 </dependency>
 ```
-artemis is next generation of activemq. By default artemis use port 61616. But you can configure it
+artemis is next generation of ActiveMQ. By default artemis use port 61616. But you can configure it
 ```
 spring.artemis.host=localhost
 spring.artemis.port=61616
@@ -6267,10 +6420,10 @@ First add this dependency to your `pom.xml`
     <artifactId>spring-boot-starter-amqp</artifactId>
 </dependency>
 ```
-Adding this starter to your build will trigger autoconfiguration that will create a AMQP connection factory and RabbitTemplate beans.
+Adding this starter to your build will trigger autoconfiguration that will create AMQP connection factory and `RabbitTemplate` beans.
 So if you don't use spring boot you will have to configure them manually.
 
-You also need to install rabbitmq `sudo apt-get install rabbitmq-server`. You can start/stop and check status with following commnads
+You also need to install RabbitMQ `sudo apt-get install rabbitmq-server`. You can start/stop and check status with following commands
 ```shell script
 sudo systemctl start rabbitmq-server.service
 sudo systemctl enable rabbitmq-server.service
@@ -6531,15 +6684,14 @@ public class App{
 
 
 #### Miscellaneous
-`@SpringBootApplication` - by default use component scanning of base package (where it was defined) and all subpackages. You can change this behavior by setting `scanBasePackages/scanBasePackageClasses` by setting other packages or java config classes.
 
 
 ###### mvnw and mvnw.cmd
 When you download [spring boot](https://start.spring.io/) you have 2 files `mvnw` and `mvnw.cmd`. These 2 files from [Maven Wrapper Plugin](https://github.com/takari/takari-maven-plugin) 
-that allows to run app on systems where there is no mvn installed. `mvnv` - script for linux, `mvnw.cmd` - for windows. Generally you don't need them in your work, so you may delete them.
+that allows you to run app on systems where there is no mvn installed. `mvnv` - script for linux, `mvnw.cmd` - for windows. Generally you don't need them in your work, so you may delete them.
 
 ###### Get param names
-Starting from java9, you can [get names](#https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#get-param-names).
+Starting from `java9`, you can [get param names](#https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#get-param-names).
 But spring was using it's own utility classes, that could get param names from debug info, by using asm
 ```java
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
@@ -6568,10 +6720,10 @@ class Person{
 ###### Pom vs Bom
 POM - project object model. BOM - bill of materials.
 Bom - special kind of pom, that helps control versions, and provide a central place to update these versions,
-it usually incude block `<dependencyManagement/>` where all dependencies are stored. When maven try to build project
-it first look for dependency in pom, and if can't find it goes to bom. 
+it usually include block `<dependencyManagement/>` where all dependencies are stored. 
+When maven try to build project it first look for dependency in pom, and if can't find it goes to bom. 
 There are 2 ways to use bom
-1. Inheret is as parent.
+1. Inherit it as parent.
 ```
 <parent>
     <groupId>bomGroup</groupId>
@@ -6595,14 +6747,14 @@ So bom allows you to not include version in your pom, cause it can be already in
 
 
 ###### Spring Batch
-Batch processing is using when you need to process a batch of data
-First let's add starter to `pom.xml`
+Batch processing is using when you need to process a batch of data. First let's add starter to `pom.xml`
 ```
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-batch</artifactId>
 </dependency>
 ```
+
 By default all jobs starts automatically, but you can turn off them in `application.properties`, just add `spring.batch.job.enabled=false`.
 ```java
 import java.time.LocalDateTime;
@@ -6688,14 +6840,14 @@ Here we using P2P channel, if we want to send message to many channels we should
 `@BridgeFrom` - can connect PubSub channel with P2P
 
 There are several building blocks of integration
-* Channel (`PublishSubscribeChannel` or `FluxMessageChannel`) - pipes that connect all other parts
-* Filter (Bean annotated with `@Filter`) - can be placed between channels to determine should message go further
-* Transformer (Bean with `@Transformer` returning `GenericTransformer<S, T>`) - can transform data 
-* Router (Bean with `@Router`, returning `AbstractMessageRouter`) - direct messages to different channels based on some criteria
-* Splitter (Bean with `@Splitter`) - split message into several sub-messages. (You can combine it with router and split message from one channel and send 2 message to 2 other channels)
-* Service activator (Bean with `@ServiceActivator` returning `MessageHandler`) - receive message from channel and handle it
-* Gateway (interface with `@MessagingGateway`) - entry point to which third-party app send data for spring integration
-* Channel Adapter (Bean with `@InboundChannelAdapter` returning `MessageSource<T>`) - entry point
+* `Channel(PublishSubscribeChannel/FluxMessageChannel)` - pipes that connect all other parts
+* `Filter` (Bean annotated with `@Filter`) - can be placed between channels to determine should message go further
+* `Transformer` (Bean with `@Transformer` returning `GenericTransformer<S, T>`) - can transform data 
+* `Router` (Bean with `@Router`, returning `AbstractMessageRouter`) - direct messages to different channels based on some criteria
+* `Splitter` (Bean with `@Splitter`) - split message into several sub-messages. (You can combine it with router and split message from one channel and send 2 message to 2 other channels)
+* `Service` activator (Bean with `@ServiceActivator` returning `MessageHandler`) - receive message from channel and handle it
+* `Gateway` (interface with `@MessagingGateway`) - entry point to which third-party app send data for spring integration
+* `Channel Adapter` (Bean with `@InboundChannelAdapter` returning `MessageSource<T>`) - entry point
 
 
 
@@ -6804,7 +6956,7 @@ Spring Cloud - allows easy production deployment. It consist of
 * `Ribbon` (client-side load balancer) - client library that help to work with eureka server
 * `Config server` - distinct service that pull configuration from git or vault service and provide it to your microservices
 * `Spring Cloud Bus` - automatic update of configuration in the Config Server, once they has been committed to git server
-* `Spring Cloud Stream` - inter-service communication with rabbitmq or kafka (can be used to propagate changes from config server to all microservices)
+* `Spring Cloud Stream` - inter-service communication with RabbitMQ or kafka (can be used to propagate changes from config server to all microservices)
 * `Hystrix (Circuit Breaker)` - netflix library to handle bad responses from other microservices
 
 To work with eureka add this to your `pom.xml`
@@ -6822,7 +6974,7 @@ In client-side (microservice that would use eureka) you should add
     <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
 </dependency>
 ```
-This dependency add both eureka client and ribbon. You should add name of your sevice to `spring.application.name=myService`. And it would be available in eureka dashboard.
+This dependency add both `eureka` client and `ribbon`. You should add name of your service to `spring.application.name=myService`. And it would be available in eureka dashboard.
 By default client will try to connect to eureka at localhost:8761. But you can change eureka url with property `eureka.client.service-url`
 Once you enable client eureka you can create load-balanced `RestTemplate` or `WebClient` like
 ```java
@@ -6839,7 +6991,7 @@ public WebClient.Builder webClientBuilder() {
 }
 ```
 
-You can also use feign client, that works like spring data, automatically generating rest code. First add this dependency to your `pom.xml`
+You can also use `feign` client, that works like spring data, automatically generating rest code. First add this dependency to your `pom.xml`
 ```
 <dependency>
     <groupId>org.springframework.cloud</groupId>
@@ -6909,8 +7061,9 @@ Then add to your config `@EnableHystrixDashboard`
 
 
 ###### Spring Utils
-`AnnotationUtils` - can be useful when you want to find some annotation that you can't get by default. By default `getAnnotation` search only annotation of a class itself, so if we have Ann1=>Ann2=>OutClass, only Ann2 would be visible.
-Of course we can write recursive function to retreive all annotations up to the top, but it's better to use `AnnotationUtils.findAnnotation`.
+`AnnotationUtils` - can be useful when you want to find some annotation that you can't get by default. 
+By default java `Class.getAnnotation` search only annotation of a class itself, so if we have Ann1=>Ann2=>OutClass, only Ann2 would be visible.
+Of course we can write recursive function to retrieve all annotations up to the top, but it's better to use `AnnotationUtils.findAnnotation`.
 ```java
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -6944,13 +7097,15 @@ null
 ```
 
 ###### Spring Boot Logging
-There are a few types of looging in java
-* java.util.logging - standard package for logging from jdk
-* logback - custom logging implementation
-* apache common loggign - custom logging from apache
-* slf4j - simple loggig facade for java
+There are a few types of logging in java
+* `java.util.logging` - standard package for logging from jdk
+* `logback` - custom logging implementation
+* `apache common logging` - custom logging from apache
+* `slf4j` - simple logging facade for java
 
-By default spring using common logging for internal logging and slf4j(with logback) for external
+By default spring uses 
+* internal logging => apache common logging
+* external logging => slf4j(with logback)
 
 ```java
 import org.apache.commons.logging.Log;
@@ -6994,133 +7149,6 @@ public class App{
 17:21:15.409 [main] INFO com.example.spring5.App - hello
 17:21:15.410 [main] ERROR com.example.spring5.App - my ex
 ```
-
-
-###### Controller's method params
-Method of controller can take following params
-* HttpSession
-* HttpServletRequest (or ServletRequest since it's super interface)
-* HttpServletResponse (or ServletResponse since it's super interface)
-```java
-package com.example.logic.ann.misc;
-
-import lombok.Data;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.context.request.WebRequest;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-@Controller
-@RequestMapping("/person")
-public class MyController {
-    @PostMapping
-    @ResponseBody
-    public Person postPerson(@RequestBody Person p, HttpServletRequest req, HttpServletResponse res, HttpSession session, WebRequest webReq){
-        System.out.println(req);
-        System.out.println(res);
-        System.out.println(session);
-        System.out.println(webReq);
-        System.out.println(p);
-        return p;
-    }
-}
-
-@Data
-class Person{
-    private int age;
-    private String name;
-}
-```
-```
-org.apache.catalina.connector.RequestFacade@3bf9b57e
-org.apache.catalina.connector.ResponseFacade@141ae951
-org.apache.catalina.session.StandardSessionFacade@28ebc7f6
-ServletWebRequest: uri=/person;client=127.0.0.1;session=FEF5F030027934B5366BF585FD50342D
-Person(age=30, name=Jack)
-```
-Send `curl -H "Content-type: application/json" -d 'ck"}' http://localhost:8080/person`
-
-To set return type of controller or method you can use `@ResponseStatus`.
-There are 2 ways to have map between your exceptions and http status codes. You can also add your own implementation of `HandlerExceptionResolver` or use one of the default to map exceptions to http statuses.
-You can also directly throw `ResponseStatusException`
-```java
-package com.example.logic.ann.misc;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-@RestController
-@RequestMapping("/")
-public class MyController {
-    @GetMapping("/a")
-    public void handleGet(){
-        System.out.println("handleGet");
-        throw new MyException1();
-    }
-    @GetMapping("/b")
-    public void handleGet2(){
-        System.out.println("handleGet2");
-        throw new MyException2();
-    }
-}
-
-
-
-@ResponseStatus(value = HttpStatus.NOT_FOUND, reason = "oops 400")
-class MyException1 extends RuntimeException{}
-
-class MyException2 extends RuntimeException{}
-
-
-@ControllerAdvice
-class MyExceptionHandler{
-    @ExceptionHandler(MyException2.class)
-    public ResponseEntity<String> handleMyException2(){
-        System.out.println("handleException");
-        return new ResponseEntity<>("oops 400", HttpStatus.NOT_FOUND);
-    }
-}
-```
-`curl http://localhost:8080/a` => `{"timestamp":"2020-04-21T05:29:59.165+0000","status":404,"error":"Not Found","message":"oops 400","path":"/a"}`
-`curl http://localhost:8080/b` => `oops 400`
-* If you have `spring-boot-devtools` with `@ResponseStatus` or `ResponseStatusException` it will also include long trace into response
-
-`@MatrixVariable` - get path variables of special format like `;a=1;b=2;c=3;`
-```java
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.util.UrlPathHelper;
-
-@RestController
-@RequestMapping("/")
-public class MyController {
-    @GetMapping("/a/{pathId}/{matrixId}")
-    public void handleGet(@PathVariable String pathId, @RequestParam("id") String paramId, @MatrixVariable String matrixId){
-        System.out.println("pathId => " + pathId + ", paramId => " + paramId + ", matrixId => " + matrixId);
-    }
-}
-
-
-@Configuration
-class WebConfig implements WebMvcConfigurer {
-    @Override
-    public void configurePathMatch(PathMatchConfigurer configurer) {
-        UrlPathHelper urlPathHelper = new UrlPathHelper();
-        urlPathHelper.setRemoveSemicolonContent(false);
-        configurer.setUrlPathHelper(urlPathHelper);
-    }
-}
-```
-If we hit ` curl http://localhost:8080/a/1/matrixId=2?id=3` we got `pathId => 1, paramId => 3, matrixId => 2`
 
 
 
@@ -7261,23 +7289,6 @@ Although you should omit it, cause most starters (for example `spring-boot-start
 
 
 
-
-
-
-
-###### Spring bean scopes (singleton vs. application)
-There are 6 scopes for spring beans, you can also create your own by implementing `Scope` interface.
-2 are common for all apps
-* `singleton` - one instance per app context
-* `prototype` - new instance every time other bean call it
-4 are for web only
-* `request` - instance per http request
-* `session` - instance per http session
-* `application` - instance per `ServletContext`
-* `websocket` - instance per web socket connection
-
-`application` is somewhat similar to a Spring `singleton` bean but differs in two important ways: It is a singleton per ServletContext, not per Spring 'ApplicationContext' (or which there may be several in any given web application), 
-and it is actually exposed and therefore visible as a ServletContext attribute
 
 
 
