@@ -58,26 +58,26 @@
 * 7.1 [JMS](#jms)
 * 7.2 [AMQP (RabbitMQ)](#amqp-rabbitmq)
 * 7.3 [Kafka](#kafka)
-10. [Miscellaneous](#miscellaneous)
-* 10.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
-* 10.2 [Get param names](#get-param-names)
-* 10.3 [Pom vs Bom](#pom-vs-bom)
-* 10.4 [Spring Batch](#spring-batch)
-* 10.5 [Spring Integration](#spring-integration)
-* 10.6 [Spring XD](#spring-xd)
-* 10.7 [Spring DevTools](#spring-devtools)
-* 10.8 [JMS, AMQP, Kafka](#jms-amqp-kafka)
-* 10.9 [YML Autocompletion](#yml-autocompletion)
-* 10.10 [Spring Cloud](#spring-cloud)
-* 10.11 [Spring Utils](#spring-utils)
-* 10.12 [Spring Boot Logging](#spring-boot-logging)
-* 10.13 [Spring Caching](#spring-caching)
-* 10.14 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
-* 10.15 [Maven scope](#maven-scope)
-* 10.16 [Spring Boot Starter](#spring-boot-starter)
-* 10.17 [Spring Context Indexer)](#spring-context-indexer)
-* 10.18 [SPEL - Spring Expression Language](#spel---spring-expression-language)
-* 10.19 [Custom Framework Impl](#custom-framework-impl)
+8. [Miscellaneous](#miscellaneous)
+* 8.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
+* 8.2 [Get param names](#get-param-names)
+* 8.3 [Pom vs Bom](#pom-vs-bom)
+* 8.4 [Spring Batch](#spring-batch)
+* 8.5 [Spring Integration](#spring-integration)
+* 8.6 [Spring XD](#spring-xd)
+* 8.7 [Spring DevTools](#spring-devtools)
+* 8.8 [JMS, AMQP, Kafka](#jms-amqp-kafka)
+* 8.9 [YML Autocompletion](#yml-autocompletion)
+* 8.10 [Spring Cloud](#spring-cloud)
+* 8.11 [Spring Utils](#spring-utils)
+* 8.12 [Spring Boot Logging](#spring-boot-logging)
+* 8.13 [Spring Caching](#spring-caching)
+* 8.14 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
+* 8.15 [Maven scope](#maven-scope)
+* 8.16 [Spring Boot Starter](#spring-boot-starter)
+* 8.17 [Spring Context Indexer)](#spring-context-indexer)
+* 8.18 [SPEL - Spring Expression Language](#spel---spring-expression-language)
+* 8.19 [Custom Framework Impl](#custom-framework-impl)
 
 
 
@@ -2767,6 +2767,7 @@ You can also use `ComposablePointcut` with 2 methods `union` and `intersection` 
 If you need to combine only pointcuts you can use `PointCut` class, but if you want to combine pointcut/methodmatcher/classfilter you should use `ComposablePointcut`.
 
 We also have `IntroductionAdvisor` by which we can add dynamically new implementations to object.
+That means that you can add methods or fields (public static final) to an adviced (proxied) object.
 One possible application is to check if object data changed, and call save to db only in this case.
 Below is simplified example, that determined is method with specific name has been called
 ```java
@@ -3264,6 +3265,9 @@ You can also write your aspects in native aspectj language. For this you first n
 
 
 ### Spring MVC
+
+Safe methods: `GET` (applying it to a resource does not result in a state change of the resource)
+Idempotent (produce same result no matter how many times called) methods: `GET, PUT, DELETE` (applying them multiple times to a resource results in the same state change of the resource as applying them once, though the response might differ)
 
 
 `@RestController` - convenience annotation => `@Controller` + `@ResponseBody` (convert method return type into http response using `HttpMessageConverter` implementations)
@@ -5803,6 +5807,8 @@ class Account{
 
 #### Spring Testing
 When you add spring test starter (`spring-boot-starter-test`), `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.
+Spring is commonly used and has a strong support for unit & integration testing. Moreover for unit you generally should start app context. Just use some mocks. But if you run integration tests then generally you need to start your app and have full app context.
+`UAT (user acceptance test`) - special tests that run by end users to verify that business flow is correct. The need arises cause developers use unit/integration tests. Qa have their tests, but no one of them test the system as a whole (end to end flow).
 
 ###### TestPropertySource and TestPropertyValues
 In testing you can add custom properties in 2 ways
