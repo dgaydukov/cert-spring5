@@ -270,6 +270,52 @@ Exception in thread "main" org.springframework.beans.factory.NoSuchBeanDefinitio
 ```
 Since we override bean names, there is no name `printer`.
 
+Note that calls to static `@Bean` methods will never get intercepted by the container, not even within `@Configuration` classes (see above). 
+This is due to technical limitations: CGLIB subclassing can only override non-static methods. As a consequence, a direct call to another @Bean method will have standard Java semantics, 
+resulting in an independent instance being returned straight from the factory method itself.
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println(context.getBean(MyService.class));
+    }
+}
+
+class MyService{}
+
+@Configuration
+class JavaConfig{
+    /**
+     * If you remove static in s1 & s2 you will get same instance
+     */
+    @Bean
+    public static MyService myService(){
+        return new MyService();
+    }
+
+    @Bean
+    public String s1(){
+        System.out.println("s1 => " + myService());
+        return "s1";
+    }
+    @Bean
+    public String s2(){
+        System.out.println("s2 => " + myService());
+        return "s2";
+    }
+}
+```
+```
+s1 => com.example.spring5.MyService@33990a0c
+s2 => com.example.spring5.MyService@4de4b452
+com.example.spring5.MyService@3a6bb9bf
+```
+As you see all 3 instances are different
+
 
 `@Configuration` - create proxy, so it can't be final, as well as `@Bean` methods can't be final. Even if your config class extends interface, spring still will use cglib.
 The reason for the Spring container subclassing `@Configuration` classes is to control bean creation, for singleton beans, subsequent requests to the method creating the bean 
@@ -3275,7 +3321,7 @@ Idempotent (produce same result no matter how many times called) methods: `GET, 
 `@SessionAttributes` (class level only) - post request gets the same instance of the model attribute object that was placed into the get request.
 `@CrossOrigin(origins="*")` - set origin to anybody, by default it same-host
 `PUT` vs. `PATCH`. put - opposite to get, so it to replace whole object for url. Patch - is to replace some fields within the object.
-`@RequestParam/@PathVariable` - have field required (default true), so if you don't pass param field you got exception. If you set it to false value would be null (if your value is primitive you got `IllegalStateException: Optional int parameter 'id' is present but cannot be translated into a null value due to being declared as a primitive type. Consider declaring it as object wrapper for the corresponding primitive type.`)
+`@RequestParam/@PathVariable` - have field `required` (default true), so if you don't pass param field you got exception. If you set it to false value would be null (if your value is primitive you got `IllegalStateException: Optional int parameter 'id' is present but cannot be translated into a null value due to being declared as a primitive type. Consider declaring it as object wrapper for the corresponding primitive type.`)
 `ContextLoaderListener` (implements `ServletContextListener`) load root web app context.
 
 
