@@ -4883,6 +4883,34 @@ and extraction of returned parameter values It simplify work with jdbc, we also 
 `update/query` methods may take a third param as array of `java.sql.Types`. Setting argument type provides correctness and optimisation (slight) for the underlying SQL statement.
 When you test application code that manipulates the state of the Hibernate session, make sure to flush the underlying session within test methods that execute that code.
 
+`DataAccessException` do
+* convert proprietary checked exceptions to a set of runtime exceptions
+* help to change sql technology since you are not couple to low level sql exceptions
+* it instances when thrown, wrap original exception
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.jdbc.template");
+        var template = context.getBean(JdbcTemplate.class);
+        try {
+            template.queryForObject("select count(*) from no_table", Object.class);
+        } catch (DataAccessException ex){
+            System.out.println(ex.getClass() + " => " + ex.getLocalizedMessage());
+            System.out.println(ex.getCause().getClass() + " => " + ex.getCause().getLocalizedMessage());
+        }
+    }
+}
+```
+```
+class org.springframework.jdbc.BadSqlGrammarException => StatementCallback; bad SQL grammar [select count(*) from no_table]; nested exception is java.sql.SQLSyntaxErrorException: Table 'spring5.no_table' doesn't exist
+class java.sql.SQLSyntaxErrorException => Table 'spring5.no_table' doesn't exist
+```
+As you see original checked sql exception `SQLSyntaxErrorException` was wrapped by `BadSqlGrammarException` which is child of `DataAccessException`
+
 Spring nicely translate all checked sql exceptions into runtime exceptions with clear names. But you can also add logic there, by creating your own translator.
 ```java
 package com.example.logic.ann.jdbc.template;
