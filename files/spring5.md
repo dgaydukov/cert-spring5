@@ -94,6 +94,10 @@
 
 #### DI and IoC
 ###### Dependency injection
+Singleton beans should be stateless and prototype beans should be stateful.
+Although both of them can have state, according to the Spring documentation, "you should use the prototype scope for all beans that are stateful, while the singleton scope should be used for stateless beans."
+                                     
+
 Rewrite filed injection with `@Autowired` (performed by `AutowiredAnnotationBeanPostProcessor`), has one filed `boolean required default true`. If no dep found will throw `NoSuchBeanDefinitionException`, if set `required = false`, null will be injected.
 
 Pros of constructor injection
@@ -3314,7 +3318,7 @@ You can also write your aspects in native aspectj language. For this you first n
 
 Safe methods: `GET` (applying it to a resource does not result in a state change of the resource)
 Idempotent (produce same result no matter how many times called) methods: `GET, PUT, DELETE` (applying them multiple times to a resource results in the same state change of the resource as applying them once, though the response might differ)
-
+PATCH changes the resources attributes. The change may require a concrete previous value of the attribute, which makes it NON idempotent. `From Name=John to Name=Gargantua`. After repeated applying the name will be Gargantua and patch will fail, since it requires the name to be "John" before the change.
 
 `@RestController` - convenience annotation => `@Controller` + `@ResponseBody` (convert method return type into http response using `HttpMessageConverter` implementations)
 `@RequestMapping(path = "/api")` - can add it to controller, so all methods would have this url as base
@@ -4708,8 +4712,8 @@ You can go to `curl http://localhost:8080/test`.
 ###### Controller's method params
 Method of controller can take following params
 * `HttpSession`
-* `HttpServletRequest (or ServletRequest since it's super interface)
-* `HttpServletResponse` (or ServletResponse since it's super interface)
+* `HttpServletRequest` (or `ServletRequest` since it's super interface)
+* `HttpServletResponse` (or `ServletResponse` since it's super interface)
 ```java
 package com.example.logic.ann.misc;
 
