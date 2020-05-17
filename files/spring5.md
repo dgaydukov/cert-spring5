@@ -96,6 +96,8 @@
 #### DI and IoC
 ###### Dependency injection
 Singleton beans should be stateless and prototype beans should be stateful.
+stateless doesn't mean object doesn't have a state, it means that once objects was configured we don't change it's state
+compare to data object (like person), once you get it from hibernate you can change it's state and it's ok
 Although both of them can have state, according to the Spring documentation, "you should use the prototype scope for all beans that are stateful, while the singleton scope should be used for stateless beans."
                                      
 
