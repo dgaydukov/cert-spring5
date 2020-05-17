@@ -78,6 +78,7 @@
 * 8.17 [Spring Context Indexer)](#spring-context-indexer)
 * 8.18 [SPEL - Spring Expression Language](#spel---spring-expression-language)
 * 8.19 [Custom Framework Impl](#custom-framework-impl)
+* 8.20 [Spring Design Patterns](#spring-design-patterns)
 
 
 
@@ -7600,6 +7601,162 @@ msg => hello, paint => black
 done => print
 ```
 
+
+
+###### Spring Design Patterns
+There are several design patterns that can be easily implemented in spring
+* Singleton
+* Chain of responsibility
+* Strategy
+
+
+`Singleton` - is both a very useful pattern and anti-pattern at the same time. The question is how to use it.
+
+Here is example of anti-pattern singleton cause it creates tight coupling and it's impossible to create unit tests.
+```java
+class CurrencyConverter{
+    public double convert(double amount){
+        return RubCurrencyRate.Instance.getRate() * amount;
+    }
+}
+
+// all converters has a base rate to usd
+interface CurrencyRate{
+    double getRate();
+}
+
+class RubCurrencyRate implements CurrencyRate{
+    private RubCurrencyRate(){}
+    public static RubCurrencyRate Instance = new RubCurrencyRate();
+
+    @Override
+    public double getRate() {
+        return getRateFromRemoteServer();
+    }
+
+    private double getRateFromRemoteServer(){
+        return 60;
+    }
+}
+```
+
+But with the help of spring you can create truly useful singleton. In this case spring itself will care to monitor that only
+single instance of object is used throughout the app. It's easy to mock it also.
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+class CurrencyConverter{
+    @Autowired
+    private CurrencyRate currencyRate;
+    
+    public double convert(double amount){
+        return currencyRate.getRate() * amount;
+    }
+}
+
+// all converters has a base rate to usd
+interface CurrencyRate{
+    double getRate();
+}
+
+@Component
+class RubCurrencyRate implements CurrencyRate{
+    @Override
+    public double getRate() {
+        return getRateFromRemoteServer();
+    }
+
+    private double getRateFromRemoteServer(){
+        return 60;
+    }
+}
+```
+
+
+`Chain of responsibility`. Suppose we have a code
+```java
+class Operation{
+    void doWork(){
+        task1();
+        task2();
+        task3();
+    }
+
+    private void task1() {
+    }
+
+    private void task2() {
+    }
+
+    private void task3() {
+    }
+}
+```
+The problem is that it breaks open-closed principle. The point if you want to add task4 to a list you have to open your app and modify code.
+
+Here is correct way with spring
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.Comparator;
+import java.util.List;
+
+class Operation{
+    @Autowired
+    private List<Task> tasks;
+    
+    void doWork(){
+        tasks.stream().sorted(Comparator.comparingInt(Task::getOrder)).forEach(Task::run);
+    }
+}
+
+interface Task{
+    void run();
+    int getOrder();
+}
+```
+
+From now on you can add as many tasks as you want, and also decide the order in which they are executed.
+
+
+`Strategy` - if we have some logic that depends on condition run one or another code, instead of using long switch we can use this pattern.
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+class MailSender{
+    /**
+     * we can directly autowired all our beans into map, in this case key would be name of a bean
+     * If you are ok with such logic you can use it, otherwise you can use second approach
+     */
+    @Autowired
+    private Map<String, MailTemplate> autowiredMap;
+    
+    private Map<String, MailTemplate> map;
+    
+    public MailSender(List<MailTemplate> mailTemplates){
+        map = mailTemplates.stream().collect(Collectors.toMap(MailTemplate::getName, t->t));
+    }
+    
+    void send(String templateName){
+        MailTemplate template = map.get(templateName);
+        if (template == null){
+            throw new UnsupportedOperationException("Code " + templateName + " not supported");
+        }
+        System.out.println("name => " + template.getName() + " body => " + template.getBody());
+    }
+}
+
+interface MailTemplate{
+    String getName();
+    String getBody();
+}
+```
 
 
 
