@@ -3,7 +3,7 @@
 1. [DI and IoC](#di-and-ioc)
 * 1.1 [Dependency injection](#dependency-injection)
 * 1.2 [Xml, Groovy, Properties example](#xml-groovy-properties-example)
-* 1.3 [BFPP, BPP, ApplicationListener](#bfpp-bpp-applicationlistener)
+* 1.3 [BFPP, BPP, ApplicationListener, @EventListener](#bfpp-bpp-applicationlistener-eventlistener)
 * 1.4 [Prototype into Singleton](#prototype-into-singleton)
 * 1.5 [PostConstruct and PreDestroy](#postconstruct-and-predestroy)
 * 1.6 [BeanNameAware, BeanFactoryAware, ApplicationContextAware](#beannameaware-beanfactoryaware-applicationcontextaware)
@@ -829,7 +829,7 @@ We can have nested application contexts. `GenericApplicationContext` have `setPa
 
 
 
-###### BFPP, BPP, ApplicationListener
+###### BFPP, BPP, ApplicationListener, @EventListener
 If you want to implement some custom logic during app lifecycle you should have classes that implement following interfaces
 * `BeanFactoryPostProcessor` - fires when bean definitions has been loaded from xml/javaConfig/annotations, but none bean has been created
 * `BeanPostProcessor` - fires when beans has been created, it has 2 methods
@@ -943,6 +943,27 @@ public class App {
 ```
 beanFactory => org.springframework.beans.factory.support.DefaultListableBeanFactory
 beanFactory instanceof ConfigurableBeanFactory => true
+```
+
+
+If we need to listen some events we can use special annotation
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+@Component
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+    }
+
+    @EventListener(ContextRefreshedEvent.class)
+    void run(){
+        System.out.println("run");
+    }
+}
 ```
 
 
@@ -7642,6 +7663,8 @@ class RubCurrencyRate implements CurrencyRate{
 
 But with the help of spring you can create truly useful singleton. In this case spring itself will care to monitor that only
 single instance of object is used throughout the app. It's easy to mock it also.
+Self-made singleton (with static invocation and private constructor) also breaks single responsibility principle. Cause right now
+it has 2 responsibility - business logic + logic of creating singleton itself.
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
