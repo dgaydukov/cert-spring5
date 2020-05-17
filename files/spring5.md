@@ -623,6 +623,8 @@ By default there is no `BeanDefinitionReader` implementation for annotations. Bu
 * `AnnotatedBeanDefinitionReader` (compare to other readers, it not implements `BeanDefinitionReader`) - with method `register` - to register a list of java config classes
 * `ClassPathBeanDefinitionScanner` - with method `scan` - to scan package with annotations like `@Component`.
 If you register only config file and it has annotation `@ComponentScan("yourPackage")`, internally it uses `ClassPathBeanDefinitionScanner`.
+`@ComponentScan` has field `boolean lazyInit() default false;`, which you can set to true and it will lazy load only those beans that you really using.
+This can be halpful in testing, when you want to start real app context but want only those bean that you are using to be created
 ```java
 import com.example.logic.ann.beans.JavaConfig;
 import com.example.logic.ann.beans.SimpleBean;
@@ -1935,7 +1937,7 @@ As you see it took all 3
 
 `@Lazy` (same as xml `<bean id="demo" class="Demo" lazy-init="true"/>`, by default if you don't specify it `false`) works in 2 ways
 * When it's declared on bean it would defer bean instantiation, until you first request it
-* When declared inside constructor, it can help fix circular dependencies. 
+* When declared inside constructor, it can help fix circular dependencies (by creating proxy not real object, and returning real object only when you request it)
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Lazy;
@@ -7781,7 +7783,44 @@ interface MailTemplate{
 }
 ```
 
+If we need to lazy load beans after context has created we can use another approach. In this case every bean that has been loaded
+would add itself to a map (so not MailSender build it's map, but all beans add themselves to this map)
+```java
+import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.HashMap;
+import java.util.Map;
+
+class MailSender{
+    private Map<String, MailTemplate> map = new HashMap<>();
+
+    public void register(String name, MailTemplate template){
+        map.put(name, template);
+    }
+
+    void send(String templateName){
+        MailTemplate template = map.get(templateName);
+        if (template == null){
+            throw new UnsupportedOperationException("Code " + templateName + " not supported");
+        }
+        System.out.println("name => " + template.getName() + " body => " + template.getBody());
+    }
+}
+
+interface MailTemplate{
+    String getName();
+    String getBody();
+
+    /**
+     * Since it autowired whenever we add new bean of type MailTemplate
+     * this default method would be called on it
+     */
+    @Autowired
+    default void registerOneself(MailSender sender){
+        sender.register(getName(), this);
+    }
+}
+```
 
 
 
