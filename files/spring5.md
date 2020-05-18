@@ -39,6 +39,7 @@
 * 3.12 [Spring ViewResolver](#spring-viewresolver)
 * 3.13 [HandlerMapping, HandlerAdapter, HttpRequestHandler](#handlermapping-handleradapter-httprequesthandler)
 * 3.14 [Controller's method params](#controllers-method-params)
+* 3.15 [RequestBodyAdvice/ResponseBodyAdvice and HandlerInterceptor](#requestbodyadviceresponsebodyadvice-and-handlerinterceptor)
 4. [DB](#db)
 * 4.1 [Spring JDBC](#spring-jdbc)
 * 4.2 [Hibernate](#hibernate)
@@ -4863,6 +4864,152 @@ If we hit ` curl http://localhost:8080/a/1/matrixId=2?id=3` we got `pathId => 1,
 
 
 
+
+###### RequestBodyAdvice/ResponseBodyAdvice and HandlerInterceptor
+These 3 interceptors allows to intercept request (both before and after controller's method execution) and add some custom logic like logging, modifiing headers/body, checking security and so on.
+
+```java
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.concurrent.ThreadLocalRandom;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpInputMessage;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.lang.Nullable;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdvice;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+import lombok.Data;
+
+
+@SpringBootApplication(exclude = {ManagementWebSecurityAutoConfiguration.class, SecurityAutoConfiguration.class})
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@RestController
+@RequestMapping("/")
+class MyController{
+    @GetMapping
+    public String handleGet(){
+        return "handleGet => " + ThreadLocalRandom.current().nextInt();
+    }
+    @PostMapping
+    public Person handlePost(@RequestBody Person person){
+        System.out.println("person => " + person);
+        return person;
+    }
+}
+
+@Data
+class Person{
+    String name;
+}
+
+@ControllerAdvice
+class MyRequestInterceptor implements RequestBodyAdvice{
+
+    @Override
+    public boolean supports(MethodParameter methodParameter, Type type, Class<? extends HttpMessageConverter<?>> aClass) {
+        System.out.println("RequestBodyAdvice.supports");
+        return true;
+    }
+
+    @Override
+    public HttpInputMessage beforeBodyRead(HttpInputMessage inputMessage, MethodParameter param, Type type, Class<? extends HttpMessageConverter<?>> cls) throws IOException {
+        System.out.println("RequestBodyAdvice.beforeBodyRead");
+        return inputMessage;
+    }
+
+    @Override
+    public Object afterBodyRead(Object body, HttpInputMessage inputMessage, MethodParameter param, Type type, Class<? extends HttpMessageConverter<?>> cls) {
+        System.out.println("RequestBodyAdvice.afterBodyRead");
+        return body;
+    }
+
+    @Override
+    public Object handleEmptyBody(Object body, HttpInputMessage inputMessage, MethodParameter param, Type type, Class<? extends HttpMessageConverter<?>> cls) {
+        System.out.println("RequestBodyAdvice.handleEmptyBody");
+        return body;
+    }
+}
+
+@ControllerAdvice
+class MyResponseInterceptor implements ResponseBodyAdvice<Object>{
+
+    @Override
+    public boolean supports(MethodParameter methodParameter, Class aClass) {
+        System.out.println("ResponseBodyAdvice.supports");
+        return true;
+    }
+
+    @Override
+    public Object beforeBodyWrite(Object body, MethodParameter methodParameter, MediaType mediaType, Class aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
+        System.out.println("ResponseBodyAdvice.beforeBodyWrite");
+        return body;
+    }
+}
+
+
+class MyInterceptor implements HandlerInterceptor{
+    @Override
+    public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object body) throws Exception {
+        System.out.println("HandlerInterceptor.preHandle");
+        return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest req, HttpServletResponse res, Object body, @Nullable ModelAndView modelAndView) throws Exception {
+        System.out.println("HandlerInterceptor.postHandle");
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest req, HttpServletResponse res, Object body, @Nullable Exception ex) throws Exception {
+        System.out.println("HandlerInterceptor.afterCompletion");
+    }
+}
+
+@Configuration
+class JavaConfig implements WebMvcConfigurer {
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new MyInterceptor());
+    }
+}
+```
+```
+HandlerInterceptor.preHandle
+RequestBodyAdvice.supports
+RequestBodyAdvice.beforeBodyRead
+RequestBodyAdvice.supports
+RequestBodyAdvice.afterBodyRead
+person => Person(name=Mike)
+ResponseBodyAdvice.supports
+ResponseBodyAdvice.beforeBodyWrite
+HandlerInterceptor.postHandle
+HandlerInterceptor.afterCompletion
+```
 
 
 #### DB

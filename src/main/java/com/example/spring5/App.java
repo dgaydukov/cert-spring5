@@ -1,6 +1,4 @@
 package com.example.spring5;
-
-
 /**
  * InjectProperty by variable name if property not set
  * Inject => rename to InjectType
@@ -13,3 +11,4 @@ package com.example.spring5;
  * init all singletons on startup
  * add cglib to proxy if no interfaces (or javassist)
  */
+
