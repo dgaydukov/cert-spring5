@@ -7617,12 +7617,18 @@ So `di` solves these 3 problems. To simplify work with reflections you can use [
 
 Here is code
 ```java
-
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Proxy;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+
 import org.reflections.Reflections;
 
 
@@ -7638,7 +7644,14 @@ public class App{
 }
 
 @Retention(RetentionPolicy.RUNTIME)
-@interface Inject{}
+@interface InjectType {}
+@Retention(RetentionPolicy.RUNTIME)
+/**
+ * Inject property by value or if it's empty by variable's name
+ */
+@interface InjectProperty {
+    String value() default "";
+}
 @Retention(RetentionPolicy.RUNTIME)
 @interface Init{}
 @Retention(RetentionPolicy.RUNTIME)
@@ -7646,10 +7659,16 @@ public class App{
 @Retention(RetentionPolicy.RUNTIME)
 @interface Logging{}
 
+interface PreInit{
+    void preInit(Object obj, AppContext context);
+}
+interface PostInit{
+    <T> T postInit(T t, Class<T> impl);
+}
+
 interface Paint{
     String getColor();
 }
-
 interface Printer{
     void print(String msg);
 }
@@ -7657,7 +7676,8 @@ interface Printer{
 class BlackPaint implements Paint{
     // since class is not public, constructor also not public, that's why we should declare it as public
     public BlackPaint(){
-        System.out.println("constructing BlackPaint...");}
+        System.out.println("constructing BlackPaint...");
+    }
 
     @Override
     public String getColor() {
@@ -7666,12 +7686,15 @@ class BlackPaint implements Paint{
 }
 @Singleton
 class SimplePrinter implements Printer{
+    @InjectProperty
+    private String name;
+
     // since class is not public, constructor also not public, that's why we should declare it as public
     public SimplePrinter(){
         System.out.println("constructing SimplePrinter...");
     }
 
-    @Inject
+    @InjectType
     private Paint paint;
 
 
@@ -7683,57 +7706,66 @@ class SimplePrinter implements Printer{
     @Override
     @Logging
     public void print(String msg) {
-        System.out.println("msg => " + msg + ", paint => " + paint.getColor());
+        System.out.println("msg => " + msg + ", paint => " + paint.getColor() + ", name => " + name);
     }
 }
 
 
 class AppContext{
     private Reflections reflections;
-    private Map<Class, Object> beans = new ConcurrentHashMap<>();
+    private Map<Class, Object> cache = new ConcurrentHashMap<>();
     private Map<Class, Class> implementations;
+    private List<PreInit> preInitList = new ArrayList<>();
+    private List<PostInit> postInitList = new ArrayList<>();
 
     /**
      * We pass map here in case we want to have our custom implementation of some interface
      */
+    @SneakyThrows
     public AppContext(String packageToScan, Map<Class, Class> implementations){
         reflections = new Reflections(packageToScan);
         this.implementations = implementations;
+        for(var cls: reflections.getSubTypesOf(PreInit.class)){
+            preInitList.add(cls.getDeclaredConstructor().newInstance());
+        }
+        for(var cls: reflections.getSubTypesOf(PostInit.class)){
+            postInitList.add(cls.getDeclaredConstructor().newInstance());
+        }
     }
-    public Class getImpl(Class impl){
-        if(impl.isInterface()){
-            if(implementations.containsKey(impl)) {
-                impl = implementations.get(impl);
+
+    /**
+     * Since we can pass interface, we should extract the exact class by it
+     * We assume that only 1 impl should be available for every interface
+     * If you have multiple you can prepopulate the map with exact implementations
+     */
+    public <T> Class<T> getImplByType(Class<T> type){
+        if(type.isInterface()){
+            if(implementations.containsKey(type)) {
+                type = implementations.get(type);
             } else {
-                var subtypes = reflections.getSubTypesOf(impl);
+                var subtypes = reflections.getSubTypesOf(type);
                 int size = subtypes.size();
                 if(size != 1) {
-                    throw new RuntimeException("Found " + size + " implementations of " + impl);
+                    throw new RuntimeException("Found " + size + " implementations of " + type);
                 }
-                Class exactImpl = (Class) subtypes.iterator().next();
-                implementations.put(impl, exactImpl);
-                impl = exactImpl;
+                Class<T> impl = (Class<T>) subtypes.iterator().next();
+                implementations.put(type, impl);
+                type = impl;
             }
         }
-        return impl;
+        return type;
     }
     @SneakyThrows
-    public <T> T getObject(Class<T> impl){
-        if (beans.containsKey(impl)){
-            return (T) beans.get(impl);
+    public <T> T getObject(Class<T> type){
+        if (cache.containsKey(type)){
+            return (T) cache.get(type);
         }
-        impl = getImpl(impl);
+        Class<T> impl = getImplByType(type);
 
         T obj = impl.getConstructor().newInstance();
 
-        //TODO: rewrite pre & post init to Bean Initializers
-        // pre init
-        for(var field: impl.getDeclaredFields()){
-            var ann = field.getAnnotation(Inject.class);
-            if(ann != null){
-                field.setAccessible(true);
-                field.set(obj, getObject(field.getType()));
-            }
+        for(var preInit: preInitList){
+            preInit.preInit(obj, this);
         }
 
         for(var method: impl.getDeclaredMethods()){
@@ -7743,24 +7775,71 @@ class AppContext{
             }
         }
 
-        // post init
-        for(var field: impl.getDeclaredMethods()){
+        for(var postInit: postInitList){
+            obj = postInit.postInit(obj, impl);
+        }
+
+        if (impl.getAnnotation(Singleton.class) != null) {
+            cache.put(type, obj);
+        }
+        return obj;
+    }
+}
+
+
+
+class LoggingPostInit implements PostInit {
+    @Override
+    public <T> T postInit(T t, Class<T> impl) {
+        for (var field : impl.getDeclaredMethods()) {
             var ann = field.getAnnotation(Logging.class);
-            if(ann != null){
-                var target = obj;
-                obj = (T) Proxy.newProxyInstance(impl.getClassLoader(), impl.getInterfaces(), (proxy, method, args) -> {
-                    System.out.println("calling => " + method.getName());
-                    Object retVal = method.invoke(target, args);
-                    System.out.println("done => " + method.getName());
+            if (ann != null) {
+                return (T) Proxy.newProxyInstance(impl.getClassLoader(), impl.getInterfaces(), (proxy, method, args) -> {
+                    System.out.println("***** start logging ******");
+                    Object retVal = method.invoke(t, args);
+                    System.out.println("***** end logging ******");
                     return retVal;
                 });
             }
         }
+        return t;
+    }
+}
 
-        if (impl.getAnnotation(Singleton.class) != null) {
-            beans.put(impl, obj);
+class InjectTypePreInit implements PreInit{
+    @Override
+    @SneakyThrows
+    public void preInit(Object obj, AppContext context) {
+        for(var field: obj.getClass().getDeclaredFields()){
+            var ann = field.getAnnotation(InjectType.class);
+            if(ann != null){
+                field.setAccessible(true);
+                field.set(obj, context.getObject(field.getType()));
+            }
         }
-        return obj;
+    }
+}
+
+class InjectPropertyPreInit implements PreInit{
+    private Map<String, String> props = new HashMap<>();
+    @SneakyThrows
+    public InjectPropertyPreInit(){
+        for(var line: new String(Files.readAllBytes(Paths.get(Objects.requireNonNull(this.getClass().getClassLoader().getResource("application.properties")).toURI()))).split("\n")){
+            var arr = line.split("=");
+            props.put(arr[0], arr[1]);
+        }
+    }
+    @Override
+    @SneakyThrows
+    public void preInit(Object obj, AppContext context) {
+        for(var field: obj.getClass().getDeclaredFields()){
+            var ann = field.getAnnotation(InjectProperty.class);
+            if(ann != null){
+                field.setAccessible(true);
+                String value = ann.value().isEmpty() ? field.getName() : ann.value();
+                field.set(obj, props.get(value));
+            }
+        }
     }
 }
 ```
@@ -7768,9 +7847,9 @@ class AppContext{
 constructing SimplePrinter...
 constructing BlackPaint...
 configuring printer...
-calling => print
-msg => hello, paint => black
-done => print
+***** start logging ******
+msg => hello, paint => black, name => Good Printer
+***** end logging ******
 ```
 
 
