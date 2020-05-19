@@ -1192,6 +1192,78 @@ Since now we are using component scanning, we don't need to explicitly define it
 `@Import` - take list of classes, `@ImportResource` - take list of paths to xml or packages.
 
 
+When we have several beans with same type and name, they are evaluated in order in which we meet them and latest overwrite previous
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println("bean => " + context.getBean("str"));
+    }
+}
+
+@Configuration
+class Config1{
+    @Bean
+    public String str(){
+        return "str1";
+    }
+}
+
+@Configuration
+class Config2{
+    @Bean
+    public String str(){
+        return "str2";
+    }
+}
+```
+```
+bean => str2
+```
+Since str from Config2 was evaluated later it overwrites str from Config1, that's why final bean is `str2`.
+
+
+We can override it by adding evaluation order.
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println("bean => " + context.getBean("str"));
+    }
+}
+
+@Configuration
+@Order(2)
+class Config1{
+    @Bean
+    public String str(){
+        return "str1";
+    }
+}
+
+@Configuration
+@Order(1)
+class Config2{
+    @Bean
+    public String str(){
+        return "str2";
+    }
+}
+```
+```
+bean => str1
+```
+Since Config1 has order 2 it is evaluated after Config2, that's why it's bean str overwrite str from Config2, and final result is str1.
+
 
 ###### PostConstruct and PreDestroy
 
@@ -5102,13 +5174,14 @@ For spring jdbc you should add to your `pom.xml`. You also would like embedded d
 
 `JdbcTemplate` has only `update` method to run `DML/DDL` (data manipulation(create, alter, drop)/definition(insert, update, delete) language). There is no `insert` method.
 `JdbcTemplate` handles creation and release of resources, executes SQL queries, update statements and stored procedure calls, performs iteration over ResultSets (when you pass `RowMapper` you just pass mapping, but template do all iteration over `ResultSet`, but when you pass `RowCallbackHandler` you do iteration by yourself), 
-and extraction of returned parameter values It simplify work with jdbc, we also have `HibernateTemplate` that simplify work with hibernate.
+and extraction of returned parameter values. 
+`JdbcTemplate` simplifies work with jdbc, we also have `HibernateTemplate` that simplify work with hibernate.
 `update/query` methods may take a third param as array of `java.sql.Types`. Setting argument type provides correctness and optimisation (slight) for the underlying SQL statement.
 When you test application code that manipulates the state of the Hibernate session, make sure to flush the underlying session within test methods that execute that code.
 
 `DataAccessException` do
 * convert proprietary checked exceptions to a set of runtime exceptions
-* help to change sql technology since you are not couple to low level sql exceptions
+* help to change sql technology since you are not coupled to low level sql exceptions
 * it instances when thrown, wrap original exception
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -5322,24 +5395,9 @@ public class App {
 }
 ```
 ```
-14:38:54.020 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing SQL query [select * from department]
-14:38:54.020 [main] DEBUG org.springframework.jdbc.datasource.DataSourceUtils - Fetching JDBC Connection from DataSource
-14:38:54.020 [main] DEBUG org.springframework.jdbc.datasource.SimpleDriverDataSource - Creating new JDBC Driver Connection to [jdbc:mysql://localhost:3306/spring5]
 getAll => [DepartmentModel(id=1, name=Exchange, type=IT), DepartmentModel(id=2, name=Solution, type=IT), DepartmentModel(id=3, name=Markets, type=CP)]
-14:38:54.061 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing SQL update and returning generated keys
-14:38:54.062 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing prepared SQL statement
-14:38:54.062 [main] DEBUG org.springframework.jdbc.datasource.DataSourceUtils - Fetching JDBC Connection from DataSource
-14:38:54.062 [main] DEBUG org.springframework.jdbc.datasource.SimpleDriverDataSource - Creating new JDBC Driver Connection to [jdbc:mysql://localhost:3306/spring5]
 save => DepartmentModel(id=28, name=finance, type=my)
-14:38:54.086 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing prepared SQL query
-14:38:54.087 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing prepared SQL statement [select * from department where id=?]
-14:38:54.087 [main] DEBUG org.springframework.jdbc.datasource.DataSourceUtils - Fetching JDBC Connection from DataSource
-14:38:54.087 [main] DEBUG org.springframework.jdbc.datasource.SimpleDriverDataSource - Creating new JDBC Driver Connection to [jdbc:mysql://localhost:3306/spring5]
 getById(28) =>DepartmentModel(id=28, name=finance, type=my)
-14:38:54.103 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing prepared SQL update
-14:38:54.103 [main] DEBUG org.springframework.jdbc.core.JdbcTemplate - Executing prepared SQL statement [delete from department where id=?]
-14:38:54.103 [main] DEBUG org.springframework.jdbc.datasource.DataSourceUtils - Fetching JDBC Connection from DataSource
-14:38:54.103 [main] DEBUG org.springframework.jdbc.datasource.SimpleDriverDataSource - Creating new JDBC Driver Connection to [jdbc:mysql://localhost:3306/spring5]
 deleteById(28) => true
 ```
 
@@ -5735,9 +5793,9 @@ Although you can use `EntityManager` to manually create queries, it's better to 
 There are 2 interfaces `CrudRepository` & `JpaRepository` from which you can extend your repository interface (spring will generate class automatically) and have many default queries already implemented.
 `JpaRepository` extends `PagingAndSortingRepository` which in turn extends `CrudRepository`.
 Their main functions are:
-* `CrudRepository` mainly provides CRUD functions. Ffor `findAll` return `Iterable`.
+* `CrudRepository` mainly provides CRUD functions. Method `findAll` return `Iterable`.
 * `PagingAndSortingRepository` provides methods to do pagination and sorting records.
-* `JpaRepository` provides some JPA-related methods such as flushing the persistence context and deleting records in a batch. For `findAll` return `List`.
+* `JpaRepository` provides some JPA-related methods such as flushing the persistence context and deleting records in a batch. Method `findAll` return `List`.
 
 You can also add `@RepositoryDefinition` to your interface, and spring will create crud repository implementation for you (no need to extends other interfaces), basically it the same as extending Repository.
 To enable work with repository add to your config `@EnableJpaRepositories("com.example.logic.ann.jdbc.spring.repository")`.
@@ -5879,7 +5937,7 @@ public class App{
 
 There are 2 types of transactions:
 * Local - work with single resource (single db) and either commit or rollback
-* Global - work with many resources (like one mysql and one oracle db), and either all changes to all db commiter or rollbacked. Using `XA` protocol.
+* Global - work with many resources (like one mysql and one oracle db), and either all changes to all db committed or rollbacked. Using `XA` protocol.
 To work with global tx you should add to your `pom.xml`
 ```
 <dependency>
@@ -7507,10 +7565,12 @@ class User{
 ```
 We are using lombok to generate getter/setter but you can also write them by hand
 
+POJO - plain old java object (term invented by Martin Fowler) - refers to any java object that's not coupled to any framework. 
+Spring Bean - a java object managed by spring container. Since POJO = plain old java object, so any class is a POJO, so spring beans also POJO.
+We associate Spring with POJO to express that with Spring, the beans stay simple, testable, adaptable, etc..., not or rather few coupled to specific framework interfaces or implementations.
+POJO brings a low coupling by using generally metadata such as XML or code annotations (often preferred as less verbose and located directly in the concerning class) to bind the beans to the framework.
 
-POJO - plain old java object (term inveted by Martin Fowler) - refers to any java object that's not coupled to any framework. 
 
-Spring Bean - a java object managed by spring container. Spring bean can be javabean, or pojo, or just some class.
 
 
 
