@@ -3548,7 +3548,7 @@ You can also write your aspects in native aspectj language. For this you first n
 
 Safe methods: `GET` (applying it to a resource does not result in a state change of the resource)
 Idempotent (produce same result no matter how many times called) methods: `GET, PUT, DELETE` (applying them multiple times to a resource results in the same state change of the resource as applying them once, though the response might differ)
-PATCH changes the resources attributes. The change may require a concrete previous value of the attribute, which makes it NON idempotent. `From Name=John to Name=Gargantua`. After repeated applying the name will be Gargantua and patch will fail, since it requires the name to be "John" before the change.
+`PATCH` changes the resources attributes. The change may require a concrete previous value of the attribute, which makes it NON idempotent. `From Name=John to Name=Mike`. After applying the name will be `Mike` and repeated patch will fail, since it requires the name to be `John` before the change.
 
 `@RestController` - convenience annotation => `@Controller` + `@ResponseBody` (convert method return type into http response using `HttpMessageConverter` implementations)
 `@RequestMapping(path = "/api")` - can add it to controller, so all methods would have this url as base
@@ -3660,7 +3660,7 @@ types of model attributes which should be transparently stored in the session or
 When you create web app, your context always an instance of `WebApplicationContext`, it extends `ApplicationContext`, and has a method `getServletContext`, to get `ServletContext`.
 Each `DispatcherServlet` has its own `WebApplicationContext`, which inherits all the beans already defined in the root `WebApplicationContext`.
 Beans inherited from root app context can be overridden in the servlet-specific scope, and you can define new scope-specific beans local to a given Servlet instance.
-If you have a `<bean>` declaration with the same name or id in both the root context and the servlet context, the servlet context one will overwrite the root context one.
+If you have a `<bean/>` declaration with the same name or id in both the root context and the servlet context, the servlet context one will overwrite the root context one.
 
 
 
@@ -3745,7 +3745,8 @@ public class App implements WebApplicationInitializer {
         var context = new AnnotationConfigWebApplicationContext();
         context.register(JavaConfig.class);
 
-        servletContext.addListener(new ContextLoaderListener(context));
+        ContextLoaderListener listener = new ContextLoaderListener(context);
+        servletContext.addListener(listener);
         ServletRegistration.Dynamic dispatcher = servletContext.addServlet("dispatcher", new DispatcherServlet(context));
 
         dispatcher.setLoadOnStartup(1);
