@@ -1264,6 +1264,59 @@ bean => str1
 ```
 Since Config1 has order 2 it is evaluated after Config2, that's why it's bean str overwrite str from Config2, and final result is str1.
 
+Don't confuse it when you have 2 beans of the same type but with different names. In this case they don't overwrite each other. They both inside reside inside container, so if you try to get them by name you will get exact bean (cause names are unique). But if you try to get them by type you will got `NoUniqueBeanDefinitionException`.
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println(context.getBean("oldPrinter", Printer.class));
+        System.out.println(context.getBean(Printer.class));
+    }
+}
+
+@Component
+class OldPrinter implements Printer{}
+
+@Component
+class NewPrinter implements Printer{}
+
+interface Printer{}
+```
+```
+com.example.spring5.OldPrinter@4cc451f2
+Exception in thread "main" org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type 'com.example.spring5.Printer' available: expected single matching bean but found 2: oldPrinter,newPrinter
+```
+
+Yet if you set the same name, only 1 bean would be created.
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println(context.getBean("printer", Printer.class));
+        System.out.println(context.getBean(Printer.class));
+    }
+}
+
+@Component("printer")
+class OldPrinter implements Printer{}
+
+@Component("printer")
+class NewPrinter implements Printer{}
+
+interface Printer{}
+```
+```
+com.example.spring5.OldPrinter@7b9a4292
+com.example.spring5.OldPrinter@7b9a4292
+```
+Pay attention on ordering. If we declare them inside `@Configuration` classes, second would overwrite the first. But since they declared as component first - overwrite last.
+
 
 ###### PostConstruct and PreDestroy
 
