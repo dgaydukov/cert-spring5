@@ -1337,7 +1337,7 @@ The same way you can hook up to destroy event
 * Add `@PreDestroy` annotation
 * Implement `DisposableBean` interface with `destroy` method
 * `destroy-method=destory` in xml config
-* Add `@Bead(destoryMethod=destroy)` to java config
+* Add `@Bean(destoryMethod=destroy)` to java config
 Destroy events are not fired automatically, you have to call `((ConfigurableApplicationContext)context).close();`. 
 Method `destroy` in context is deprecated, and inside just make a call to `close`.
 
@@ -1431,7 +1431,7 @@ public class App {
 
 Overriding `@PostConstruct/@PreDestroy`. 
 Since parent init is private, and child - public, it's not overriding. So when we create child bean parent init also called. 
-If it was public, it would be valid overridning and it won't be called.
+If it was public, it would be valid overriding and it won't be called.
 ```java
 import org.springframework.stereotype.Component;
 
@@ -1710,9 +1710,46 @@ public class PropsJavaConfig {
 
 ###### Profile, Primary, Qualifier, Order, Lazy
 We can have only 1 constructor with `@Aurowired` that is required. Or have many constructor with `@Aurowired(required=false)` - in this case spring will automatically determine which to use.
+But you can't have multiple constructor where some are `required=false` and 1 or more required (just `@Autowored` ,cause `required` is `true` by default).
 
-`@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean
+`@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean.
 `@Qualifier("beanName")` - you can inject any bean you want. It's stronger than primary, so it injects bean by name.
+
+`@Qualifier` overwrites `@Primary`.
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
+
+@Component
+public class App{
+    @Autowired
+    @Qualifier("oldPrinter")
+    private Printer printer;
+
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println(context.getBean(App.class).printer);
+    }
+}
+
+
+interface Printer{}
+
+@Component
+@Primary
+class NewPrinter implements Printer{}
+
+@Component
+class OldPrinter implements Printer{}
+```
+```
+com.example.spring5.OldPrinter@52bf72b5
+```
+
+
 We have spring qualifier and also `JSR-330` from `javax.inject` package. You cad add to your `pom.xml` this dependency
 ```
 <dependency>
@@ -1722,7 +1759,7 @@ We have spring qualifier and also `JSR-330` from `javax.inject` package. You cad
 </dependency>
 ```
 
-`@Qualifier` - same as spring `@Qualifier`
+`javax.inject.Qualifier` - same as spring `@Qualifier`
 Spring support both of them. Moreover you can create your own qualifiers based on any of these 2.
 
 Another `JSR-330` annotation is `@Named` - same as spring `@Component`
@@ -1814,7 +1851,7 @@ cars => [SuvCar, SportCar]
 qualifierCars => [car1, car2, car3]
 ```
 As you see without qualifier spring injects single beans that implement our interface, but with qualifier we can inject list bean itself.
-* If no single beans found then list bean would be injected. 
+If no single beans found then list bean would be injected. 
 
 
 When you use `@Autowired` and have 2 or more beans(and not Primary/Qualifier) it will try to inject it by variable name.
@@ -1859,7 +1896,7 @@ class SimpleBean {
 ```
 Since variable name is `newPrinter`, it injects it as `NewPrinter` bean. If you change it to `oldPrinter` then `OldPrinter` would be injected. If you change it anything else, you got `NoUniqueBeanDefinitionException`.
 
-`@Qualifier` work as and. So if we have bean with multiple qualifiers only those that are include both would be injected
+`@Qualifier` work as `AND`. So if we have bean with multiple qualifiers only those that are include both would be injected
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -2065,7 +2102,7 @@ As you see it took all 3
 
 `@Lazy` (same as xml `<bean id="demo" class="Demo" lazy-init="true"/>`, by default if you don't specify it `false`) works in 2 ways
 * When it's declared on bean it would defer bean instantiation, until you first request it
-* When declared inside constructor, it can help fix circular dependencies (by creating proxy not real object, and returning real object only when you request it)
+* When declared inside constructor, it can help fix circular dependencies (by creating proxy not real object, and when you call methods on proxy -> creating real objects and call methods on it)
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Lazy;
@@ -2121,7 +2158,7 @@ constructing B, a => com.example.spring5.A
 b => com.example.spring5.B$$EnhancerBySpringCGLIB$$75dd6352
 class B
 ```
-As you see it first create instance of a with proxy, and later when you request it, it change proxy to fully-featured proxy.
+As you see it first create instance of `A` with proxy, and later when you request it, it change empty proxy to fully-featured proxy.
 
 
 ###### PropertySource and ConfigurationProperties
@@ -2158,7 +2195,7 @@ class MyService{
 }
 ```
 
-`${expr} --> Immediate Evaluation`  `#{expr} --> Deferred Evaluation`
+`${expr} --> Immediate Evaluation` vs. `#{expr} --> Deferred Evaluation` (SPeL)
 Immediate evaluation means that the expression is evaluated and the result returned as soon as the page is first rendered. Deferred evaluation means that the technology using the expression 
 language can use its own machinery to evaluate the expression sometime later during the page’s lifecycle, whenever it is appropriate to do so.
 
@@ -2512,8 +2549,8 @@ m2
 
 Spring aop keywords
 * `Join point` - well-defined point during code execution (e.g. method call, object instantiation). In Spring AOP it's always method call. 
-* `Pointcut` - join point with applied advice
-* `Advice` - piece of code that executes at particular join point
+* `Pointcut` - expression that select particular join point.
+* `Advice` - piece of code that executes at particular join point.
 * `Aspect` - advice + pointcut
 * `Weaving` - process of inserting aspect into code (3 types => compile(AspectJ), LTW(load-time weaving AspecJ, done during class loading), dynamic(Spring AOP)). Using compile or load-time weaving we can intercept internal calls and private methods.
 * `Target` - original object whose flow is modified by aspect
@@ -2525,10 +2562,10 @@ Spring aop keywords
 Spring supports 6 types of advices
 * `org.springframework.aop.MethodBeforeAdvice/@Before` - before method execution. has access to params. In case of exception, join point is not called
 * `org.springframework.aop.AfterReturningAdvice/@AfterReturning` -  after method executed, has access to params & return value. If method execution throws exception, not called. If advice throws exception, code won't proceed further (so you can implement some after validation)
+* `org.springframework.aop.ThrowsAdvice/@AfterThrowing` run if execution method throws exception
 * `org.springframework.aop.AfterAdvice/@After` - cause would be executed no matter what
 * `org.aopalliance.intercept.MethodInterceptor/@Around` - has full control over method execution
-* `org.springframework.aop.ThrowsAdvice/@AfterThrowing` run if execution method throws exception
-* `org.springframework.aop.IntroductionAdvisor/@DeclareParents` (no annotation, have to manually create such a bean with `ProxyFactoryBean`) add special logic to class
+* `org.springframework.aop.IntroductionAdvisor/@DeclareParents` - can add interface implementations on the fly
 
 3 advices example (before, after, around). Notice that proxy is changed object, not original
 ```java
@@ -3146,6 +3183,47 @@ class PrinterImpl implements Printer{
 }
 ```
 
+
+You can use `throwing` (we should pass name of exception variable) value of `@AfterThrowing` advice to filter on which exceptions to catch
+```java
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.AfterThrowing;
+import org.aspectj.lang.annotation.Aspect;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        context.getBean(Printer.class).print();
+    }
+}
+
+@Component
+class Printer{
+    void print(){
+        throw new MyException();
+    }
+}
+
+@Component
+@EnableAspectJAutoProxy
+@Aspect
+class AopAspect{
+    @AfterThrowing(pointcut = "execution(* print(..))", throwing = "ex")
+    private void afterThrowing(JoinPoint jp, MyException ex){
+        System.out.println("name => " + jp.getSignature().getName());
+    }
+}
+
+class MyException extends RuntimeException{}
+```
+```
+name => print
+Exception in thread "main" com.example.spring5.MyException
+```
+As you see here we limit exceptions only of type `MyException`.
 
 
 ###### Aop framework
