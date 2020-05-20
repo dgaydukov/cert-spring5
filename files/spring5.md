@@ -627,7 +627,7 @@ By default there is no `BeanDefinitionReader` implementation for annotations. Bu
 * `ClassPathBeanDefinitionScanner` - with method `scan` - to scan package with annotations like `@Component`.
 If you register only config file and it has annotation `@ComponentScan("yourPackage")`, internally it uses `ClassPathBeanDefinitionScanner`.
 `@ComponentScan` has field `boolean lazyInit() default false;`, which you can set to true and it will lazy load only those beans that you really using.
-This can be halpful in testing, when you want to start real app context but want only those bean that you are using to be created
+This can be helpful in testing, when you want to start real app context but want only those bean that you are using to be created
 ```java
 import com.example.logic.ann.beans.JavaConfig;
 import com.example.logic.ann.beans.SimpleBean;
@@ -838,11 +838,13 @@ We can have nested application contexts. `GenericApplicationContext` have `setPa
 If you want to implement some custom logic during app lifecycle you should have classes that implement following interfaces
 * `BeanFactoryPostProcessor` - fires when bean definitions has been loaded from xml/javaConfig/annotations, but none bean has been created
 * `BeanPostProcessor` - fires when beans has been created, it has 2 methods
-    * `postProcessBeforeInitialization` - fires before initialization, we can be sure that in this method we have original beans
+    * `postProcessBeforeInitialization` - fires before init, we can be sure that in this method we have original beans
     * `postProcessAfterInitialization` - fires after init, usually here we can substitute our bean with dynamic proxy
 * `ApplicationListener<E extends ApplicationEvent>` - fires after bfpp and bpp, when we got some events
 
-Since app context is also `ApplicationEventPublisher`, you can use context to publish `ApplicationEvent`. `start/stop` events can be called only from app context, spring will never issue them, inside they just called `publishEvent`.
+
+Since app context is also `ApplicationEventPublisher`, you can use context to publish `ApplicationEvent`. 
+`start/stop` events can be called only from app context, spring will never issue them, inside they just call `publishEvent`.
 ```java
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
@@ -924,7 +926,7 @@ If you have logging through custom annotation @TimeLogging (that handles by cust
 if you call them separately both would be wrapped into time-logging. But if you call one from another, only one logging would be displayed To fix this you can do self-injection like `private @Autowired MyService proxy;`
 And call one method from another, not with `this`, but with `proxy`. Or you can also create your own annotation `@SelfAutowired` and custom BPP to inject proxy.
 
-To activate your BFPP/BPP you can either add `@Component` to it, or add it as static bean to java config file (bean should be static so it would be executed first, before config class is loaded), or you can do it manually by code.
+To activate your BFPP/BPP you can either add `@Component` to it, or add it as static bean to java config file (bean should be static so it would be executed first, before instantiating config class), or you can do it manually by code.
 `DefaultListableBeanFactory => ConfigurableListableBeanFactory => ConfigurableBeanFactory`
 `ConfigurableBeanFactory.addBeanPostProcessor` - method to programatically add BPP
 here is example
@@ -951,7 +953,7 @@ beanFactory instanceof ConfigurableBeanFactory => true
 ```
 
 
-If we need to listen some events we can use special annotation
+If we need to listen some events we can use `@EventListener` annotation
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -1074,8 +1076,8 @@ MyBean => global
 
 If prototype bean is dependency of singleton, then it would be eagerly created once, and stay inside container until close.
 To add ability for singleton to get every time new prototype we should add `@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE, proxyMode = ScopedProxyMode.TARGET_CLASS)`
+`ScopedProxyMode.TARGET_CLASS` - use cglib proxy, `ScopedProxyMode.INTERFACES` - use jdk proxy.
 In this case proxy (not actual bean) is created and injected once. So only 1 instance of proxy would stay in container. Then for every method call, proxy create new instance of original object inside and call it's method.
-TARGET_CLASS - use cglib proxy, INTERFACES - use jdk proxy.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import com.example.logic.ann.prototypeintosingleton.proxymode.SingletonBean;
@@ -4131,6 +4133,86 @@ public class ReactiveJavaConfig {
 ```
 
 
+Simple security example
+```java
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+
+import java.io.IOException;
+import java.util.List;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Configuration
+@EnableWebSecurity
+class JavaConfig extends WebSecurityConfigurerAdapter {
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        http
+            .authorizeRequests()
+            .antMatchers("/public").permitAll()
+            .anyRequest()
+            .authenticated();
+        http.addFilterBefore(new MyAuthFilter(), BasicAuthenticationFilter.class);
+    }
+}
+
+class MyAuthFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        String authHeader = ((HttpServletRequest)req).getHeader("auth");
+        if ("user".equals(authHeader)) {
+            Authentication auth = new UsernamePasswordAuthenticationToken("user", "password", List.of(()->"ROLE_USER"));
+            SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+            securityContext.setAuthentication(auth);
+            SecurityContextHolder.setContext(securityContext);
+        }
+        chain.doFilter(req, res);
+    }
+}
+
+
+@RestController
+@RequestMapping("/")
+class MyController{
+    @GetMapping("/public")
+    public void publicEndpoint(Authentication auth){
+        System.out.println("publicEndpoint => " + auth);
+    }
+    @GetMapping("/private")
+    public void privateEndpoint(Authentication auth){
+        System.out.println("privateEndpoint => " + auth);
+    }
+}
+```
+You can try it by calling
+* `curl http://localhost:8080/public` - should always call controller method
+* `curl -H "auth: user" http://localhost:8080/private` - should always call controller method. If you don't pass auth header, or pass wrong key it won't work
+
 ###### Aop security
 To work with aop security add following annotation to your config `@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)`
 * `prePostEnabled` => pre/post annotations
@@ -6677,7 +6759,7 @@ By default all mapping are `/actuator/health` and so on, so base path is `actuat
 management.endpoints.web.base-path = /
 management.endpoints.web.path-mapping.health = apphealth
 ```
-By default only `/health` & `/info` are enabled, cause actuator doesn't have any security. 
+By default only `/health` & `/info` are enabled, cause actuator doesn't have any security (yet it autoconfigure security with bean `ManagementWebSecurityAutoConfiguration`). 
 You can secure it with spring security, and enable other features by adding `management.endpoints.web.exposure.include = health,info,beans,conditions`, or set it to `*` to include all endpoints.
 If you want to include all, except a few you can add `include=*` and `management.endpoints.web.exposure.exclude = info, beans`.
 
@@ -7361,7 +7443,7 @@ To use devtools add this to your `pom.xml`
 ###### YML Autocompletion
 
 By default auto-completion work in ultimate ide for both `.yml` and `.properties`.
-If you are using CE (community edition) you should download plugin `Spring Assistant`, it will enable auto-completion for `.yml` files.
+If you are using `CE (community edition)` you should download plugin `Spring Assistant`, it will enable auto-completion for `.yml` files.
 
 You can also have auto-completion for your custom props, you should add this to your `pom.xml`
 ```
@@ -7541,6 +7623,9 @@ You can monitor hystrix from actuator, or create new project with hystrix dashbo
 Then add to your config `@EnableHystrixDashboard`
 
 
+
+
+
 ###### Spring Utils
 `AnnotationUtils` - can be useful when you want to find some annotation that you can't get by default. 
 By default java `Class.getAnnotation` search only annotation of a class itself, so if we have Ann1=>Ann2=>OutClass, only Ann2 would be visible.
@@ -7585,8 +7670,8 @@ There are a few types of logging in java
 * `slf4j` - simple logging facade for java
 
 By default spring uses 
-* internal logging => apache common logging
-* external logging => slf4j(with logback)
+* `internal logging` => apache common logging
+* `external logging` => slf4j(with logback)
 
 ```java
 import org.apache.commons.logging.Log;
@@ -7634,7 +7719,7 @@ public class App{
 
 
 ###### Spring Caching
-You should enable cache `@EnableCaching` 
+You should enable cache with `@EnableCaching` 
 ```java
 package com.example.logic.ann.misc;
 
@@ -7716,6 +7801,8 @@ public class App{
 First time you run ` curl http://localhost:8080/` you will wait for 3 sec, later you would get response immediately.
 To clear cache call `curl -X POST http://localhost:8080/`
 
+
+
 ###### JavaBeans, POJO, Spring Beans
 JavaBean - a bean with public no-arg constructor, private fields and public getter/setter. The best example is simple model
 ```java
@@ -7731,10 +7818,10 @@ class User{
 ```
 We are using lombok to generate getter/setter but you can also write them by hand
 
-POJO - plain old java object (term invented by Martin Fowler) - refers to any java object that's not coupled to any framework. 
+`POJO` - plain old java object (term invented by Martin Fowler) - refers to any java object that's not coupled to any framework. 
 Spring Bean - a java object managed by spring container. Since POJO = plain old java object, so any class is a POJO, so spring beans also POJO.
-We associate Spring with POJO to express that with Spring, the beans stay simple, testable, adaptable, etc..., not or rather few coupled to specific framework interfaces or implementations.
-POJO brings a low coupling by using generally metadata such as XML or code annotations (often preferred as less verbose and located directly in the concerning class) to bind the beans to the framework.
+We associate Spring with `POJO` to express that with Spring, the beans stay simple, testable, adaptable, etc..., not or rather few coupled to specific framework interfaces or implementations.
+`POJO` brings a low coupling by using generally metadata such as XML or code annotations (often preferred as less verbose and located directly in the concerning class) to bind the beans to the framework.
 
 
 
