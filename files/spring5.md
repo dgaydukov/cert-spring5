@@ -3676,7 +3676,7 @@ Inside we had web.xml were all configs are stores, then we put this file into `t
 starts, it takes with file and run it. That's why we didn't have any `main` method inside web app for spring, tomcat itself build jar path and run our app.
 
 To build web app you should implement `WebApplicationInitializer`, but usually you just extends some class like `AbstractAnnotationConfigDispatcherServletInitializer`.
-
+g
 `WebApplicationInitializer vs ServletContainerInitializer`
 Tomcat 3.0+ search for `javax.servlet.ServletContainerInitializer` through the SPI and load that class.
 Spring has default implementation `org.springframework.web.SpringServletContainerInitializer` with annotation `@HandlesTypes({WebApplicationInitializer.class})`.
@@ -3854,6 +3854,40 @@ public class FilterJavaConfig {
 
 
 ###### Http security
+
+Spring's `DelegatingFilterProxy` provides the link between `web.xml` (below) and the application context
+```
+<filter>
+    <filter-name>myFilter</filter-name>
+    <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+</filter>
+
+<filter-mapping>
+    <filter-name>myFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+</filter-mapping>
+```
+`DelegatingFilterProxy` - delegates the Filter's methods through to a bean which is obtained from the Spring application context. 
+This enables the bean to benefit from the Spring web application context lifecycle support and configuration flexibility. 
+The bean must implement `javax.servlet.Filter` and it must have the same name as that in the filter-name element.
+We can also use `filter-chain` to set filters that would handle particular `pattern` (web url)
+```
+<bean id="filterChainProxy" class="org.springframework.security.web.FilterChainProxy">
+  <sec:filter-chain-map path-type="ant">
+     <sec:filter-chain pattern="/webServices/**" filters="
+           securityContextPersistenceFilterWithASCFalse,
+           basicAuthenticationFilter,
+           exceptionTranslationFilter,
+           filterSecurityInterceptor" />
+     <sec:filter-chain pattern="/**" filters="
+           securityContextPersistenceFilterWithASCTrue,
+           formLoginFilter,
+           exceptionTranslationFilter,
+           filterSecurityInterceptor" />
+  </sec:filter-chain-map>
+</bean>
+```
+
 
 * `antMatcher(String antPattern)` - allows configuring the `HttpSecurity` to only be invoked when matching the provided ant pattern.
 * `mvcMatcher(String mvcPattern)` - allows configuring the `HttpSecurity` to only be invoked when matching the provided Spring MVC pattern.
