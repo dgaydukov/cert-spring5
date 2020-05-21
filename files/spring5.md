@@ -11,7 +11,7 @@
 * 1.8 [Spring i18n](#spring-i18n)
 * 1.9 [Resource interface](#resource-interface)
 * 1.10 [Environment and PropertySource](#environment-and-propertysource)
-* 1.11 [Profile, Primary, Qualifier, Order, Lazy](#profile-primary-qualifier-order-lazy)
+* 1.11 [Profile, Primary, Aurowired, Qualifier, Order, Lazy](#profile-primary-aurowired-qualifier-order-lazy)
 * 1.12 [PropertySource and ConfigurationProperties](#propertysource-and-configurationproperties)
 * 1.13 [Task scheduling](#task-scheduling)
 * 1.14 [Remoting](#remoting)
@@ -1710,8 +1710,42 @@ public class PropsJavaConfig {
 
 
 
-###### Profile, Primary, Qualifier, Order, Lazy
-We can have only 1 constructor with `@Aurowired` that is required. Or have many constructor with `@Aurowired(required=false)` - in this case spring will automatically determine which to use.
+###### Profile, Primary, Aurowired, Qualifier, Order, Lazy
+* If we have 1 constructor we can omit `@Autowired`
+* If we have multiple constructors at least one of them should be `@Autowired` so spring will know which one to use. Only one single constructor may be annotated with `@Autowired`.
+* We can have only 1 constructor with `@Aurowired` that is required. Or have many constructor with `@Aurowired(required=false)` - in this case spring will automatically determine which to use.
+
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.stereotype.Component;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println(context.getBean(MyService.class));
+    }
+}
+
+@Component
+class A{}
+@Component
+class B{}
+@Component
+// exception, since we have 2 constructors and neither one is Autowired
+class MyService{
+    public MyService(A a){
+        System.out.println("1-arg constructor");
+    }
+    public MyService(A a, B b){
+        System.out.println("2-args constructor");
+    }
+}
+```
+```
+Exception in thread "main" org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'myService': Instantiation of bean failed; nested exception is org.springframework.beans.BeanInstantiationException: 
+Failed to instantiate [com.example.spring5.MyService]: No default constructor found; nested exception is java.lang.NoSuchMethodException: com.example.spring5.MyService.<init>()
+```
+
 But you can't have multiple constructor where some are `required=false` and 1 or more required (just `@Autowored` ,cause `required` is `true` by default).
 
 `@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean.
@@ -3558,7 +3592,7 @@ Idempotent (produce same result no matter how many times called) methods: `GET, 
 `@CrossOrigin(origins="*")` - set origin to anybody, by default it same-host
 `PUT` vs. `PATCH`. put - opposite to get, so it to replace whole object for url. Patch - is to replace some fields within the object.
 `@RequestParam/@PathVariable` - have field `required` (default true), so if you don't pass param field you got exception. If you set it to false value would be null (if your value is primitive you got `IllegalStateException: Optional int parameter 'id' is present but cannot be translated into a null value due to being declared as a primitive type. Consider declaring it as object wrapper for the corresponding primitive type.`)
-`ContextLoaderListener` (implements `ServletContextListener`) load root web app context.
+`ContextLoaderListener` (implements `ServletContextListener`) load root web app context (we would also need dispatcher servlet to communicate with this context)
 
 
 You can also use `web.xml` to register your web app. Here you can register 
@@ -3746,6 +3780,7 @@ public class App implements WebApplicationInitializer {
     public void onStartup(ServletContext servletContext) throws ServletException {
         var context = new AnnotationConfigWebApplicationContext();
         context.register(JavaConfig.class);
+        context.setServletContext(servletContext);
 
         ContextLoaderListener listener = new ContextLoaderListener(context);
         servletContext.addListener(listener);
@@ -6366,6 +6401,7 @@ class Account{
 When you add spring test starter (`spring-boot-starter-test`), `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.
 Spring is commonly used and has a strong support for unit & integration testing. Moreover for unit you generally should start app context. Just use some mocks. But if you run integration tests then generally you need to start your app and have full app context.
 `UAT (user acceptance test`) - special tests that run by end users to verify that business flow is correct. The need arises cause developers use unit/integration tests. Qa have their tests, but no one of them test the system as a whole (end to end flow).
+`@WebAppConfiguration` - class-level annotation that is used to declare that the `ApplicationContext` loaded for an integration test should be a `WebApplicationContext`, must be used in conjunction with `@ContextConfiguration`.
 
 ###### TestPropertySource and TestPropertyValues
 In testing you can add custom properties in 2 ways
