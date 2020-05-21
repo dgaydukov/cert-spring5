@@ -1742,8 +1742,7 @@ class MyService{
 }
 ```
 ```
-Exception in thread "main" org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'myService': Instantiation of bean failed; nested exception is org.springframework.beans.BeanInstantiationException: 
-Failed to instantiate [com.example.spring5.MyService]: No default constructor found; nested exception is java.lang.NoSuchMethodException: com.example.spring5.MyService.<init>()
+BeanInstantiationException: Failed to instantiate [com.example.spring5.MyService]: No default constructor found; nested exception is java.lang.NoSuchMethodException: com.example.spring5.MyService.<init>()
 ```
 
 But you can't have multiple constructor where some are `required=false` and 1 or more required (just `@Autowored` ,cause `required` is `true` by default).
@@ -7916,7 +7915,32 @@ It is separate language from `OGNL` (Object-Graph Navigation Language - open-sou
 It supports regular expression
 'hello world' - is valid `SPEL` expression
 
+Programmatic example of evaluating SpEL
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.expression.BeanFactoryResolver;
+import org.springframework.expression.Expression;
+import org.springframework.expression.common.TemplateParserContext;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 
+public class App{
+    public static void main(String[] args) {
+        String spelExpr = "Your OS => #{@systemProperties['os.name']}";
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        var beanFactoryResolver = new BeanFactoryResolver(context);
+        var templateParserContext = new TemplateParserContext();
+        var spelExpressionParser = new SpelExpressionParser();
+        Expression expression = spelExpressionParser.parseExpression(spelExpr, templateParserContext);
+        var standardEvaluationContext = new StandardEvaluationContext();
+        standardEvaluationContext.setBeanResolver(beanFactoryResolver);
+        System.out.println(expression.getValue(standardEvaluationContext));
+    }
+}
+```
+```
+Your OS => Linux
+```
 
 
 
