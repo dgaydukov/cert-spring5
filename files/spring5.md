@@ -2584,7 +2584,7 @@ m2
 
 Spring aop keywords
 * `Join point` - well-defined point during code execution (e.g. method call, object instantiation). In Spring AOP it's always method call. 
-* `Pointcut` - expression that select particular join point.
+* `Pointcut` - expression that select particular join point. They can be combined using the logical operators && (and), || (or) and ! (not).
 * `Advice` - piece of code that executes at particular join point.
 * `Aspect` - advice + pointcut
 * `Weaving` - process of inserting aspect into code (3 types => compile(AspectJ), LTW(load-time weaving AspecJ, done during class loading), dynamic(Spring AOP)). Using compile or load-time weaving we can intercept internal calls and private methods.
@@ -2592,7 +2592,12 @@ Spring aop keywords
 * `AOP proxy` - an object created by the AOP framework in order to implement the aspect contracts (advise method executions and so on). In the Spring Framework, an AOP proxy will be a JDK dynamic proxy or a CGLIB proxy.
 * `Introduction` - modification of code on the fly (e.g. add interface to a class)
 
-
+AspectJ support other join points:
+* Method invocation
+* Method execution
+* Object creation
+* Constructor execution
+* Field references
 
 Spring supports 6 types of advices
 * `org.springframework.aop.MethodBeforeAdvice/@Before` - before method execution. has access to params. In case of exception, join point is not called
@@ -3353,7 +3358,7 @@ I'm AopSimpleBean
 As you see we have 2 beans of the same type, original (not adviced) and proxy (adviced).
 If you want to have one bean, and you never need original you can remove it from java config, and inject it directly into `ProxyFactoryBean`
 
-You can also use `@AspectJ` annotations, you should first enable them `@EnableAspectJAutoProxy(proxyTargetClass = true)` (setting proxyTargetClass force spring aop to use CGLIB)
+You can also use `@AspectJ` annotations, you should first enable them `@EnableAspectJAutoProxy(proxyTargetClass = true)` (setting proxyTargetClass force spring aop to use CGLIB, by default - false cause Spring AOP use JDK dynamic proxy by default)
 `@AspectJ` refers to a style of declaring aspects as regular Java classes annotated with annotations.
 The `@AspectJ` support can be enabled with XML or Java style configuration. In either case you will also need to ensure that AspectJ’s `aspectjweaver.jar` library is on the classpath of your application (version 1.6.8 or later)
 If you are using `@SpringBootApplication` you don't need to explicitly include `@EnableAspectJAutoProxy`, cause it would be configured with `@EnableAutoConfiguration` which with the help of conditional annotations enables aop.
@@ -3411,16 +3416,16 @@ printing...
 
 Pointcut Designators
 
-* `execution` - for matching method execution join points, this is the primary pointcut designator you will use when working with Spring AOP
-* `within` - limits matching to join points within certain types (simply the execution of a method declared within a matching type when using Spring AOP)
-* `this` - limits matching to join points (the execution of methods when using Spring AOP) where the bean reference (Spring AOP proxy) is an instance of the given type
-* `target` - limits matching to join points (the execution of methods when using Spring AOP) where the target object (application object being proxied) is an instance of the given type
-* `args` - limits matching to join points (the execution of methods when using Spring AOP) where the arguments are instances of the given types
-* `@target` - limits matching to join points (the execution of methods when using Spring AOP) where the class of the executing object has an annotation of the given type
+* `execution([method visibility] [return type] [package].[class].[method]([parameters] [throws exceptions]))` (method visibility can be omitted) - for matching method execution join points, this is the primary pointcut designator you will use when working with Spring AOP.
+* `within([package].[class])` - limits matching to join points within certain types (simply the execution of a method declared within a matching type when using Spring AOP).
+* `this(MyInterface)` - limits matching to join points (the execution of methods when using Spring AOP) where the bean reference (Spring AOP proxy) is an instance of the given type
+* `target(MyClass)` - limits matching to join points (the execution of methods when using Spring AOP) where the target object (application object being proxied) is an instance of the given type
+* `args(int, String)` (`..` - zero or more args of any type, `*` - one arg of any type) - limits matching to join points (the execution of methods when using Spring AOP) where the arguments are instances of the given types
+* `@target(MyAnnotation)` - limits matching to join points (the execution of methods when using Spring AOP) where the class of the executing object has an annotation of the given type
 * `@args` - limits matching to join points (the execution of methods when using Spring AOP) where the runtime type of the actual arguments passed have annotations of the given type(s)
 * `@within` - limits matching to join points within types that have the given annotation (the execution of methods declared in types with the given annotation when using Spring AOP)
 * `@annotation` - limits matching to join points where the subject of the join point (method being executed in Spring AOP) has the given annotation
-* `bean` - limits matching to join points (method being executed in Spring AOP) to beans with provided name
+* `bean(myBean)` - limits matching to join points (method being executed in Spring AOP) to beans with provided name
 
 Example
 ```java
@@ -7915,31 +7920,69 @@ It is separate language from `OGNL` (Object-Graph Navigation Language - open-sou
 It supports regular expression
 'hello world' - is valid `SPEL` expression
 
-Programmatic example of evaluating SpEL
+You can evaluate spel expressions in any `@Value` attribute, but also with programmatic evaluation using `SpelExpressionParser`
 ```java
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.expression.BeanFactoryResolver;
 import org.springframework.expression.Expression;
 import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.stereotype.Component;
+
+
+import lombok.Getter;
 
 public class App{
     public static void main(String[] args) {
-        String spelExpr = "Your OS => #{@systemProperties['os.name']}";
         var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
-        var beanFactoryResolver = new BeanFactoryResolver(context);
+        System.out.println(context.getBean(MyBean.class).getValue());
+        System.out.println("SYSTEM_PROPS => " + SpelEvaluator.evaluate(context, SpelExpressions.SYSTEM_PROPS));
+        System.out.println("STATIC_METHOD_CALL => " + SpelEvaluator.evaluate(context, SpelExpressions.STATIC_METHOD_CALL));
+        System.out.println("INSTANCE_METHOD_CALL => " + SpelEvaluator.evaluate(context, SpelExpressions.INSTANCE_METHOD_CALL));
+    }
+}
+
+class SpelEvaluator{
+    public static Object evaluate(BeanFactory beanFactory, String spelExpr){
+        var beanFactoryResolver = new BeanFactoryResolver(beanFactory);
         var templateParserContext = new TemplateParserContext();
         var spelExpressionParser = new SpelExpressionParser();
         Expression expression = spelExpressionParser.parseExpression(spelExpr, templateParserContext);
         var standardEvaluationContext = new StandardEvaluationContext();
         standardEvaluationContext.setBeanResolver(beanFactoryResolver);
-        System.out.println(expression.getValue(standardEvaluationContext));
+        return expression.getValue(standardEvaluationContext);
     }
+}
+
+@Component
+class MyBean{
+    @Getter
+    @Value(SpelExpressions.SYSTEM_PROPS)
+    private String value;
+
+    public static String getStatic(){
+        return "static";
+    }
+    public String getInstance(){
+        return "instance";
+    }
+}
+
+
+class SpelExpressions{
+    public static final String SYSTEM_PROPS = "Your OS => #{@systemProperties['os.name']}";
+    public static final String STATIC_METHOD_CALL = "#{T(com.example.spring5.MyBean).getStatic()}";
+    public static final String INSTANCE_METHOD_CALL = "#{@myBean.getInstance()}";
 }
 ```
 ```
 Your OS => Linux
+SYSTEM_PROPS => Your OS => Linux
+STATIC_METHOD_CALL => static
+INSTANCE_METHOD_CALL => instance
 ```
 
 
