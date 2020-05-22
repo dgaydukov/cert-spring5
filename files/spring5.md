@@ -3949,7 +3949,7 @@ Spring's `DelegatingFilterProxy` provides the link between `web.xml` (below) and
 
 <filter-mapping>
     <filter-name>myFilter</filter-name>
-    <url-pattern>/*</url-pattern>
+    <url-pattern>/api/*</url-pattern>
 </filter-mapping>
 ```
 `DelegatingFilterProxy` - delegates the Filter's methods through to a bean which is obtained from the Spring application context. 
@@ -5240,7 +5240,7 @@ class MyExceptionHandler{
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.config.annotation.ene;
 import org.springframework.web.util.UrlPathHelper;
 
 @RestController
@@ -5740,7 +5740,8 @@ There are several implementations of `DataSource`
 Although you can write your own implementation of `RowMapper` for each entity, if your db columns correspond to your model, you can
 use one of default impl like `BeanPropertyRowMapper`, or if you need to get a map (key - columns, value- values) you can use `ColumnMapRowMapper`.
 
-If you want to manipulate the whole result set you can use `ResultSetExtractor`. `RowCallbackHandler` can be used in `query`, but you have to manually regulate state.
+If you want to manipulate the whole result set you can use `ResultSetExtractor` (stateless cause all logic is handled inside `extractData` method).
+`RowCallbackHandler` can be used in `query` (stateful cause `processRow` returns void, so you have to keep state outside of this function).
 ```java
 private DepartmentModel resultSetToModel(ResultSet rs) throws SQLException {
     DepartmentModel model = new DepartmentModel();
