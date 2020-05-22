@@ -322,8 +322,52 @@ s1 => com.example.spring5.MyService@33990a0c
 s2 => com.example.spring5.MyService@4de4b452
 com.example.spring5.MyService@3a6bb9bf
 ```
-As you see all 3 instances are different
+As you see all 3 instances are different. The reason is first call was made by container and first bean was created. Then we made 2 calls from `s1` and `s2` beans. But since cglib can't override `static` methods, new beans are created.
+The same would be true if we make bean non-static, but change it from configuration to component
+`@Configuration` vs `@Component` - the main difference is that configuration - create cglib proxy and whenever you call method annotated with `@Bean`, cglib return created object and don't call method again.
+```java
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
 
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        System.out.println(context.getBean(MyService.class));
+    }
+}
+
+class MyService{}
+
+@Component
+class JavaConfig{
+    /**
+     * Since it's @Component and not @Configuration, Spring will not create cglib proxy for this class
+     * so all calls to this method create new bean
+     */
+    @Bean
+    public MyService myService(){
+        return new MyService();
+    }
+
+    @Bean
+    public String s1(){
+        System.out.println("s1 => " + myService());
+        return "s1";
+    }
+    @Bean
+    public String s2(){
+        System.out.println("s2 => " + myService());
+        return "s2";
+    }
+}
+```
+```
+s1 => com.example.spring5.MyService@6f1de4c7
+s2 => com.example.spring5.MyService@459e9125
+com.example.spring5.MyService@3c19aaa5
+```
+As you see all 3 beans are different.
 
 `@Configuration` - create proxy, so it can't be final, as well as `@Bean` methods can't be final. Even if your config class extends interface, spring still will use cglib.
 The reason for the Spring container subclassing `@Configuration` classes is to control bean creation, for singleton beans, subsequent requests to the method creating the bean 
