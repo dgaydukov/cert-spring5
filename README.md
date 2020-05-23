@@ -3,11 +3,6 @@
 ### Description
 Here is my experience for taking [spring5](https://store.education.pivotal.io/confirm-course?courseid=EDU-1202) certification.
 
-### Results
-By successful completion you are given [badge](http://bcert.me/seavwbxal).
-In email you are given results score by each topic.
-
-![Exam score](https://github.com/dgaydukov/cert-spring5/blob/master/files/images/exam-score.png)
 
 ### Why do you need it.
 There are 2 main reasons to get it.
@@ -32,3 +27,12 @@ Although there is paid mocks, the quality is of no good, so you should google an
 * [Notes for preparing for Spring Professional Certification](https://github.com/MrR0807/SpringCertification5.0) - pdf files with detailed explanation based on questions from official study guide
 * [Spring Professional v.5 Preparation Repository](https://github.com/vshemyako/spring-certification-5.0) - java project with detailed spring/java examples based on questions from official study guide
 * [Free mobile mock](https://play.google.com/store/apps/details?id=com.springqcm) - good free easy mock
+
+
+### My Results
+By passing certification you will get 3 things
+* [Digital badge](http://bcert.me/seavwbxal)
+* Certification itself
+* Detailed results on each topic:
+
+![Exam score](https://github.com/dgaydukov/cert-spring5/blob/master/files/images/exam-score.png)
