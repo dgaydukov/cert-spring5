@@ -3,6 +3,11 @@
 ### Description
 Here is my experience for taking [spring5](https://store.education.pivotal.io/confirm-course?courseid=EDU-1202) certification.
 
+### Results
+By successful completion you are given [badge](http://bcert.me/seavwbxal).
+In email you are given results score by each topic.
+![alt text](http://url/to/img.png)
+
 ### Why do you need it.
 There are 2 main reasons to get it.
 1. During preparation you will learn a lot of new stuff

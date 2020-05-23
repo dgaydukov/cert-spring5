@@ -2488,7 +2488,7 @@ Of course you should share code for `MyService` between 2 apps.
 There are several annotations that can help you determine should you create a bean or not. 
 `@Profile` - can be used to determine should bean be created for certain profile. Can be used on class and methods (in case method is a `@Bean`)
 But there also class of `@Conditional` annotations.
-`@ConditionalOnClass(MyService.class)` - bean would be created if bean of type MyService exists
+`@ConditionalOnClass(MyService.class)` - bean would be created if class `MyService` is in classpath. Since this annotation is parsed by loading class bytecode, it is safe to specify classes here that may ultimately not be on the classpath.
 `@ConditionalOnBean(name = "myService")` - bean would be created if bean with name myService exists
 `@ConditionalOnMissingClass/@ConditionalOnMissingBean` - bean would be created if bean of type/name doesn't exist
 `@ConditionalOnProperty(prefix = "my.starter", name = "show", matchIfMissing = true)` - bean would be created if value of `my.starter.show` not false, or it doesn't exist in configuration.
