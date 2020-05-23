@@ -6,7 +6,8 @@ Here is my experience for taking [spring5](https://store.education.pivotal.io/co
 ### Results
 By successful completion you are given [badge](http://bcert.me/seavwbxal).
 In email you are given results score by each topic.
-![alt text](http://url/to/img.png)
+
+![Exam score](https://github.com/dgaydukov/cert-spring5/blob/master/files/images/exam-score.png)
 
 ### Why do you need it.
 There are 2 main reasons to get it.
