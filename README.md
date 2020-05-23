@@ -32,7 +32,7 @@ Although there is paid mocks, the quality is of no good, so you should google an
 ### My Results
 By passing certification you will get 3 things
 * [Digital badge](http://bcert.me/seavwbxal)
-* []()
+* [Pivotal Spring Professional Certificate](https://github.com/dgaydukov/cert-spring5/blob/master/files/images/spring-certificate.pdf)
 * Detailed results on each topic:
 
 ![Exam score](https://github.com/dgaydukov/cert-spring5/blob/master/files/images/exam-score.png)
