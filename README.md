@@ -36,3 +36,8 @@ By passing certification you will get 3 things
 * Detailed results on each topic:
 
 ![Exam score](https://github.com/dgaydukov/cert-spring5/blob/master/files/images/exam-score.png)
+
+0. article how spring force you to write high quality code (singleton, interface autowired method called on all classes)
+0. spring audit - annotation for old_value
+0. добавить прмер аутенфикации по ключу (другие типы аутенфикации)
+0. spring integration vs message queue
