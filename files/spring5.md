@@ -76,7 +76,7 @@
 * 8.14 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
 * 8.15 [Maven scope](#maven-scope)
 * 8.16 [Spring Boot Starter](#spring-boot-starter)
-* 8.17 [Spring Context Indexer)](#spring-context-indexer)
+* 8.17 [Spring Context Indexer](#spring-context-indexer)
 * 8.18 [SPEL - Spring Expression Language](#spel---spring-expression-language)
 * 8.19 [Custom Framework Impl](#custom-framework-impl)
 * 8.20 [Spring Design Patterns](#spring-design-patterns)
