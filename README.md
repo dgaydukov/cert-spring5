@@ -36,3 +36,7 @@ By passing certification you will get 3 things
 * Detailed results on each topic:
 
 ![Exam score](https://github.com/dgaydukov/cert-spring5/blob/master/files/images/exam-score.png)
+
+### TODO List
+* spring integration example with security
+* eureka/ribbon spring app loadbalancer example vs. aws lb
