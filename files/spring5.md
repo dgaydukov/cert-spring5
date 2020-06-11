@@ -7999,7 +7999,7 @@ We can list all of dependencies by running `mvn dependency:tree`
 Scopes can help to limit transitivity and modify classpath for different built tasks. There are 6 scopes:
 * `compile` - default scope if no other set. Dependencies with this scope available on the classpath for all builds. They are transitive.
 * `provided` - dependency should be provided by jdk or container. So it only available during compile-time. At run-time they won't be available. For example `spring-starter-tomcat` for `.war` application.
-* `runtime` - dependency only available at run-time not compile time. For example jdbc driver, since for compilation we are suing `DataSource` to obtain connection we don't need driver at compile time, be we definitely need it during runtime.
+* `runtime` - dependency only available at run-time not compile time. For example jdbc driver, since for compilation we are using `DataSource` to obtain connection we don't need driver at compile time, be we definitely need it during runtime.
 * `test` - means that junit types would be available only in testing scope, not inside main app. For example class `AopTestUtils` is available under test folder, but you can't import it into main code.
 * `system` - similar to provided, but we should declare the exact path to jar file using `<systemPath/>` tag
 * `import` - available for type `pom`, should be replaced with all respective dependencies from it's pom.
