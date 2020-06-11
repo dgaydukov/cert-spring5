@@ -5349,7 +5349,7 @@ If we hit ` curl http://localhost:8080/a/1/matrixId=2?id=3` we got `pathId => 1,
 
 ###### RequestBodyAdvice/ResponseBodyAdvice and HandlerInterceptor
 These 3 interceptors allows to intercept request (both before and after controller's method execution) and add some custom logic like logging, modifiing headers/body, checking security and so on.
-
+As you will see by output `HandlerInterceptor` is not quite useful cause you can't get body from it.
 ```java
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -5399,7 +5399,7 @@ class MyController{
     }
     @PostMapping
     public Person handlePost(@RequestBody Person person){
-        System.out.println("person => " + person);
+        System.out.println("handlePost => person=" + person);
         return person;
     }
 }
@@ -5410,45 +5410,40 @@ class Person{
 }
 
 @ControllerAdvice
-class MyRequestInterceptor implements RequestBodyAdvice{
-
+class MyRequestInterceptor implements RequestBodyAdvice {
     @Override
-    public boolean supports(MethodParameter methodParameter, Type type, Class<? extends HttpMessageConverter<?>> aClass) {
-        System.out.println("RequestBodyAdvice.supports");
+    public boolean supports(MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) {
         return true;
     }
 
     @Override
-    public HttpInputMessage beforeBodyRead(HttpInputMessage inputMessage, MethodParameter param, Type type, Class<? extends HttpMessageConverter<?>> cls) throws IOException {
-        System.out.println("RequestBodyAdvice.beforeBodyRead");
-        return inputMessage;
+    public HttpInputMessage beforeBodyRead(HttpInputMessage msg, MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) throws IOException {
+        return msg;
     }
 
     @Override
-    public Object afterBodyRead(Object body, HttpInputMessage inputMessage, MethodParameter param, Type type, Class<? extends HttpMessageConverter<?>> cls) {
-        System.out.println("RequestBodyAdvice.afterBodyRead");
+    public Object afterBodyRead(Object body, HttpInputMessage msg, MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) {
+        System.out.println("afterBodyRead => method=" + mp.getMethod().getName() + ", body=" + body);
         return body;
     }
 
     @Override
-    public Object handleEmptyBody(Object body, HttpInputMessage inputMessage, MethodParameter param, Type type, Class<? extends HttpMessageConverter<?>> cls) {
-        System.out.println("RequestBodyAdvice.handleEmptyBody");
+    public Object handleEmptyBody(Object body, HttpInputMessage msg, MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) {
+        System.out.println("handleEmptyBody => method=" + mp.getMethod().getName() + ", body=" + body);
         return body;
     }
 }
 
 @ControllerAdvice
 class MyResponseInterceptor implements ResponseBodyAdvice<Object>{
-
     @Override
-    public boolean supports(MethodParameter methodParameter, Class aClass) {
-        System.out.println("ResponseBodyAdvice.supports");
+    public boolean supports(MethodParameter mp, Class cls) {
         return true;
     }
 
     @Override
-    public Object beforeBodyWrite(Object body, MethodParameter methodParameter, MediaType mediaType, Class aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
-        System.out.println("ResponseBodyAdvice.beforeBodyWrite");
+    public Object beforeBodyWrite(Object body, MethodParameter mp, MediaType mediaType, Class cls, ServerHttpRequest req, ServerHttpResponse res) {
+        System.out.println("handleEmptyBody => url=" + req.getURI() + ", method=" + mp.getMethod().getName() + ", body=" + body);
         return body;
     }
 }
@@ -5456,19 +5451,19 @@ class MyResponseInterceptor implements ResponseBodyAdvice<Object>{
 
 class MyInterceptor implements HandlerInterceptor{
     @Override
-    public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object body) throws Exception {
-        System.out.println("HandlerInterceptor.preHandle");
+    public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) throws Exception {
+        System.out.println("preHandle => url=" + req.getRequestURI() + ", handler=" + handler);
         return true;
     }
 
     @Override
-    public void postHandle(HttpServletRequest req, HttpServletResponse res, Object body, @Nullable ModelAndView modelAndView) throws Exception {
-        System.out.println("HandlerInterceptor.postHandle");
+    public void postHandle(HttpServletRequest req, HttpServletResponse res, Object handler, @Nullable ModelAndView modelAndView) throws Exception {
+        System.out.println("postHandle => url=" + req.getRequestURI() + ", handler=" + handler);
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest req, HttpServletResponse res, Object body, @Nullable Exception ex) throws Exception {
-        System.out.println("HandlerInterceptor.afterCompletion");
+    public void afterCompletion(HttpServletRequest req, HttpServletResponse res, Object handler, @Nullable Exception ex) throws Exception {
+        System.out.println("afterCompletion => url=" + req.getRequestURI() + ", handler=" + handler);
     }
 }
 
@@ -5480,19 +5475,23 @@ class JavaConfig implements WebMvcConfigurer {
     }
 }
 ```
+`curl http://localhost:8080`
 ```
-HandlerInterceptor.preHandle
-RequestBodyAdvice.supports
-RequestBodyAdvice.beforeBodyRead
-RequestBodyAdvice.supports
-RequestBodyAdvice.afterBodyRead
-person => Person(name=Mike)
-ResponseBodyAdvice.supports
-ResponseBodyAdvice.beforeBodyWrite
-HandlerInterceptor.postHandle
-HandlerInterceptor.afterCompletion
+preHandle => url=/, handler=com.example.spring5.MyController#handleGet()
+handleEmptyBody => url=http://localhost:8080/, method=handleGet, body=handleGet => 1827543397
+postHandle => url=/, handler=com.example.spring5.MyController#handleGet()
+afterCompletion => url=/, handler=com.example.spring5.MyController#handleGet()
 ```
 
+`curl -H "Content-type: application/json" -d '{"name":"Jack"}' http://localhost:8080`
+```
+preHandle => url=/, handler=com.example.spring5.MyController#handlePost(Person)
+afterBodyRead => method=handlePost, body=Person(name=Jack)
+handlePost => person=Person(name=Jack)
+handleEmptyBody => url=http://localhost:8080/, method=handlePost, body=Person(name=Jack)
+postHandle => url=/, handler=com.example.spring5.MyController#handlePost(Person)
+afterCompletion => url=/, handler=com.example.spring5.MyController#handlePost(Person)
+```
 
 #### DB
 
