@@ -80,6 +80,8 @@
 * 8.18 [SPEL - Spring Expression Language](#spel---spring-expression-language)
 * 8.19 [Custom Framework Impl](#custom-framework-impl)
 * 8.20 [Spring Design Patterns](#spring-design-patterns)
+* 8.20 [Spring Design Patterns](#spring-design-patterns)
+* 8.21 [Oauth2 and Spring Security](#oauth2-and-spring-security)
 
 
 
@@ -8592,11 +8594,35 @@ interface MailTemplate{
 
 
 
+###### Oauth2 and Spring Security
+Oauth (Open Authentication) - open standard (so it's not api or some service) for secured delegated access. There are 2 versions
+* Oauth 1.0 - old version, not used today
+* Oauth 2.0 - default version of today (so when someone says Oauth he probably means Oauth 2.0)
 
+SSO (Single Sing-on) - authentication into application using Identity Provider (app should trust IdP). You first authenticate into your IdP and get auth token. 
+Then app uses this token to verify your identity. This is basically Oauth, instead of giving username+password to app (so app would authenticate you in IdP)
+you request token from IdP and send this token to app with every request. App then verify that this token is valid by calling IdP.
 
+Oath include a few components
+* Scope - what app can do (allow scope) and what app can't do (deny scope). For example app can get email from IdP but can't get phone number.
+Big advantage that you can set time for which scope is valid. And also revoke app access in case you don't want this app to access your profile or run some actions on your behalf.
+* Actors:
+    * Resource Owner - user who has profile in IdP
+    * Resource Server - API that provides user's data
+    * Client - app that use Oath to access data from resource server
+    * Authorization Server - where token is generated and validated (usually can be a single app combined with resource server)
+* Flow - you app redirect you to your IdP, where you accept that app would authenticate you with this IdP. Then you get redirected back to app with access token in url.
+From here app use this token to authenticate you and to get some information (defined by allow scopes) from your IdP. This is called implicit flow cause all communication is done through browser.
 
-
-
+To work with oath2 in spring you should add to your `pom.xml` this dependency
+```
+<dependency>
+    <groupId>org.springframework.security.oauth</groupId>
+    <artifactId>spring-security-oauth2</artifactId>
+    <version>2.5.0.RELEASE</version>
+</dependency>
+```
+The main class is `ResourceServerConfigurerAdapter`, so you extends your oath2 security config class from this class and override `configure(HttpSecurity http)` method.
 
 
 
