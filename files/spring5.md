@@ -5810,10 +5810,10 @@ getById(28) =>DepartmentModel(id=28, name=finance, type=my)
 deleteById(28) => true
 ```
 
-There are several implementations of `DataSource`
-* `SimpleDriverDataSource` (pooled, so you can use it only for testing purpose.) - Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi. We should set driver class with `setDriverClass`.
+There are 3 implementations of `DataSource` (all of them are not connection pools, so you can use it only for testing purpose and never in production)
 * `DriverManagerDataSource` - Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call. We can set just driver class name with `setDriverClassName`.
 * `SingleConnectionDataSource` - (extends `DriverManagerDataSource`, implement `SmartDataSource`) - use single connection without closing it
+* `SimpleDriverDataSource` - Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi. We should set driver class with `setDriverClass
 
 Although you can write your own implementation of `RowMapper` for each entity, if your db columns correspond to your model, you can
 use one of default impl like `BeanPropertyRowMapper`, or if you need to get a map (key - columns, value- values) you can use `ColumnMapRowMapper`.
