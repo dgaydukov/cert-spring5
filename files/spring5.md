@@ -8595,11 +8595,13 @@ interface MailTemplate{
 ###### 2 Security filters for 2 different urls
 When you add `spring-boot-starter-security` starter to your `pom.xml` all your urls automatically becomes secured.
 If you want to implement custom rules you should add class that extends from `WebSecurityConfigurerAdapter` and write your security rules there.
-But if you want to add cusotm filter to path you should add 2 security classes with `@Order`. Otherwise you would get unexpected behavior if you jusr write in one class
+But if you want to add custom filter to path you should add 2 security classes with `@Order`. Otherwise you would get unexpected behavior if you just write in one class
 ```
 http.mvcMatcher("/api/**").addFilterBefore(new CookieFilter(), BasicAuthenticationFilter.class);
 http.mvcMatcher("/internal/**").addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class);
 ```
+
+Spring docs also suggest to create [separate Spring Security @Configuration files](https://docs.spring.io/spring-security/site/docs/current/reference/html5/#multiple-httpsecurity)
 So below an example to implement 2 filters for 2 different pathes
 ```java
 import javax.servlet.Filter;
@@ -8760,12 +8762,107 @@ To work with oath2 in spring you should add to your `pom.xml` this dependency
 <dependency>
     <groupId>org.springframework.security.oauth</groupId>
     <artifactId>spring-security-oauth2</artifactId>
-    <version>2.5.0.RELEASE</version>
+    <version>2.3.8.RELEASE</version>
 </dependency>
 ```
+** Pay attention that starting form version 2.4.0 this whole package is considered [deprecated](https://stackoverflow.com/questions/59280271/authorizationserverconfigureradapter-is-deprecated).\
+
 The main class is `ResourceServerConfigurerAdapter`, so you extends your oath2 security config class from this class and override `configure(HttpSecurity http)` method.
+`@EnableResourceServer` convert your `ResourceServerConfigurer` into `WebSecurityConfigurerAdapter` with `@Order(3)`. It's done to separate security concern for oauth authentication.
+Here is example of oauth2.0 authentication service
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.config.annotation.configurers.ClientDetailsServiceConfigurer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.AuthorizationServerConfigurerAdapter;
+import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
+import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
+import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.token.TokenStore;
+import org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-** Pay attention that starting form version 2.4.0 this whole package is considered [deprecated](https://stackoverflow.com/questions/59280271/authorizationserverconfigureradapter-is-deprecated).
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Configuration
+@EnableResourceServer
+class ResourceServer extends ResourceServerConfigurerAdapter {
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+            .antMatchers("/api/**").hasRole("USER");
+    }
+}
+
+@Configuration
+@EnableAuthorizationServer
+class AuthorizationServer extends AuthorizationServerConfigurerAdapter {
+    @Bean
+    public TokenStore tokenStore() {
+        return new InMemoryTokenStore();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder(4);
+    }
+
+    @Override
+    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
+        clients
+            .inMemory()
+            .withClient("username")
+            .secret(passwordEncoder().encode("password"))
+            .authorities("ROLE_USER")
+            .scopes("all")
+            .authorizedGrantTypes("client_credentials")
+            .accessTokenValiditySeconds(3600)
+            .refreshTokenValiditySeconds(24 * 3600);
+    }
+    @Override
+    public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
+        endpoints.tokenStore(tokenStore());
+    }
+
+    /**
+     * fot method /oauth/check_token?token={access_token} to work
+     */
+    @Override
+    public void configure(AuthorizationServerSecurityConfigurer oauthServer) throws Exception {
+        oauthServer.checkTokenAccess("permitAll()");
+    }
+}
+
+@RestController
+class ApiController{
+    @GetMapping("/api/info")
+    public String getApiInfo(){
+        return "Api v1.0";
+    }
+}
+```
 
 
+```
+# get access token
+curl -u username:password -X POST localhost:8080/oauth/token?grant_type=client_credentials
 
+# validate token
+curl -u username:password -X POST localhost:8080/oauth/check_token?token={access_token}
+
+# get resource by token
+curl -H "Authorization: Bearer {access_token}" localhost:8080/api/info
+```
