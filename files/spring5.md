@@ -81,7 +81,8 @@
 * 8.19 [Custom Framework Impl](#custom-framework-impl)
 * 8.20 [Spring Design Patterns](#spring-design-patterns)
 * 8.20 [Spring Design Patterns](#spring-design-patterns)
-* 8.21 [Oauth2 and Spring Security](#oauth2-and-spring-security)
+* 8.21 [2 Security filters for 2 different urls](#2-security-filters-for-2-different-urls)
+* 8.22 [Oauth2 and Spring Security](#oauth2-and-spring-security)
 
 
 
@@ -8591,7 +8592,147 @@ interface MailTemplate{
 }
 ```
 
+###### 2 Security filters for 2 different urls
+When you add `spring-boot-starter-security` starter to your `pom.xml` all your urls automatically becomes secured.
+If you want to implement custom rules you should add class that extends from `WebSecurityConfigurerAdapter` and write your security rules there.
+But if you want to add cusotm filter to path you should add 2 security classes with `@Order`. Otherwise you would get unexpected behavior if you jusr write in one class
+```
+http.mvcMatcher("/api/**").addFilterBefore(new CookieFilter(), BasicAuthenticationFilter.class);
+http.mvcMatcher("/internal/**").addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class);
+```
+So below an example to implement 2 filters for 2 different pathes
+```java
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+public class App{
+    public static final String AUTH_COOKIE_NAME = "auth";
+    public static final String AUTH_COOKIE_VALUE = "admin";
+    public static final String AUTH_HEADER_NAME = "auth";
+    public static final String AUTH_HEADER_VALUE = "admin";
+
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Configuration
+@EnableWebSecurity
+class SecurityConfig {
+    @Order(1)
+    @Configuration
+    public class ApiSecurityConfig extends WebSecurityConfigurerAdapter {
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http.mvcMatcher("/api/**").addFilterBefore(new CookieFilter(), BasicAuthenticationFilter.class)
+                .authorizeRequests()
+                .anyRequest().authenticated();
+        }
+    }
+
+    @Order(2)
+    @Configuration
+    public class InternalSecurityConfig extends WebSecurityConfigurerAdapter {
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http.mvcMatcher("/internal/**").addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class)
+                .authorizeRequests()
+                .anyRequest().authenticated();
+        }
+    }
+}
+
+class HeaderFilter implements Filter{
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        System.out.println("HeaderFilter.doFilter");
+        String authToken = ((HttpServletRequest)req).getHeader(App.AUTH_HEADER_NAME);
+        if (App.AUTH_HEADER_VALUE.equals(authToken)) {
+            Authentication auth = new UsernamePasswordAuthenticationToken("user", null, List.of(()->"ROLE_INTERNAL_USER"));
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(auth);
+            SecurityContextHolder.setContext(context);
+        }
+        chain.doFilter(req, res);
+    }
+}
+
+class CookieFilter implements Filter{
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        System.out.println("CookieFilter.doFilter");
+        var authToken = Stream.ofNullable(((HttpServletRequest)req).getCookies())
+            .flatMap(Arrays::stream)
+            .filter(c -> App.AUTH_COOKIE_NAME.equals(c.getName()))
+            .map(Cookie::getValue)
+            .findFirst()
+            .orElse(null);
+        if (App.AUTH_COOKIE_VALUE.equals(authToken)) {
+            Authentication auth = new UsernamePasswordAuthenticationToken("user", null, List.of(()->"ROLE_API_USER"));
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(auth);
+            SecurityContextHolder.setContext(context);
+        }
+        /**
+         * if you put this inside if condition, user won't proceed further and will not see 403 Forbidden error
+         */
+        chain.doFilter(req, res);
+    }
+}
+
+
+@RestController
+class ApiController{
+    @GetMapping("/pub/info")
+    public String getPubInfo(){
+        return "Public info";
+    }
+
+    @GetMapping("/api/info")
+    public String getApiInfo(){
+        return "Api app";
+    }
+
+    @GetMapping("/internal/info")
+    public String getInternalInfo(){
+        return "Internal app";
+    }
+}
+```
+You can check it by running
+```
+curl localhost:8080/pub/info
+curl --cookie "auth=admin" localhost:8080/api/info
+curl -H "auth: admin" localhost:8080/internal/info
+```
+**Pay attention once you do `http.mvcMatcher("/api/**")` all logic from here is applied only to this url. All other urls by default stays open.
+That's why we don't need to explicitly add `.mvcMathcers("/pub/**").permitAll()`. It's already public.
 
 
 ###### Oauth2 and Spring Security
@@ -8623,6 +8764,8 @@ To work with oath2 in spring you should add to your `pom.xml` this dependency
 </dependency>
 ```
 The main class is `ResourceServerConfigurerAdapter`, so you extends your oath2 security config class from this class and override `configure(HttpSecurity http)` method.
+
+** Pay attention that starting form version 2.4.0 this whole package is considered [deprecated](https://stackoverflow.com/questions/59280271/authorizationserverconfigureradapter-is-deprecated).
 
 
 
