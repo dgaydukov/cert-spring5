@@ -8855,7 +8855,7 @@ class ApiController{
 }
 ```
 
-
+You can play by calling following commands.
 ```
 # get access token
 curl -u username:password -X POST localhost:8080/oauth/token?grant_type=client_credentials
@@ -8866,6 +8866,11 @@ curl -u username:password -X POST localhost:8080/oauth/check_token?token={access
 # get resource by token
 curl -H "Authorization: Bearer {access_token}" localhost:8080/api/info
 ```
+
+** Pay attention that classes `ResourceServerConfigurerAdapter` and `AuthorizationServerConfigurerAdapter`
+are for convenience purpose. You can build oauth service from scratch by creating controller+service that would
+generate token and adding `WebSecurityConfigurerAdapter` that would validate tokens. But basically this is what these 2 classes
+are doing, hiding all these boilerplate code.
 
 
 Since `ResourceServerConfigurerAdapter` in the end transforms into `WebSecurityConfigurerAdapter` with hardcoded order of 3, you can use it for security configuration.
