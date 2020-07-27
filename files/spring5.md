@@ -39,10 +39,11 @@
 * 3.14 [Controller's method params](#controllers-method-params)
 * 3.15 [RequestBodyAdvice/ResponseBodyAdvice and HandlerInterceptor](#requestbodyadviceresponsebodyadvice-and-handlerinterceptor)
 4.[Spring Security](#spring-security)
-* 4.1 [Http security](#http-security)
-* 4.2 [Aop security](#aop-security)
-* 4.3 [2 Security filters for 2 different urls](#2-security-filters-for-2-different-urls)
-* 4.4 [Oauth2 and Spring Security](#oauth2-and-spring-security)
+* 4.1 [Security Filters](#security-filters)
+* 4.2 [Http security](#http-security)
+* 4.3 [Aop security](#aop-security)
+* 4.4 [2 Security filters for 2 different urls](#2-security-filters-for-2-different-urls)
+* 4.5 [Oauth2](#oauth2)
 5. [DB](#db)
 * 5.1 [Spring JDBC](#spring-jdbc)
 * 5.2 [Hibernate](#hibernate)
@@ -4962,6 +4963,212 @@ afterCompletion => url=/, handler=com.example.spring5.MyController#handlePost(Pe
 ```
 
 #### Spring Security
+###### Security Filters
+There are 2 default https filters (you can also create your custom filter, for example to handle cookie or custom headers)
+* `BasicAuthenticationFilter` - authenticate user using `httpBasic`
+* `UsernamePasswordAuthenticationFilter` - authenticate user using `formLogin`
+
+
+`UserDetailsService` - used to retrieve user information by username and authenticate user
+* Convert your `UserDetails` object into `Authentication` object
+* You should add `BasicAuthenticationFilter` to chain of filters by adding `httpBasic()` to `HttpSecurity`
+* You should return `UserDetails` with valid username/password and spring will compare it with username/password form basic auth (extracted by `BasicAuthenticationFilter`)
+* You should use `@AuthenticationPrincipal` to populate `UserDetails` object
+* You can check app by calling `curl -u admin:admin localhost:8080/api/info`
+```java
+import java.util.List;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Configuration
+class SecurityConfig extends WebSecurityConfigurerAdapter{
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .authorizeRequests().anyRequest().authenticated()
+            .and().httpBasic()
+        ;
+    }
+
+    @Override
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(username->{
+            System.out.println("username => " + username);
+            return new User("admin", "{noop}admin", List.of(()->"ROLE_USER"));
+        });
+    }
+}
+
+@RestController
+class ApiController{
+    @GetMapping("/api/info")
+    public String getApiInfo(Authentication auth, @AuthenticationPrincipal UserDetails user){
+        System.out.println(auth);
+        System.out.println(user);
+        return "Api v2.0";
+    }
+}
+```
+```
+username => admin
+org.springframework.security.authentication.UsernamePasswordAuthenticationToken@b0315e81: Principal: org.springframework.security.core.userdetails.User@586034f: Username: admin; Password: [PROTECTED]; Enabled: true; AccountNonExpired: true; credentialsNonExpired: true; AccountNonLocked: true; Granted Authorities: com.example.spring5.SecurityConfig$$Lambda$1145/0x00000008409ce440@4a483774; Credentials: [PROTECTED]; Authenticated: true; Details: org.springframework.security.web.authentication.WebAuthenticationDetails@957e: RemoteIpAddress: 127.0.0.1; SessionId: null; Granted Authorities: com.example.spring5.SecurityConfig$$Lambda$1145/0x00000008409ce440@4a483774
+org.springframework.security.core.userdetails.User@586034f: Username: admin; Password: [PROTECTED]; Enabled: true; AccountNonExpired: true; credentialsNonExpired: true; AccountNonLocked: true; Granted Authorities: com.example.spring5.SecurityConfig$$Lambda$1145/0x00000008409ce440@4a483774
+```
+
+
+`AuthenticationProvider` - can authenticate your user
+* It uses `Authentication` object provided by `BasicAuthenticationFilter` (which extract username/password from basic auth credentials)
+* check `curl -u admin:admin localhost:8080/api/info`
+```java
+import java.util.List;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Configuration
+class SecurityConfig extends WebSecurityConfigurerAdapter{
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .authorizeRequests().anyRequest().authenticated()
+            .and().httpBasic()
+        ;
+    }
+
+    @Override
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        // when we are using AuthenticationProvider it overrides UserDetailsService
+        auth.authenticationProvider(new AuthenticationProvider() {
+            @Override
+            public Authentication authenticate(Authentication auth) throws AuthenticationException {
+                // here we have access to password
+                System.out.println("authenticate => " + auth.getPrincipal() + "/" + auth.getCredentials());
+                return new UsernamePasswordAuthenticationToken("admin", "admin", List.of(()->"ROLE_USER"));
+            }
+
+            @Override
+            public boolean supports(Class<?> cls) {
+                return true;
+            }
+        });
+    }
+}
+
+@RestController
+class ApiController{
+    @GetMapping("/api/info")
+    public String getApiInfo(Authentication auth){
+        // we don't have access to password here
+        System.out.println("/api/info => " + auth.getPrincipal() + "/" + auth.getCredentials());
+        return "Api v2.0";
+    }
+}
+```
+```
+authenticate => admin/admin
+/api/info => admin/null
+```
+
+
+Same example using `FormLogin`
+* First authenticate by `curl -v -X POST -F username=admin -F password=admin localhost:8080/login`
+* Then call api with cookie `curl --cookie "JSESSIONID={session_from_first_request}" localhost:8080/api/info`
+```java
+import java.util.List;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Configuration
+class SecurityConfig extends WebSecurityConfigurerAdapter{
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        // for simplicity we should disable csrf, cause we are testing from curl
+        http
+            .csrf().disable()
+            .authorizeRequests().anyRequest().authenticated()
+            .and().formLogin()
+        ;
+    }
+
+    @Override
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        // when we are using AuthenticationProvider it overrides UserDetailsService
+        auth.authenticationProvider(new AuthenticationProvider() {
+            @Override
+            public Authentication authenticate(Authentication auth) throws AuthenticationException {
+                // here we have access to password
+                System.out.println("authenticate => " + auth.getPrincipal() + "/" + auth.getCredentials());
+                return new UsernamePasswordAuthenticationToken("admin", "admin", List.of(()->"ROLE_USER"));
+            }
+
+            @Override
+            public boolean supports(Class<?> cls) {
+                return true;
+            }
+        });
+    }
+}
+
+@RestController
+class ApiController{
+    @GetMapping("/api/info")
+    public String getApiInfo(Authentication auth){
+        // we don't have access to password here
+        System.out.println("/api/info => " + auth.getPrincipal() + "/" + auth.getCredentials());
+        return "Api v2.0";
+    }
+}
+```
 
 ###### Http security
 Spring's `DelegatingFilterProxy` provides the link between `web.xml` (below) and the application context
@@ -5634,7 +5841,7 @@ curl -H "auth: admin" localhost:8080/internal/info
 That's why we don't need to explicitly add `.mvcMathcers("/pub/**").permitAll()`. It's already public.
 
 
-###### Oauth2 and Spring Security
+###### Oauth2
 Oauth (Open Authentication) - open standard (so it's not api or some service) for secured delegated access. There are 2 versions
 * Oauth 1.0 - old version, not used today
 * Oauth 2.0 - default version of today (so when someone says Oauth he probably means Oauth 2.0)
