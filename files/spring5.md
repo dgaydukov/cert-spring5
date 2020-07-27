@@ -5333,172 +5333,6 @@ public class App {
 springSecurityFilterChain => FilterChainProxy[Filter Chains: [[ any request, [org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@15ecde52, org.springframework.security.web.context.SecurityContextPersistenceFilter@770b5cd2, org.springframework.security.web.header.HeaderWriterFilter@6aed3675, org.springframework.security.web.csrf.CsrfFilter@e9c4c2d, org.springframework.security.web.authentication.logout.LogoutFilter@1175070a, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@51d5c50f, org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter@2b023506, org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter@3d39d68, org.springframework.security.web.authentication.www.BasicAuthenticationFilter@148f6fd5, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@295cb28f, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@34002c3d, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@401d9586, org.springframework.security.web.session.SessionManagementFilter@29a62c48, org.springframework.security.web.access.ExceptionTranslationFilter@9d3851, org.springframework.security.web.access.intercept.FilterSecurityInterceptor@2954b177]]]]
 ```
 
-There are 4 ways to specify user storage. For all of them you must create configuration class that implements `WebSecurityConfigurerAdapter`
-1. In-memory storage
-```java
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-
-@Configuration
-@EnableWebSecurity
-public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
-    @Override
-    public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.inMemoryAuthentication()
-            .withUser("user")
-            .password("user")
-            .authorities("ROLE_USER")
-        .and()
-            .withUser("admin")
-            .password("admin")
-            .authorities("ROLE_USER", "ROLE_ADMIN");
-    }
-}
-```
-
-2. Database storage
-```java
-import javax.sql.DataSource;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-@Configuration
-@EnableWebSecurity
-public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
-    @Autowired
-    private DataSource ds;
-
-    @Override
-    public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        /**
-         * If you don't want to store plain-text password in db you would better to
-         * use password encoder
-         */
-        PasswordEncoder encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
-
-        /**
-         * This expects you have table like this
-         * users
-         * username: string
-         * password: string
-         * enabled: boolean
-         *
-         * authorities
-         * username
-         * authority
-         */
-        auth.jdbcAuthentication().dataSource(ds).passwordEncoder(encoder);
-
-        /**
-         * You can also set your tables for this
-         */
-        auth.jdbcAuthentication()
-            .dataSource(ds)
-            .usersByUsernameQuery("select username, password, enabled from user_table where username=?")
-            .authoritiesByUsernameQuery("select username, authority from auth_table where username=?")
-            .passwordEncoder(encoder);
-
-    }
-}
-```
-
-3. LDAP server
-```java
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-
-@Configuration
-@EnableWebSecurity
-public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
-
-    @Override
-    public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        /**
-         * If you want to compare password not in plain-text in ldap you should add password encoder
-         * By default spring assume that ldap in localhost:33389
-         * If you have custom ldap you should add .contextSource().url("your_ldap_url")
-         */
-        auth.ldapAuthentication()
-            .userSearchFilter("user_id={0}")
-            .groupSearchFilter("member_id={0}")
-            .passwordCompare();
-    }
-}
-```
-
-4. Custom user service (it should be divided on 3 files, but I just give example in one file)
-```java
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.data.repository.CrudRepository;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
-
-import lombok.Data;
-
-@Data
-@Entity
-class UserEntity implements UserDetails {
-    @Id
-    @GeneratedValue
-    private int id;
-    private String username;
-    private String password;
-    private List<GrantedAuthority> authorities;
-    private boolean enabled;
-    private boolean accountNonExpired;
-    private boolean accountNonLocked;
-    private boolean credentialsNonExpired;
-}
-
-interface UserRepository extends CrudRepository<UserEntity, Integer>{
-    Optional<UserEntity> findByUsername(String username);
-}
-
-@Configuration
-@EnableWebSecurity
-public class SecurityJavaConfig extends WebSecurityConfigurerAdapter {
-    @Autowired
-    private UserRepository userRepository;
-
-    @Override
-    public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(username->{
-            var user = userRepository.findByUsername(username);
-            if (user.isEmpty()) {
-                throw new UsernameNotFoundException("Username `" + username + "` doesn't exist");
-            }
-            return user.get();
-        })
-        .passwordEncoder(PasswordEncoderFactories.createDelegatingPasswordEncoder());
-    }
-}
-```
-
-For every controller you can inject current user like `@AuthenticationPrincipal UserEntity entity`
-
-
 For servlet-based security we configure `HttpSecurity`, for reactive we configure `ServerHttpSecurity`.
 ```java
 package com.example.logic.ann.reactive;
@@ -5582,7 +5416,7 @@ class JavaConfig extends WebSecurityConfigurerAdapter {
     public void configure(HttpSecurity http) throws Exception {
         http
             .authorizeRequests()
-            .antMatchers("/public").permitAll()
+            .mvcMatchers("/public/**").permitAll()
             .anyRequest()
             .authenticated();
         http.addFilterBefore(new MyAuthFilter(), BasicAuthenticationFilter.class);
@@ -6048,7 +5882,7 @@ class AuthorizationServer extends AuthorizationServerConfigurerAdapter {
 class ApiController{
     @GetMapping("/api/info")
     public String getApiInfo(){
-        return "Api v1.0";
+        return "Api v2.0";
     }
 }
 ```
@@ -6158,7 +5992,7 @@ class HeaderFilter implements Filter {
 class ApiController{
     @GetMapping("/api/info")
     public String getApiInfo(){
-        return "Api v1.0";
+        return "Api v2.0";
     }
 }
 ```
@@ -6223,7 +6057,7 @@ class ResourceServer extends ResourceServerConfigurerAdapter {
 class ApiController{
     @GetMapping("/api/info")
     public String getApiInfo(){
-        return "Api v1.0";
+        return "Api v2.0";
     }
 }
 ```
