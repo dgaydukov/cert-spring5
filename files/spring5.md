@@ -28,8 +28,6 @@
     * 3.1.3 [Build .war file with Spring Boot](#build-war-file-with-spring-boot)
 * 3.2 [Spring Boot](#spring-boot)
 * 3.3 [Custom Filters](#custom-filters)
-* 3.4 [Http security](#http-security)
-* 3.5 [Aop security](#aop-security)
 * 3.6 [WebSocket API](#websocket-api)
 * 3.7 [Reactive WebFlux](#reactive-webflux)
 * 3.8 [Data Validation](#data-validation)
@@ -40,49 +38,51 @@
 * 3.13 [HandlerMapping, HandlerAdapter, HttpRequestHandler](#handlermapping-handleradapter-httprequesthandler)
 * 3.14 [Controller's method params](#controllers-method-params)
 * 3.15 [RequestBodyAdvice/ResponseBodyAdvice and HandlerInterceptor](#requestbodyadviceresponsebodyadvice-and-handlerinterceptor)
-4. [DB](#db)
-* 4.1 [Spring JDBC](#spring-jdbc)
-* 4.2 [Hibernate](#hibernate)
-* 4.3 [Spring Data](#spring-data)
-* 4.4 [JTA - java transaction API](#jta---java-transaction-api)
-* 4.5 [DataSource Interceptor and Sql query counter](#datasource-interceptor-and-sql-query-counter)
-* 4.6 [@DynamicUpdate/@DynamicInsert and @NamedEntityGraph](#datasource-interceptor-and-sql-query-counter)
-* 4.7 [Cascade types](#cascade-types)
-5. [Spring Testing](#spring-testing)
-* 5.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
-* 5.2 [OutputCaptureRule](#outputcapturerule)
-* 5.3 [TestExecutionListener](#testexecutionlistener)
-6. [Spring Monitoring](#spring-monitoring)
-* 6.1 [Jmx monitoring](#jmx-monitoring)
-* 6.2 [Spring Boot Actuator](#spring-boot-actuator)
-7. [Message Support](#message-support)
-* 7.1 [JMS](#jms)
-* 7.2 [AMQP (RabbitMQ)](#amqp-rabbitmq)
-* 7.3 [Kafka](#kafka)
-8. [Miscellaneous](#miscellaneous)
-* 8.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
-* 8.2 [Get param names](#get-param-names)
-* 8.3 [Pom vs Bom](#pom-vs-bom)
-* 8.4 [Spring Batch](#spring-batch)
-* 8.5 [Spring Integration](#spring-integration)
-* 8.6 [Spring XD](#spring-xd)
-* 8.7 [Spring DevTools](#spring-devtools)
-* 8.8 [JMS, AMQP, Kafka](#jms-amqp-kafka)
-* 8.9 [YML Autocompletion](#yml-autocompletion)
-* 8.10 [Spring Cloud](#spring-cloud)
-* 8.11 [Spring Utils](#spring-utils)
-* 8.12 [Spring Boot Logging](#spring-boot-logging)
-* 8.13 [Spring Caching](#spring-caching)
-* 8.14 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
-* 8.15 [Maven scope](#maven-scope)
-* 8.16 [Spring Boot Starter](#spring-boot-starter)
-* 8.17 [Spring Context Indexer](#spring-context-indexer)
-* 8.18 [SPEL - Spring Expression Language](#spel---spring-expression-language)
-* 8.19 [Custom Framework Impl](#custom-framework-impl)
-* 8.20 [Spring Design Patterns](#spring-design-patterns)
-* 8.20 [Spring Design Patterns](#spring-design-patterns)
-* 8.21 [2 Security filters for 2 different urls](#2-security-filters-for-2-different-urls)
-* 8.22 [Oauth2 and Spring Security](#oauth2-and-spring-security)
+4.[Spring Security](#spring-security)
+* 4.1 [Http security](#http-security)
+* 4.2 [Aop security](#aop-security)
+* 4.3 [2 Security filters for 2 different urls](#2-security-filters-for-2-different-urls)
+* 4.4 [Oauth2 and Spring Security](#oauth2-and-spring-security)
+5. [DB](#db)
+* 5.1 [Spring JDBC](#spring-jdbc)
+* 5.2 [Hibernate](#hibernate)
+* 5.3 [Spring Data](#spring-data)
+* 5.4 [JTA - java transaction API](#jta---java-transaction-api)
+* 5.5 [DataSource Interceptor and Sql query counter](#datasource-interceptor-and-sql-query-counter)
+* 5.6 [@DynamicUpdate/@DynamicInsert and @NamedEntityGraph](#datasource-interceptor-and-sql-query-counter)
+* 5.7 [Cascade types](#cascade-types)
+6. [Spring Testing](#spring-testing)
+* 6.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
+* 6.2 [OutputCaptureRule](#outputcapturerule)
+* 6.3 [TestExecutionListener](#testexecutionlistener)
+7. [Spring Monitoring](#spring-monitoring)
+* 7.1 [Jmx monitoring](#jmx-monitoring)
+* 7.2 [Spring Boot Actuator](#spring-boot-actuator)
+8. [Message Support](#message-support)
+* 8.1 [JMS](#jms)
+* 8.2 [AMQP (RabbitMQ)](#amqp-rabbitmq)
+* 8.3 [Kafka](#kafka)
+9. [Miscellaneous](#miscellaneous)
+* 9.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
+* 9.2 [Get param names](#get-param-names)
+* 9.3 [Pom vs Bom](#pom-vs-bom)
+* 9.4 [Spring Batch](#spring-batch)
+* 9.5 [Spring Integration](#spring-integration)
+* 9.6 [Spring XD](#spring-xd)
+* 9.7 [Spring DevTools](#spring-devtools)
+* 9.8 [JMS, AMQP, Kafka](#jms-amqp-kafka)
+* 9.9 [YML Autocompletion](#yml-autocompletion)
+* 9.10 [Spring Cloud](#spring-cloud)
+* 9.11 [Spring Utils](#spring-utils)
+* 9.12 [Spring Boot Logging](#spring-boot-logging)
+* 9.13 [Spring Caching](#spring-caching)
+* 9.14 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
+* 9.15 [Maven scope](#maven-scope)
+* 9.16 [Spring Boot Starter](#spring-boot-starter)
+* 9.17 [Spring Context Indexer](#spring-context-indexer)
+* 9.18 [SPEL - Spring Expression Language](#spel---spring-expression-language)
+* 9.19 [Custom Framework Impl](#custom-framework-impl)
+* 9.20 [Spring Design Patterns](#spring-design-patterns)
 
 
 
@@ -3939,10 +3939,1031 @@ public class FilterJavaConfig {
 ```
 
 
+###### WebSocket API
+To work with spring websocket we should add to `pom.xml`. Since we most likely to work with json it's better to add jackson library too
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-websocket</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-json</artifactId>
+    <version>2.2.6.RELEASE</version>
+</dependency>
+```
 
+Working example. This file should be places in `main/resources/static/ws.html` and it would be accessible on `http://localhost:8080/ws.html`
+
+`ws.html`
+```
+<html>
+    <body>
+        <h1>WebSocket Client</h1>
+        <input id="server" size="40" value="ws://localhost:8080/socket"/>
+        <br/>
+        <button id="connect">Connect</button>
+        <button id="disconnect">Disconnect</button>
+        <br/>
+        <br/>Message:
+        <input id="message" value=""/>
+        <button id="send">Send</button>
+        <br/>
+        <textarea id="chat" rows="10" cols="50"></textarea>
+    </body>
+</html>
+<script type="text/javascript">
+var socket;
+document.getElementById("connect").addEventListener("click", (event) => {
+    var url = document.getElementById("server").value;
+    console.log(`connecting to ${url}...`);
+    socket = new WebSocket(url);
+    socket.onopen = event => {
+        document.getElementById("chat").value = "CONNECTED";
+        socket.onmessage = event => {
+              console.log(event);
+              document.getElementById("chat").value=document.getElementById("chat").value + "\n" + event.data;
+            }
+        };
+});
+document.getElementById("disconnect").addEventListener("click", (event) => {
+    console.log("closing socket");
+    socket.close();
+});
+document.getElementById("send").addEventListener("click", (event) => {
+    socket.send(document.getElementById("message").value);
+    document.getElementById("message").value="";
+});
+</script>
+```
+
+`WsJavaConfig.java`
+```java
+package com.example.logic.ann.ws;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+@Configuration
+@EnableWebSocket
+public class WsJavaConfig implements WebSocketConfigurer {
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        /**
+         * By default only same url can access socket, if you want disable this add
+         * setAllowedOrigins("*") to addHandler
+         */
+        registry.addHandler(new TextWebSocketHandler(){
+            @Override
+            protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+                System.out.println("handleTextMessage => " + message);
+                session.sendMessage(new TextMessage("response => " + message.getPayload()));
+            }
+        }, "/socket");
+    }
+}
+```
+
+`App.java`
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+
+/**
+ * Since we have one pom.xml for all examples we exclude security so our socket
+ * is open, and no security filter blocking us
+ * otherwise we won't be able to open localhost:8080/ws.html (would be redirected to login page)
+ */
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
+@ComponentScan("com.example.logic.ann.ws")
+public class App {
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+```
+
+If `WebSocket` is not supported by browser we call fallback to SockJs. For client take a [sockjs](https://github.com/sockjs/sockjs-client#getting-started).
+For server add this `withSockJS()` to `registry.addHandler().`
+
+
+
+###### Reactive WebFlux
+For java reactive api there are 4 nested interfaces in  `java.util.concurrent.Flow` class. `Publisher` produces data that it sends to a `Subscriber` per a `Subscription`. And `Processor` is both publisher & subscriber to create pipes.
+Since in java we have only interfaces of reactive, you should use either Reactor (spring use it) or RxJava
+Here is short example to compare Reactor with Java Stream/Optional
+```java
+import java.util.Optional;
+import java.util.stream.Stream;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+public class App {
+    public static void main(String[] args) {
+        String name = "mike";
+        /**
+         * Reactor Mono is equivalent to java Optional
+         */
+        Mono.just(name).map(String::toUpperCase).map(n->"Hello, "+n).subscribe(System.out::println);
+        Optional.of(name).map(String::toUpperCase).map(n->"Hello, "+n).ifPresent(System.out::println);
+
+        /**
+         * Reactor Flux is equivalent to java Stream
+         */
+        Stream.of(1,2,3).filter(i->i%2==0).map(i->i*2).forEach(System.out::println);
+        Flux.just(1,2,3).filter(i->i%2==0).map(i->i*2).subscribe(System.out::println);
+    }
+}
+```
+
+Useful functions:
+* `fromArray/fromIterable/fromStream` to consume array/list/stream
+* `range(to, from)` (from value is inclusive) to generate flow of data.
+* `mergeWith` - combine flux with another (`concat` in stream api)
+* `zip` - combine flux with another and produce tuples (where one element from first flux, another from second) - so you can handle both flux at the same time (no alternative in stream api)
+* `skip` - skip first n elements (`skip` in stream api)
+* `take` - take first n elements (`take` in stream api)
+* `filter` - filter elements based on Predicate (`filter` in stream api)
+* `distinct` - filter only distinct elements (`distinct` in stream api)
+* `map/flatMap` - transform value (`map/flatMap` in stream api)
+* `subscribe` - terminal operation (`forEach` in stream api)
+* `subscribeOn` - how we should handle flow (takes `reactor.core.scheduler.Scheduler`, usually from `Schedulers` you call `single/immediate/parallel`)
+* `buffer` - create buffers of size n `Flux<List<T>>` (kind of `collect` in stream api)
+* `collectList` - create `Mono<List<T>>` (`collect(Collectors.toList())` in stream api)
+* `collectMap` - create `Mono<Map<K, V>>` (`collect(Collectors.toMap())` in stream api)
+* `all` - take predicate, verify that all elements comply to it (`allMatch` in stream api)
+* `yan` - take predicate, verify that at least one element comply to it (`anyMatch` in stream api)
+
+
+
+To use project Reactor you should add to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-webflux</artifactId>
+</dependency>
+```
+
+Basic syntax
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+
+public class App {
+    public static void main(String[] args) {
+        List<Integer> list = new ArrayList<>(List.of(1,2,3));
+        Flux<Integer> flux = Flux.just(1,2,3);
+        Flux<Integer> flux2 = Flux.fromIterable(list);
+
+        Mono<Integer> mono = Mono.just(1);
+    }
+}
+```
+
+
+If you want to work with reactive spring data, your repo should extends from `ReactiveCrudRepository` where all calls return `Flux/Mono`. Notice that only cassandra and mongodb support true reactive programming.
+Controller stay the same, but it returns not values but also Flux/Mono, and media type should be `MediaType.TEXT_EVENT_STREAM_VALUE` (server will create a response with `Content-Type: text/event-stream`).
+Relational databases don't support reactive, due to blocking nature of `JDBC`. Although you can use `ReactiveCrudRepository` for relational db, it just wrap all calls to `JDBC` into `Flux/Mono`.
+
+To work with cassandra you should add to your `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-cassandra-reactive</artifactId>
+</dependency>
+```
+For both mongo & cassandra we have reactive as well as non-reactive starters.
+
+
+You can also use functional controllers. The idea is not to use annotation, but instead create beans with type `RouterFunction` and return routes there.
+For this to work you should remove `spring-boot-starter-web` from `pom.xml`, or exclude tomcat from it.
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.ServerResponse;
+
+import static org.springframework.web.reactive.function.server.RouterFunctions.route;
+import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
+import static org.springframework.web.reactive.function.server.ServerResponse.ok;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Configuration
+public class MyFunctionalController {
+    @Bean
+    RouterFunction<ServerResponse> routes() {
+        return route(GET("/employee"), req -> ok().body(Flux.just("a", "b"), String.class))
+                .and(route(GET("/employee/{id}"), req -> ok().body(Mono.just("a"), String.class)));
+    }
+}
+```
+
+When you add `webflux` starter, it also add `Reactor IPC` to work with reactive servers like `ne.tty` (framework for asynchronous operations)
+Comparing to tomcat, which for every request create new thread and block it until work is done netty has 1 process, when it get request it use ChannelOperation to pass request to `DispatcherHandler` which pass request to spring controllers.
+When controller done his work, it calls publisher to `ChannelOperation` where subscribe is called and netty returns result.
+
+
+###### Data Validation
+`@Valid` vs. `@Validated`. They work the same, but `@Validated` can be useful when you have multiple step validation and in each step you want to validate some of fields of your model
+```java
+import javax.validation.constraints.Email;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Controller
+@RequestMapping("/account")
+public class MyController {
+    @PostMapping("/step1")
+    public void stepOne(@Validated(Account.Step1.class) Account account) {}
+
+    @PostMapping("/step2")
+    public void stepTwo(@Validated(Account.Step2.class) Account account) {}
+}
+
+class Account {
+    public static class Step1{}
+    public static class Step2{}
+
+    @NotBlank(groups = {Step1.class})
+    private String username;
+
+    @Email(groups = {Step1.class})
+    @NotBlank(groups = {Step1.class})
+    private String email;
+
+    @NotBlank(groups = {Step2.class})
+    @Min(value = 8, groups = {Step2.class})
+    private String password;
+
+    @NotBlank(groups = {Step2.class})
+    private String confirmedPassword;
+}
+```
+
+Example with controller, model and validator
+`Employee.java`
+```java
+package com.example.logic.ann.validation;
+
+import javax.validation.constraints.Digits;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+import org.hibernate.validator.constraints.CreditCardNumber;
+
+import lombok.Data;
+
+@Data
+public class Employee {
+    // NotNull - only for objects
+    @NotNull(message = "Id can't be null")
+    private String id;
+
+    @NotBlank(message = "Name can't be empty")
+    @Size(min = 3, max = 5, message = "Name should be between 3 and 5 letters")
+    private String name;
+
+    @CreditCardNumber(message = "Credit card should be correct")
+    private String cardNumber;
+
+    @Digits(integer = 3, fraction = 0, message = "Ccv should be exactly 3 digits")
+    private String ccv;
+}
+```
+`EmployeeValidator.java`
+```java
+package com.example.logic.ann.validation;
+
+import org.springframework.stereotype.Component;
+import org.springframework.validation.Errors;
+import org.springframework.validation.Validator;
+
+@Component
+public class EmployeeValidator implements Validator {
+    @Override
+    public boolean supports(Class<?> cls) {
+        return cls == Employee.class;
+    }
+
+    @Override
+    public void validate(Object obj, Errors err) {
+        Employee emp = (Employee) obj;
+        if ("Jack".equals(emp.getName())) {
+            err.reject("name", "`Jack` is a bad choice");
+        }
+    }
+}
+```
+`MyController.java`
+```java
+package com.example.logic.ann.validation;
+
+import javax.validation.Valid;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.validation.Errors;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import lombok.RequiredArgsConstructor;
+
+@Controller
+@RequestMapping("/employee")
+@RequiredArgsConstructor
+public class MyController {
+    private final EmployeeValidator employeeValidator;
+
+    /**
+     * If we don't specify model to which apply validation, it would be applied to all methods in controller
+     */
+    @InitBinder("employee")
+    public void addValidation(WebDataBinder binder) {
+        binder.addValidators(employeeValidator);
+    }
+
+
+    /**
+     * If we don't put errors as second param - exception would be thrown in case validation failed
+     */
+    @PostMapping
+    public ResponseEntity save(@RequestBody @Valid Employee emp, Errors err){
+        System.out.println(err);
+        if(err.hasErrors()) {
+            List<String> errors = err.getAllErrors().stream().map(e->e.getDefaultMessage()).collect(Collectors.toList());
+            return new ResponseEntity<>(Map.of("object", emp, "errors", errors), HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(emp, HttpStatus.OK);
+    }
+}
+```
+Run
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
+@ComponentScan("com.example.logic.ann.validation")
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+```
+
+
+###### HATEOAS - Hypermedia as the Engine of Application State
+HATEOAS (Hypermedia as the Engine of Application State) - when response return also other possible resources, and you don't need to hardcode them in client side. Add this to `pom.xml`
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifact`Id>spring-boot-starter-hateoas</artifactId>
+</dependency>
+```
+
+Data model should be extended from `RepresentationModel`
+```java
+package com.example.logic.ann.hateoas;
+
+import org.springframework.hateoas.RepresentationModel;
+import org.springframework.hateoas.server.core.Relation;
+
+import lombok.Data;
+
+@Data
+@Relation(value="person", collectionRelation="people")
+public class Person extends RepresentationModel<Person> {
+    private int id;
+    private String name;
+    private String email;
+    private String phone;
+}
+```
+Controller
+```java
+package com.example.logic.ann.hateoas;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+
+import javax.annotation.PostConstruct;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/person")
+public class MyController {
+    private List<Person> persons = new ArrayList<>();
+
+    @PostConstruct
+    public void init(){
+        Person p = new Person();
+        p.setId(1);
+        p.setName("John");
+        p.setEmail("john@mail.com");
+        p.setPhone("+123456789");
+        persons.add(p);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Person>> getPersons(){
+        persons.forEach(this::addLinks);
+        return new ResponseEntity<>(persons, HttpStatus.OK);
+    }
+
+    @PostMapping
+    public ResponseEntity<Person> addPerson(@RequestBody Person person){
+        persons.add(person);
+        return new ResponseEntity<>(person, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Person> getPerson(@PathVariable int id) {
+        Optional<Person> person = persons.stream().filter(p->p.getId()==id).findFirst();
+        person.ifPresent(this::addLinks);
+        return new ResponseEntity<>(person.orElse(null), HttpStatus.OK);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Person> updatePerson(@PathVariable int id, @RequestBody Person person) {
+        Optional<Person> current = persons.stream().filter(p->p.getId()==id).findFirst();
+        if (current.isEmpty()) {
+            return new ResponseEntity<>(person, HttpStatus.NOT_FOUND);
+        }
+        persons.removeIf(p->p.getId()==id);
+        persons.add(person);
+        return new ResponseEntity<>(person, HttpStatus.ACCEPTED);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity deletePerson(@PathVariable int id) {
+        persons.removeIf(p->p.getId()==id);
+        return new ResponseEntity<>(null, HttpStatus.NO_CONTENT);
+    }
+
+    private void addLinks(Person p){
+        p.add(linkTo(MyController.class).withRel("persons"));
+        p.add(linkTo(MyController.class).withRel("addPerson"));
+        p.add(linkTo(MyController.class).slash(p.getId()).withRel("getPerson"));
+        p.add(linkTo(MyController.class).slash(p.getId()).withRel("updatePerson"));
+        p.add(linkTo(MyController.class).slash(p.getId()).withRel("deletePerson"));
+    }
+}
+```
+Response 
+```
+[
+    {
+        "id": 1,
+        "name": "John",
+        "email": "john@mail.com",
+        "phone": "+123456789",
+        "links": [
+            {
+                "rel": "persons",
+                "href": "http://localhost:8080/person"
+            },
+            {
+                "rel": "addPerson",
+                "href": "http://localhost:8080/person"
+            },
+            {
+                "rel": "getPerson",
+                "href": "http://localhost:8080/person/1"
+            },
+            {
+                "rel": "updatePerson",
+                "href": "http://localhost:8080/person/1"
+            },
+            {
+                "rel": "deletePerson",
+                "href": "http://localhost:8080/person/1"
+            }
+        ]
+    }
+]
+```
+
+
+###### RestTemplate and WebClient
+`org.springframework.web.client.RestTemplate` - synchronous web client to interact with REST (Representational state transfer) API
+`org.springframework.web.reactive.function.client.WebClient` - reactive asynchronous web client to interact with REST API
+
+
+`RestTemplate` just like `JdbcTemplate` frees you from low level http boiler-place (create client, send request, handle response ...).
+It automatically encodes passed url so `http://test.com/my list` => would be encoded into `my%20list`. 
+3 examples to get object. 
+```java
+package com.example.logic.ann.hateoas;
+
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+
+public class RestApiCall {
+    public void getForObject(){
+        RestTemplate rt = new RestTemplate();
+        int id = 1;
+        Person p1 = rt.getForObject("http://localhost:8080/person/{id}", Person.class, id);
+        Person p2 = rt.getForObject("http://localhost:8080/person/{id}", Person.class, Map.of("id", id));
+        Person p3 = rt.getForObject("http://localhost:8080/person/1", Person.class);
+    }
+    
+    public void getForEntity(){
+        RestTemplate rt = new RestTemplate();
+        int id = 1;
+        ResponseEntity<Person> p1 = rt.getForEntity("http://localhost:8080/person/{id}", Person.class, id);
+        ResponseEntity<Person> p2 = rt.getForEntity("http://localhost:8080/person/{id}", Person.class, Map.of("id", id));
+        ResponseEntity<Person> p3 = rt.getForEntity("http://localhost:8080/person/1", Person.class);
+    }
+}
+```
+
+If you have api with hypermedia (hateoas) you can use [traverson](https://github.com/traverson/traverson)
+```
+Traverson traverson = new Traverson(URI.create("http://localhost:8080/api"), MediaTypes.HAL_JSON);
+```
+
+
+
+
+###### Custom HttpMessageConverter
+When we receive request with `Content-type` header, we must parse it according to this content-type.
+And when we send response, we should send it according to `Accept` header. 
+To convert between java objects and response/request body we must use `HttpMessageConverter`.
+Here a quick example how to implement custom converter. We implement 2 methods - one for handle request payload, other to convert response body
+```java
+package com.example.logic.ann.web;
+
+import org.springframework.http.HttpInputMessage;
+import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.AbstractHttpMessageConverter;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.converter.HttpMessageNotWritableException;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Scanner;
+
+public class MyHMC extends AbstractHttpMessageConverter<Person> {
+    public MyHMC(){
+        super(new MediaType("text", "person"));
+    }
+
+    @Override
+    protected boolean supports(Class<?> cls) {
+        return cls == Person.class;
+    }
+
+    @Override
+    protected Person readInternal(Class<? extends Person> cls, HttpInputMessage input) throws IOException, HttpMessageNotReadableException {
+        try(Scanner scanner = new Scanner(input.getBody())) {
+            Person p = new Person();
+            String[] arr = scanner.next().split("/");
+            p.setAge(Integer.parseInt(arr[0]));
+            p.setName(arr[1]);
+            return p;
+        }
+    }
+
+    @Override
+    protected void writeInternal(Person person, HttpOutputMessage output) throws IOException, HttpMessageNotWritableException {
+        try(OutputStream stream = output.getBody()){
+            stream.write(person.toString().getBytes());
+        }
+    }
+}
+```
+
+We should also register it as custom converter in config file
+```java
+package com.example.logic.ann.web;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.List;
+
+@Configuration
+public class WebJavaConfig implements WebMvcConfigurer {
+    /**
+     * You can register new HttpMessageConverter by either addging a Bean
+     * or overriding configureMessageConverters
+     */
+    @Bean
+    public HttpMessageConverter<Person> httpMessageConverter(){
+        return new MyHMC();
+    }
+
+    @Override
+    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+        converters.add(new MyHMC());
+    }
+}
+```
+
+Simple controller example
+```java
+package com.example.logic.ann.web;
+
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/person")
+public class MyController {
+    @GetMapping
+    public Person handleGet(){
+        Person p = new Person();
+        p.setAge(30);
+        p.setName("Jack");
+        return p;
+    }
+
+    @PostMapping
+    public Person handlePost( Person p){
+        System.out.println("handlePost => " + p);
+        return p;
+    }
+}
+```
+
+
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
+@ComponentScan("com.example.logic.ann.web")
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+```
+Now you can send 2 requests 
+```
+curl -H "Accept: text/person" http://localhost:8080/person
+curl -H "Content-Type: text/person" -d "30/Jack" http://localhost:8080/person
+```
+
+
+
+###### Spring ViewResolver
+`ViewResolver` - special interface to determine which view to show. There are several implementation:
+* `InternalResourceViewResolver extends UrlBasedViewResolver` - allows to set prefix & suffix to view name
+* `BeanNameViewResolver` - resolves views declared as beans
+
+
+
+###### HandlerMapping, HandlerAdapter, HttpRequestHandler
+* `HttpRequestHandler` - special interface to handle requests
+* `HandlerMapping` - define a mapping between request and `HandlerAdapter`
+* `HandlerAdapter` - handler that executed when some url called
+
+```java
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.HttpRequestHandler;
+
+@Configuration
+class JavaConfig{
+    @Bean(name = "/test")
+    public HttpRequestHandler httpRequestHandler(){
+        return (HttpServletRequest req, HttpServletResponse res) -> System.out.println("handle");
+    }
+}
+```
+You can go to `curl http://localhost:8080/test`.
+
+
+###### Controller's method params
+Method of controller can take following params
+* `HttpSession`
+* `HttpServletRequest` (or `ServletRequest` since it's super interface)
+* `HttpServletResponse` (or `ServletResponse` since it's super interface)
+```java
+package com.example.logic.ann.misc;
+
+import lombok.Data;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.context.request.WebRequest;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+@Controller
+@RequestMapping("/person")
+public class MyController {
+    @PostMapping
+    @ResponseBody
+    public Person postPerson(@RequestBody Person p, HttpServletRequest req, HttpServletResponse res, HttpSession session, WebRequest webReq){
+        System.out.println(req);
+        System.out.println(res);
+        System.out.println(session);
+        System.out.println(webReq);
+        System.out.println(p);
+        return p;
+    }
+}
+
+@Data
+class Person{
+    private int age;
+    private String name;
+}
+```
+```
+org.apache.catalina.connector.RequestFacade@3bf9b57e
+org.apache.catalina.connector.ResponseFacade@141ae951
+org.apache.catalina.session.StandardSessionFacade@28ebc7f6
+ServletWebRequest: uri=/person;client=127.0.0.1;session=FEF5F030027934B5366BF585FD50342D
+Person(age=30, name=Jack)
+```
+Send `curl -H "Content-type: application/json" -d 'ck"}' http://localhost:8080/person`
+
+To set return type of controller or method you can use `@ResponseStatus`.
+There are 2 ways to have map between your exceptions and http status codes. You can also add your own implementation of `HandlerExceptionResolver` or use one of the default to map exceptions to http statuses.
+You can also directly throw `ResponseStatusException`
+```java
+package com.example.logic.ann.misc;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/")
+public class MyController {
+    @GetMapping("/a")
+    public void handleGet(){
+        System.out.println("handleGet");
+        throw new MyException1();
+    }
+    @GetMapping("/b")
+    public void handleGet2(){
+        System.out.println("handleGet2");
+        throw new MyException2();
+    }
+}
+
+
+
+@ResponseStatus(value = HttpStatus.NOT_FOUND, reason = "oops 400")
+class MyException1 extends RuntimeException{}
+
+class MyException2 extends RuntimeException{}
+
+
+@ControllerAdvice
+class MyExceptionHandler{
+    @ExceptionHandler(MyException2.class)
+    public ResponseEntity<String> handleMyException2(){
+        System.out.println("handleException");
+        return new ResponseEntity<>("oops 400", HttpStatus.NOT_FOUND);
+    }
+}
+```
+`curl http://localhost:8080/a` => `{"timestamp":"2020-04-21T05:29:59.165+0000","status":404,"error":"Not Found","message":"oops 400","path":"/a"}`
+`curl http://localhost:8080/b` => `oops 400`
+* If you have `spring-boot-devtools` with `@ResponseStatus` or `ResponseStatusException` it will also include long trace into response
+
+`@MatrixVariable` - get path variables of special format like `;a=1;b=2;c=3;`
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.ene;
+import org.springframework.web.util.UrlPathHelper;
+
+@RestController
+@RequestMapping("/")
+public class MyController {
+    @GetMapping("/a/{pathId}/{matrixId}")
+    public void handleGet(@PathVariable String pathId, @RequestParam("id") String paramId, @MatrixVariable String matrixId){
+        System.out.println("pathId => " + pathId + ", paramId => " + paramId + ", matrixId => " + matrixId);
+    }
+}
+
+
+@Configuration
+class WebConfig implements WebMvcConfigurer {
+    @Override
+    public void configurePathMatch(PathMatchConfigurer configurer) {
+        UrlPathHelper urlPathHelper = new UrlPathHelper();
+        urlPathHelper.setRemoveSemicolonContent(false);
+        configurer.setUrlPathHelper(urlPathHelper);
+    }
+}
+```
+If we hit ` curl http://localhost:8080/a/1/matrixId=2?id=3` we got `pathId => 1, paramId => 3, matrixId => 2`
+
+
+
+
+###### RequestBodyAdvice/ResponseBodyAdvice and HandlerInterceptor
+These 3 interceptors allows to intercept request (both before and after controller's method execution) and add some custom logic like logging, modifiing headers/body, checking security and so on.
+As you will see by output `HandlerInterceptor` is not quite useful cause you can't get body from it.
+```java
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.concurrent.ThreadLocalRandom;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpInputMessage;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.lang.Nullable;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdvice;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+import lombok.Data;
+
+
+@SpringBootApplication(exclude = {ManagementWebSecurityAutoConfiguration.class, SecurityAutoConfiguration.class})
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@RestController
+@RequestMapping("/")
+class MyController{
+    @GetMapping
+    public String handleGet(){
+        return "handleGet => " + ThreadLocalRandom.current().nextInt();
+    }
+    @PostMapping
+    public Person handlePost(@RequestBody Person person){
+        System.out.println("handlePost => person=" + person);
+        return person;
+    }
+}
+
+@Data
+class Person{
+    String name;
+}
+
+@ControllerAdvice
+class MyRequestInterceptor implements RequestBodyAdvice {
+    @Override
+    public boolean supports(MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) {
+        return true;
+    }
+
+    @Override
+    public HttpInputMessage beforeBodyRead(HttpInputMessage msg, MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) throws IOException {
+        return msg;
+    }
+
+    @Override
+    public Object afterBodyRead(Object body, HttpInputMessage msg, MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) {
+        System.out.println("afterBodyRead => method=" + mp.getMethod().getName() + ", body=" + body);
+        return body;
+    }
+
+    @Override
+    public Object handleEmptyBody(Object body, HttpInputMessage msg, MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) {
+        System.out.println("handleEmptyBody => method=" + mp.getMethod().getName() + ", body=" + body);
+        return body;
+    }
+}
+
+@ControllerAdvice
+class MyResponseInterceptor implements ResponseBodyAdvice<Object>{
+    @Override
+    public boolean supports(MethodParameter mp, Class cls) {
+        return true;
+    }
+
+    @Override
+    public Object beforeBodyWrite(Object body, MethodParameter mp, MediaType mediaType, Class cls, ServerHttpRequest req, ServerHttpResponse res) {
+        System.out.println("handleEmptyBody => url=" + req.getURI() + ", method=" + mp.getMethod().getName() + ", body=" + body);
+        return body;
+    }
+}
+
+
+class MyInterceptor implements HandlerInterceptor{
+    @Override
+    public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) throws Exception {
+        System.out.println("preHandle => url=" + req.getRequestURI() + ", handler=" + handler);
+        return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest req, HttpServletResponse res, Object handler, @Nullable ModelAndView modelAndView) throws Exception {
+        System.out.println("postHandle => url=" + req.getRequestURI() + ", handler=" + handler);
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest req, HttpServletResponse res, Object handler, @Nullable Exception ex) throws Exception {
+        System.out.println("afterCompletion => url=" + req.getRequestURI() + ", handler=" + handler);
+    }
+}
+
+@Configuration
+class JavaConfig implements WebMvcConfigurer {
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new MyInterceptor());
+    }
+}
+```
+`curl http://localhost:8080`
+```
+preHandle => url=/, handler=com.example.spring5.MyController#handleGet()
+handleEmptyBody => url=http://localhost:8080/, method=handleGet, body=handleGet => 1827543397
+postHandle => url=/, handler=com.example.spring5.MyController#handleGet()
+afterCompletion => url=/, handler=com.example.spring5.MyController#handleGet()
+```
+
+`curl -H "Content-type: application/json" -d '{"name":"Jack"}' http://localhost:8080`
+```
+preHandle => url=/, handler=com.example.spring5.MyController#handlePost(Person)
+afterBodyRead => method=handlePost, body=Person(name=Jack)
+handlePost => person=Person(name=Jack)
+handleEmptyBody => url=http://localhost:8080/, method=handlePost, body=Person(name=Jack)
+postHandle => url=/, handler=com.example.spring5.MyController#handlePost(Person)
+afterCompletion => url=/, handler=com.example.spring5.MyController#handlePost(Person)
+```
+
+#### Spring Security
 
 ###### Http security
-
 Spring's `DelegatingFilterProxy` provides the link between `web.xml` (below) and the application context
 ```
 <filter>
@@ -4468,1036 +5489,384 @@ public class App{
 }
 ```
 
-
-
-###### WebSocket API
-To work with spring websocket we should add to `pom.xml`. Since we most likely to work with json it's better to add jackson library too
+###### 2 Security filters for 2 different urls
+When you add `spring-boot-starter-security` starter to your `pom.xml` all your urls automatically becomes secured.
+If you want to implement custom rules you should add class that extends from `WebSecurityConfigurerAdapter` and write your security rules there.
+But if you want to add custom filter to path you should add 2 security classes with `@Order`. Otherwise you would get unexpected behavior if you just write in one class
 ```
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-websocket</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-json</artifactId>
-    <version>2.2.6.RELEASE</version>
-</dependency>
+http.mvcMatcher("/api/**").addFilterBefore(new CookieFilter(), BasicAuthenticationFilter.class);
+http.mvcMatcher("/internal/**").addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class);
 ```
 
-Working example. This file should be places in `main/resources/static/ws.html` and it would be accessible on `http://localhost:8080/ws.html`
-
-`ws.html`
-```
-<html>
-    <body>
-        <h1>WebSocket Client</h1>
-        <input id="server" size="40" value="ws://localhost:8080/socket"/>
-        <br/>
-        <button id="connect">Connect</button>
-        <button id="disconnect">Disconnect</button>
-        <br/>
-        <br/>Message:
-        <input id="message" value=""/>
-        <button id="send">Send</button>
-        <br/>
-        <textarea id="chat" rows="10" cols="50"></textarea>
-    </body>
-</html>
-<script type="text/javascript">
-var socket;
-document.getElementById("connect").addEventListener("click", (event) => {
-    var url = document.getElementById("server").value;
-    console.log(`connecting to ${url}...`);
-    socket = new WebSocket(url);
-    socket.onopen = event => {
-        document.getElementById("chat").value = "CONNECTED";
-        socket.onmessage = event => {
-              console.log(event);
-              document.getElementById("chat").value=document.getElementById("chat").value + "\n" + event.data;
-            }
-        };
-});
-document.getElementById("disconnect").addEventListener("click", (event) => {
-    console.log("closing socket");
-    socket.close();
-});
-document.getElementById("send").addEventListener("click", (event) => {
-    socket.send(document.getElementById("message").value);
-    document.getElementById("message").value="";
-});
-</script>
-```
-
-`WsJavaConfig.java`
+Spring docs also suggest to create [separate Spring Security @Configuration files](https://docs.spring.io/spring-security/site/docs/current/reference/html5/#multiple-httpsecurity)
+So below an example to implement 2 filters for 2 different pathes
 ```java
-package com.example.logic.ann.ws;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.config.annotation.EnableWebSocket;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
-
-@Configuration
-@EnableWebSocket
-public class WsJavaConfig implements WebSocketConfigurer {
-    @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        /**
-         * By default only same url can access socket, if you want disable this add
-         * setAllowedOrigins("*") to addHandler
-         */
-        registry.addHandler(new TextWebSocketHandler(){
-            @Override
-            protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-                System.out.println("handleTextMessage => " + message);
-                session.sendMessage(new TextMessage("response => " + message.getPayload()));
-            }
-        }, "/socket");
-    }
-}
-```
-
-`App.java`
-```java
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
-
-/**
- * Since we have one pom.xml for all examples we exclude security so our socket
- * is open, and no security filter blocking us
- * otherwise we won't be able to open localhost:8080/ws.html (would be redirected to login page)
- */
-@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
-@ComponentScan("com.example.logic.ann.ws")
-public class App {
-    public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
-    }
-}
-```
-
-If `WebSocket` is not supported by browser we call fallback to SockJs. For client take a [sockjs](https://github.com/sockjs/sockjs-client#getting-started).
-For server add this `withSockJS()` to `registry.addHandler().`
-
-
-
-###### Reactive WebFlux
-
-For java reactive api there are 4 nested interfaces in  `java.util.concurrent.Flow` class. `Publisher` produces data that it sends to a `Subscriber` per a `Subscription`. And `Processor` is both publisher & subscriber to create pipes.
-Since in java we have only interfaces of reactive, you should use either Reactor (spring use it) or RxJava
-Here is short example to compare Reactor with Java Stream/Optional
-```java
-import java.util.Optional;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Stream;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-public class App {
-    public static void main(String[] args) {
-        String name = "mike";
-        /**
-         * Reactor Mono is equivalent to java Optional
-         */
-        Mono.just(name).map(String::toUpperCase).map(n->"Hello, "+n).subscribe(System.out::println);
-        Optional.of(name).map(String::toUpperCase).map(n->"Hello, "+n).ifPresent(System.out::println);
-
-        /**
-         * Reactor Flux is equivalent to java Stream
-         */
-        Stream.of(1,2,3).filter(i->i%2==0).map(i->i*2).forEach(System.out::println);
-        Flux.just(1,2,3).filter(i->i%2==0).map(i->i*2).subscribe(System.out::println);
-    }
-}
-```
-
-Useful functions:
-* `fromArray/fromIterable/fromStream` to consume array/list/stream
-* `range(to, from)` (from value is inclusive) to generate flow of data.
-* `mergeWith` - combine flux with another (`concat` in stream api)
-* `zip` - combine flux with another and produce tuples (where one element from first flux, another from second) - so you can handle both flux at the same time (no alternative in stream api)
-* `skip` - skip first n elements (`skip` in stream api)
-* `take` - take first n elements (`take` in stream api)
-* `filter` - filter elements based on Predicate (`filter` in stream api)
-* `distinct` - filter only distinct elements (`distinct` in stream api)
-* `map/flatMap` - transform value (`map/flatMap` in stream api)
-* `subscribe` - terminal operation (`forEach` in stream api)
-* `subscribeOn` - how we should handle flow (takes `reactor.core.scheduler.Scheduler`, usually from `Schedulers` you call `single/immediate/parallel`)
-* `buffer` - create buffers of size n `Flux<List<T>>` (kind of `collect` in stream api)
-* `collectList` - create `Mono<List<T>>` (`collect(Collectors.toList())` in stream api)
-* `collectMap` - create `Mono<Map<K, V>>` (`collect(Collectors.toMap())` in stream api)
-* `all` - take predicate, verify that all elements comply to it (`allMatch` in stream api)
-* `yan` - take predicate, verify that at least one element comply to it (`anyMatch` in stream api)
-
-
-
-To use project Reactor you should add to your `pom.xml`
-```
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-webflux</artifactId>
-</dependency>
-```
-
-Basic syntax
-```java
-import java.util.ArrayList;
-import java.util.List;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-
-public class App {
-    public static void main(String[] args) {
-        List<Integer> list = new ArrayList<>(List.of(1,2,3));
-        Flux<Integer> flux = Flux.just(1,2,3);
-        Flux<Integer> flux2 = Flux.fromIterable(list);
-
-        Mono<Integer> mono = Mono.just(1);
-    }
-}
-```
-
-
-If you want to work with reactive spring data, your repo should extends from `ReactiveCrudRepository` where all calls return `Flux/Mono`. Notice that only cassandra and mongodb support true reactive programming.
-Controller stay the same, but it returns not values but also Flux/Mono, and media type should be `MediaType.TEXT_EVENT_STREAM_VALUE` (server will create a response with `Content-Type: text/event-stream`).
-Relational databases don't support reactive, due to blocking nature of `JDBC`. Although you can use `ReactiveCrudRepository` for relational db, it just wrap all calls to `JDBC` into `Flux/Mono`.
-
-To work with cassandra you should add to your `pom.xml`
-```
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-cassandra-reactive</artifactId>
-</dependency>
-```
-For both mongo & cassandra we have reactive as well as non-reactive starters.
-
-
-You can also use functional controllers. The idea is not to use annotation, but instead create beans with type `RouterFunction` and return routes there.
-For this to work you should remove `spring-boot-starter-web` from `pom.xml`, or exclude tomcat from it.
-```java
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.reactive.function.server.RouterFunction;
-import org.springframework.web.reactive.function.server.ServerResponse;
-
-import static org.springframework.web.reactive.function.server.RouterFunctions.route;
-import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
-import static org.springframework.web.reactive.function.server.ServerResponse.ok;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-@Configuration
-public class MyFunctionalController {
-    @Bean
-    RouterFunction<ServerResponse> routes() {
-        return route(GET("/employee"), req -> ok().body(Flux.just("a", "b"), String.class))
-                .and(route(GET("/employee/{id}"), req -> ok().body(Mono.just("a"), String.class)));
-    }
-}
-```
-
-When you add `webflux` starter, it also add `Reactor IPC` to work with reactive servers like `ne.tty` (framework for asynchronous operations)
-Comparing to tomcat, which for every request create new thread and block it until work is done netty has 1 process, when it get request it use ChannelOperation to pass request to `DispatcherHandler` which pass request to spring controllers.
-When controller done his work, it calls publisher to `ChannelOperation` where subscribe is called and netty returns result.
-
-
-###### Data Validation
-`@Valid` vs. `@Validated`. They work the same, but `@Validated` can be useful when you have multiple step validation and in each step you want to validate some of fields of your model
-```java
-import javax.validation.constraints.Email;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
-
-import org.springframework.stereotype.Controller;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-@Controller
-@RequestMapping("/account")
-public class MyController {
-    @PostMapping("/step1")
-    public void stepOne(@Validated(Account.Step1.class) Account account) {}
-
-    @PostMapping("/step2")
-    public void stepTwo(@Validated(Account.Step2.class) Account account) {}
-}
-
-class Account {
-    public static class Step1{}
-    public static class Step2{}
-
-    @NotBlank(groups = {Step1.class})
-    private String username;
-
-    @Email(groups = {Step1.class})
-    @NotBlank(groups = {Step1.class})
-    private String email;
-
-    @NotBlank(groups = {Step2.class})
-    @Min(value = 8, groups = {Step2.class})
-    private String password;
-
-    @NotBlank(groups = {Step2.class})
-    private String confirmedPassword;
-}
-```
-
-Example with controller, model and validator
-`Employee.java`
-```java
-package com.example.logic.ann.validation;
-
-import javax.validation.constraints.Digits;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
-
-import org.hibernate.validator.constraints.CreditCardNumber;
-
-import lombok.Data;
-
-@Data
-public class Employee {
-    // NotNull - only for objects
-    @NotNull(message = "Id can't be null")
-    private String id;
-
-    @NotBlank(message = "Name can't be empty")
-    @Size(min = 3, max = 5, message = "Name should be between 3 and 5 letters")
-    private String name;
-
-    @CreditCardNumber(message = "Credit card should be correct")
-    private String cardNumber;
-
-    @Digits(integer = 3, fraction = 0, message = "Ccv should be exactly 3 digits")
-    private String ccv;
-}
-```
-`EmployeeValidator.java`
-```java
-package com.example.logic.ann.validation;
-
-import org.springframework.stereotype.Component;
-import org.springframework.validation.Errors;
-import org.springframework.validation.Validator;
-
-@Component
-public class EmployeeValidator implements Validator {
-    @Override
-    public boolean supports(Class<?> cls) {
-        return cls == Employee.class;
-    }
-
-    @Override
-    public void validate(Object obj, Errors err) {
-        Employee emp = (Employee) obj;
-        if ("Jack".equals(emp.getName())) {
-            err.reject("name", "`Jack` is a bad choice");
-        }
-    }
-}
-```
-`MyController.java`
-```java
-package com.example.logic.ann.validation;
-
-import javax.validation.Valid;
-
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.validation.Errors;
-import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-import lombok.RequiredArgsConstructor;
-
-@Controller
-@RequestMapping("/employee")
-@RequiredArgsConstructor
-public class MyController {
-    private final EmployeeValidator employeeValidator;
-
-    /**
-     * If we don't specify model to which apply validation, it would be applied to all methods in controller
-     */
-    @InitBinder("employee")
-    public void addValidation(WebDataBinder binder) {
-        binder.addValidators(employeeValidator);
-    }
-
-
-    /**
-     * If we don't put errors as second param - exception would be thrown in case validation failed
-     */
-    @PostMapping
-    public ResponseEntity save(@RequestBody @Valid Employee emp, Errors err){
-        System.out.println(err);
-        if(err.hasErrors()) {
-            List<String> errors = err.getAllErrors().stream().map(e->e.getDefaultMessage()).collect(Collectors.toList());
-            return new ResponseEntity<>(Map.of("object", emp, "errors", errors), HttpStatus.BAD_REQUEST);
-        }
-        return new ResponseEntity<>(emp, HttpStatus.OK);
-    }
-}
-```
-Run
-```java
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
-
-@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
-@ComponentScan("com.example.logic.ann.validation")
-public class App{
-    public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
-    }
-}
-```
-
-
-###### HATEOAS - Hypermedia as the Engine of Application State
-HATEOAS (Hypermedia as the Engine of Application State) - when response return also other possible resources, and you don't need to hardcode them in client side. Add this to `pom.xml`
-```
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifact`Id>spring-boot-starter-hateoas</artifactId>
-</dependency>
-```
-
-Data model should be extended from `RepresentationModel`
-```java
-package com.example.logic.ann.hateoas;
-
-import org.springframework.hateoas.RepresentationModel;
-import org.springframework.hateoas.server.core.Relation;
-
-import lombok.Data;
-
-@Data
-@Relation(value="person", collectionRelation="people")
-public class Person extends RepresentationModel<Person> {
-    private int id;
-    private String name;
-    private String email;
-    private String phone;
-}
-```
-Controller
-```java
-package com.example.logic.ann.hateoas;
-
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-
-import javax.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@SpringBootApplication
+public class App{
+    public static final String AUTH_COOKIE_NAME = "auth";
+    public static final String AUTH_COOKIE_VALUE = "admin";
+    public static final String AUTH_HEADER_NAME = "auth";
+    public static final String AUTH_HEADER_VALUE = "admin";
+
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Configuration
+@EnableWebSecurity
+class SecurityConfig {
+    @Order(1)
+    @Configuration
+    public class ApiSecurityConfig extends WebSecurityConfigurerAdapter {
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http.mvcMatcher("/api/**").addFilterBefore(new CookieFilter(), BasicAuthenticationFilter.class)
+                .authorizeRequests()
+                .anyRequest().authenticated();
+        }
+    }
+
+    @Order(2)
+    @Configuration
+    public class InternalSecurityConfig extends WebSecurityConfigurerAdapter {
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http.mvcMatcher("/internal/**").addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class)
+                .authorizeRequests()
+                .anyRequest().authenticated();
+        }
+    }
+}
+
+class HeaderFilter implements Filter{
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        System.out.println("HeaderFilter.doFilter");
+        String authToken = ((HttpServletRequest)req).getHeader(App.AUTH_HEADER_NAME);
+        if (App.AUTH_HEADER_VALUE.equals(authToken)) {
+            Authentication auth = new UsernamePasswordAuthenticationToken("user", null, List.of(()->"ROLE_INTERNAL_USER"));
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(auth);
+            SecurityContextHolder.setContext(context);
+        }
+        chain.doFilter(req, res);
+    }
+}
+
+class CookieFilter implements Filter{
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        System.out.println("CookieFilter.doFilter");
+        var authToken = Stream.ofNullable(((HttpServletRequest)req).getCookies())
+            .flatMap(Arrays::stream)
+            .filter(c -> App.AUTH_COOKIE_NAME.equals(c.getName()))
+            .map(Cookie::getValue)
+            .findFirst()
+            .orElse(null);
+        if (App.AUTH_COOKIE_VALUE.equals(authToken)) {
+            Authentication auth = new UsernamePasswordAuthenticationToken("user", null, List.of(()->"ROLE_API_USER"));
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(auth);
+            SecurityContextHolder.setContext(context);
+        }
+        /**
+         * if you put this inside if condition, user won't proceed further and will not see 403 Forbidden error
+         */
+        chain.doFilter(req, res);
+    }
+}
+
+
 @RestController
-@RequestMapping("/person")
-public class MyController {
-    private List<Person> persons = new ArrayList<>();
-
-    @PostConstruct
-    public void init(){
-        Person p = new Person();
-        p.setId(1);
-        p.setName("John");
-        p.setEmail("john@mail.com");
-        p.setPhone("+123456789");
-        persons.add(p);
+class ApiController{
+    @GetMapping("/pub/info")
+    public String getPubInfo(){
+        return "Public info";
     }
 
-    @GetMapping
-    public ResponseEntity<List<Person>> getPersons(){
-        persons.forEach(this::addLinks);
-        return new ResponseEntity<>(persons, HttpStatus.OK);
+    @GetMapping("/api/info")
+    public String getApiInfo(){
+        return "Api app";
     }
 
-    @PostMapping
-    public ResponseEntity<Person> addPerson(@RequestBody Person person){
-        persons.add(person);
-        return new ResponseEntity<>(person, HttpStatus.CREATED);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Person> getPerson(@PathVariable int id) {
-        Optional<Person> person = persons.stream().filter(p->p.getId()==id).findFirst();
-        person.ifPresent(this::addLinks);
-        return new ResponseEntity<>(person.orElse(null), HttpStatus.OK);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Person> updatePerson(@PathVariable int id, @RequestBody Person person) {
-        Optional<Person> current = persons.stream().filter(p->p.getId()==id).findFirst();
-        if (current.isEmpty()) {
-            return new ResponseEntity<>(person, HttpStatus.NOT_FOUND);
-        }
-        persons.removeIf(p->p.getId()==id);
-        persons.add(person);
-        return new ResponseEntity<>(person, HttpStatus.ACCEPTED);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity deletePerson(@PathVariable int id) {
-        persons.removeIf(p->p.getId()==id);
-        return new ResponseEntity<>(null, HttpStatus.NO_CONTENT);
-    }
-
-    private void addLinks(Person p){
-        p.add(linkTo(MyController.class).withRel("persons"));
-        p.add(linkTo(MyController.class).withRel("addPerson"));
-        p.add(linkTo(MyController.class).slash(p.getId()).withRel("getPerson"));
-        p.add(linkTo(MyController.class).slash(p.getId()).withRel("updatePerson"));
-        p.add(linkTo(MyController.class).slash(p.getId()).withRel("deletePerson"));
+    @GetMapping("/internal/info")
+    public String getInternalInfo(){
+        return "Internal app";
     }
 }
 ```
-Response 
+You can check it by running
 ```
-[
-    {
-        "id": 1,
-        "name": "John",
-        "email": "john@mail.com",
-        "phone": "+123456789",
-        "links": [
-            {
-                "rel": "persons",
-                "href": "http://localhost:8080/person"
-            },
-            {
-                "rel": "addPerson",
-                "href": "http://localhost:8080/person"
-            },
-            {
-                "rel": "getPerson",
-                "href": "http://localhost:8080/person/1"
-            },
-            {
-                "rel": "updatePerson",
-                "href": "http://localhost:8080/person/1"
-            },
-            {
-                "rel": "deletePerson",
-                "href": "http://localhost:8080/person/1"
-            }
-        ]
-    }
-]
+curl localhost:8080/pub/info
+curl --cookie "auth=admin" localhost:8080/api/info
+curl -H "auth: admin" localhost:8080/internal/info
 ```
+**Pay attention once you do `http.mvcMatcher("/api/**")` all logic from here is applied only to this url. All other urls by default stays open.
+That's why we don't need to explicitly add `.mvcMathcers("/pub/**").permitAll()`. It's already public.
 
 
-###### RestTemplate and WebClient
-`org.springframework.web.client.RestTemplate` - synchronous web client to interact with REST (Representational state transfer) API
-`org.springframework.web.reactive.function.client.WebClient` - reactive asynchronous web client to interact with REST API
+###### Oauth2 and Spring Security
+Oauth (Open Authentication) - open standard (so it's not api or some service) for secured delegated access. There are 2 versions
+* Oauth 1.0 - old version, not used today
+* Oauth 2.0 - default version of today (so when someone says Oauth he probably means Oauth 2.0)
 
+SSO (Single Sing-on) - authentication into application using Identity Provider (app should trust IdP). You first authenticate into your IdP and get auth token. 
+Then app uses this token to verify your identity. This is basically Oauth, instead of giving username+password to app (so app would authenticate you in IdP)
+you request token from IdP and send this token to app with every request. App then verify that this token is valid by calling IdP.
 
-`RestTemplate` just like `JdbcTemplate` frees you from low level http boiler-place (create client, send request, handle response ...).
-It automatically encodes passed url so `http://test.com/my list` => would be encoded into `my%20list`. 
-3 examples to get object. 
+Oath include a few components
+* Scope - what app can do (allow scope) and what app can't do (deny scope). For example app can get email from IdP but can't get phone number.
+Big advantage that you can set time for which scope is valid. And also revoke app access in case you don't want this app to access your profile or run some actions on your behalf.
+* Actors:
+    * Resource Owner - user who has profile in IdP
+    * Resource Server - API that provides user's data
+    * Client - app that use Oath to access data from resource server
+    * Authorization Server - where token is generated and validated (usually can be a single app combined with resource server)
+* Flow - you app redirect you to your IdP, where you accept that app would authenticate you with this IdP. Then you get redirected back to app with access token in url.
+From here app use this token to authenticate you and to get some information (defined by allow scopes) from your IdP. This is called implicit flow cause all communication is done through browser.
+
+To work with oath2 in spring you should add to your `pom.xml` this dependency
+```
+<dependency>
+    <groupId>org.springframework.security.oauth</groupId>
+    <artifactId>spring-security-oauth2</artifactId>
+    <version>2.3.8.RELEASE</version>
+</dependency>
+```
+** Pay attention that starting form version 2.4.0 this whole package is considered [deprecated](https://stackoverflow.com/questions/59280271/authorizationserverconfigureradapter-is-deprecated).\
+
+The main class is `ResourceServerConfigurerAdapter`, so you extends your oath2 security config class from this class and override `configure(HttpSecurity http)` method.
+`@EnableResourceServer` convert your `ResourceServerConfigurer` into `WebSecurityConfigurerAdapter` with `@Order(3)`. It's done to separate security concern for oauth authentication.
+Here is example of oauth2.0 authentication service
 ```java
-package com.example.logic.ann.hateoas;
-
-import java.util.Map;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
-
-public class RestApiCall {
-    public void getForObject(){
-        RestTemplate rt = new RestTemplate();
-        int id = 1;
-        Person p1 = rt.getForObject("http://localhost:8080/person/{id}", Person.class, id);
-        Person p2 = rt.getForObject("http://localhost:8080/person/{id}", Person.class, Map.of("id", id));
-        Person p3 = rt.getForObject("http://localhost:8080/person/1", Person.class);
-    }
-    
-    public void getForEntity(){
-        RestTemplate rt = new RestTemplate();
-        int id = 1;
-        ResponseEntity<Person> p1 = rt.getForEntity("http://localhost:8080/person/{id}", Person.class, id);
-        ResponseEntity<Person> p2 = rt.getForEntity("http://localhost:8080/person/{id}", Person.class, Map.of("id", id));
-        ResponseEntity<Person> p3 = rt.getForEntity("http://localhost:8080/person/1", Person.class);
-    }
-}
-```
-
-If you have api with hypermedia (hateoas) you can use [traverson](https://github.com/traverson/traverson)
-```java
-Traverson traverson = new Traverson(URI.create("http://localhost:8080/api"), MediaTypes.HAL_JSON);
-```
-
-
-
-
-
-
-###### Custom HttpMessageConverter
-
-When we receive request with `Content-type` header, we must parse it according to this content-type.
-And when we send response, we should send it according to `Accept` header. 
-To convert between java objects and response/request body we must use `HttpMessageConverter`.
-Here a quick example how to implement custom converter. We implement 2 methods - one for handle request payload, other to convert response body
-```java
-package com.example.logic.ann.web;
-
-import org.springframework.http.HttpInputMessage;
-import org.springframework.http.HttpOutputMessage;
-import org.springframework.http.MediaType;
-import org.springframework.http.converter.AbstractHttpMessageConverter;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.http.converter.HttpMessageNotWritableException;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Scanner;
-
-public class MyHMC extends AbstractHttpMessageConverter<Person> {
-    public MyHMC(){
-        super(new MediaType("text", "person"));
-    }
-
-    @Override
-    protected boolean supports(Class<?> cls) {
-        return cls == Person.class;
-    }
-
-    @Override
-    protected Person readInternal(Class<? extends Person> cls, HttpInputMessage input) throws IOException, HttpMessageNotReadableException {
-        try(Scanner scanner = new Scanner(input.getBody())) {
-            Person p = new Person();
-            String[] arr = scanner.next().split("/");
-            p.setAge(Integer.parseInt(arr[0]));
-            p.setName(arr[1]);
-            return p;
-        }
-    }
-
-    @Override
-    protected void writeInternal(Person person, HttpOutputMessage output) throws IOException, HttpMessageNotWritableException {
-        try(OutputStream stream = output.getBody()){
-            stream.write(person.toString().getBytes());
-        }
-    }
-}
-```
-
-We should also register it as custom converter in config file
-```java
-package com.example.logic.ann.web;
-
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.config.annotation.configurers.ClientDetailsServiceConfigurer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.AuthorizationServerConfigurerAdapter;
+import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
+import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
+import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.token.TokenStore;
+import org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Configuration
+@EnableResourceServer
+class ResourceServer extends ResourceServerConfigurerAdapter {
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+            .antMatchers("/api/**").hasRole("USER");
+    }
+}
+
+@Configuration
+@EnableAuthorizationServer
+class AuthorizationServer extends AuthorizationServerConfigurerAdapter {
+    @Bean
+    public TokenStore tokenStore() {
+        return new InMemoryTokenStore();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder(4);
+    }
+
+    @Override
+    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
+        clients
+            .inMemory()
+            .withClient("username")
+            .secret(passwordEncoder().encode("password"))
+            .authorities("ROLE_USER")
+            .scopes("all")
+            .authorizedGrantTypes("client_credentials")
+            .accessTokenValiditySeconds(3600)
+            .refreshTokenValiditySeconds(24 * 3600);
+    }
+    @Override
+    public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
+        endpoints.tokenStore(tokenStore());
+    }
+
+    /**
+     * fot method /oauth/check_token?token={access_token} to work
+     */
+    @Override
+    public void configure(AuthorizationServerSecurityConfigurer oauthServer) throws Exception {
+        oauthServer.checkTokenAccess("permitAll()");
+    }
+}
+
+@RestController
+class ApiController{
+    @GetMapping("/api/info")
+    public String getApiInfo(){
+        return "Api v1.0";
+    }
+}
+```
+
+You can play by calling following commands.
+```
+# get access token
+curl -u username:password -X POST localhost:8080/oauth/token?grant_type=client_credentials
+
+# validate token
+curl -u username:password -X POST localhost:8080/oauth/check_token?token={access_token}
+
+# get resource by token
+curl -H "Authorization: Bearer {access_token}" localhost:8080/api/info
+```
+
+** Pay attention that classes `ResourceServerConfigurerAdapter` and `AuthorizationServerConfigurerAdapter`
+are for convenience purpose. You can build oauth service from scratch by creating controller+service that would
+generate token and adding `WebSecurityConfigurerAdapter` that would validate tokens. But basically this is what these 2 classes
+are doing, hiding all these boilerplate code.
+
+
+Since `ResourceServerConfigurerAdapter` in the end transforms into `WebSecurityConfigurerAdapter` with hardcoded order of 3, you can use it for security configuration.
+Although it's not logical error (cause it would be converted into `WebSecurityConfigurerAdapter`), it's more a semantical error, cause it's better to explicitly create security class
+
+```java
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+
+import java.io.IOException;
 import java.util.List;
 
-@Configuration
-public class WebJavaConfig implements WebMvcConfigurer {
-    /**
-     * You can register new HttpMessageConverter by either addging a Bean
-     * or overriding configureMessageConverters
-     */
-    @Bean
-    public HttpMessageConverter<Person> httpMessageConverter(){
-        return new MyHMC();
-    }
-
-    @Override
-    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        converters.add(new MyHMC());
-    }
-}
-```
-
-Simple controller example
-```java
-package com.example.logic.ann.web;
-
-import org.springframework.web.bind.annotation.*;
-
-@RestController
-@RequestMapping("/person")
-public class MyController {
-    @GetMapping
-    public Person handleGet(){
-        Person p = new Person();
-        p.setAge(30);
-        p.setName("Jack");
-        return p;
-    }
-
-    @PostMapping
-    public Person handlePost( Person p){
-        System.out.println("handlePost => " + p);
-        return p;
-    }
-}
-```
-
-
-```java
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
-
-@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
-@ComponentScan("com.example.logic.ann.web")
-public class App{
-    public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
-    }
-}
-```
-Now you can send 2 requests 
-```
-curl -H "Accept: text/person" http://localhost:8080/person
-curl -H "Content-Type: text/person" -d "30/Jack" http://localhost:8080/person
-```
-
-
-
-###### Spring ViewResolver
-`ViewResolver` - special interface to determine which view to show. There are several implementation:
-* `InternalResourceViewResolver extends UrlBasedViewResolver` - allows to set prefix & suffix to view name
-* `BeanNameViewResolver` - resolves views declared as beans
-
-
-
-###### HandlerMapping, HandlerAdapter, HttpRequestHandler
-* `HttpRequestHandler` - special interface to handle requests
-* `HandlerMapping` - define a mapping between request and `HandlerAdapter`
-* `HandlerAdapter` - handler that executed when some url called
-
-```java
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.HttpRequestHandler;
-
-@Configuration
-class JavaConfig{
-    @Bean(name = "/test")
-    public HttpRequestHandler httpRequestHandler(){
-        return (HttpServletRequest req, HttpServletResponse res) -> System.out.println("handle");
-    }
-}
-```
-You can go to `curl http://localhost:8080/test`.
-
-
-###### Controller's method params
-Method of controller can take following params
-* `HttpSession`
-* `HttpServletRequest` (or `ServletRequest` since it's super interface)
-* `HttpServletResponse` (or `ServletResponse` since it's super interface)
-```java
-package com.example.logic.ann.misc;
-
-import lombok.Data;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.context.request.WebRequest;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-@Controller
-@RequestMapping("/person")
-public class MyController {
-    @PostMapping
-    @ResponseBody
-    public Person postPerson(@RequestBody Person p, HttpServletRequest req, HttpServletResponse res, HttpSession session, WebRequest webReq){
-        System.out.println(req);
-        System.out.println(res);
-        System.out.println(session);
-        System.out.println(webReq);
-        System.out.println(p);
-        return p;
-    }
-}
-
-@Data
-class Person{
-    private int age;
-    private String name;
-}
-```
-```
-org.apache.catalina.connector.RequestFacade@3bf9b57e
-org.apache.catalina.connector.ResponseFacade@141ae951
-org.apache.catalina.session.StandardSessionFacade@28ebc7f6
-ServletWebRequest: uri=/person;client=127.0.0.1;session=FEF5F030027934B5366BF585FD50342D
-Person(age=30, name=Jack)
-```
-Send `curl -H "Content-type: application/json" -d 'ck"}' http://localhost:8080/person`
-
-To set return type of controller or method you can use `@ResponseStatus`.
-There are 2 ways to have map between your exceptions and http status codes. You can also add your own implementation of `HandlerExceptionResolver` or use one of the default to map exceptions to http statuses.
-You can also directly throw `ResponseStatusException`
-```java
-package com.example.logic.ann.misc;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-@RestController
-@RequestMapping("/")
-public class MyController {
-    @GetMapping("/a")
-    public void handleGet(){
-        System.out.println("handleGet");
-        throw new MyException1();
-    }
-    @GetMapping("/b")
-    public void handleGet2(){
-        System.out.println("handleGet2");
-        throw new MyException2();
-    }
-}
-
-
-
-@ResponseStatus(value = HttpStatus.NOT_FOUND, reason = "oops 400")
-class MyException1 extends RuntimeException{}
-
-class MyException2 extends RuntimeException{}
-
-
-@ControllerAdvice
-class MyExceptionHandler{
-    @ExceptionHandler(MyException2.class)
-    public ResponseEntity<String> handleMyException2(){
-        System.out.println("handleException");
-        return new ResponseEntity<>("oops 400", HttpStatus.NOT_FOUND);
-    }
-}
-```
-`curl http://localhost:8080/a` => `{"timestamp":"2020-04-21T05:29:59.165+0000","status":404,"error":"Not Found","message":"oops 400","path":"/a"}`
-`curl http://localhost:8080/b` => `oops 400`
-* If you have `spring-boot-devtools` with `@ResponseStatus` or `ResponseStatusException` it will also include long trace into response
-
-`@MatrixVariable` - get path variables of special format like `;a=1;b=2;c=3;`
-```java
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
-import org.springframework.web.servlet.config.annotation.ene;
-import org.springframework.web.util.UrlPathHelper;
-
-@RestController
-@RequestMapping("/")
-public class MyController {
-    @GetMapping("/a/{pathId}/{matrixId}")
-    public void handleGet(@PathVariable String pathId, @RequestParam("id") String paramId, @MatrixVariable String matrixId){
-        System.out.println("pathId => " + pathId + ", paramId => " + paramId + ", matrixId => " + matrixId);
-    }
-}
-
-
-@Configuration
-class WebConfig implements WebMvcConfigurer {
-    @Override
-    public void configurePathMatch(PathMatchConfigurer configurer) {
-        UrlPathHelper urlPathHelper = new UrlPathHelper();
-        urlPathHelper.setRemoveSemicolonContent(false);
-        configurer.setUrlPathHelper(urlPathHelper);
-    }
-}
-```
-If we hit ` curl http://localhost:8080/a/1/matrixId=2?id=3` we got `pathId => 1, paramId => 3, matrixId => 2`
-
-
-
-
-###### RequestBodyAdvice/ResponseBodyAdvice and HandlerInterceptor
-These 3 interceptors allows to intercept request (both before and after controller's method execution) and add some custom logic like logging, modifiing headers/body, checking security and so on.
-As you will see by output `HandlerInterceptor` is not quite useful cause you can't get body from it.
-```java
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.util.concurrent.ThreadLocalRandom;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.MethodParameter;
-import org.springframework.http.HttpInputMessage;
-import org.springframework.http.MediaType;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.server.ServerHttpRequest;
-import org.springframework.http.server.ServerHttpResponse;
-import org.springframework.lang.Nullable;
-import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.HandlerInterceptor;
-import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdvice;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
-import lombok.Data;
 
-
-@SpringBootApplication(exclude = {ManagementWebSecurityAutoConfiguration.class, SecurityAutoConfiguration.class})
+@SpringBootApplication
 public class App{
+    public static final String AUTH_HEADER_NAME = "auth";
+    public static final String AUTH_HEADER_VALUE = "admin";
+
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
     }
 }
 
-@RestController
-@RequestMapping("/")
-class MyController{
-    @GetMapping
-    public String handleGet(){
-        return "handleGet => " + ThreadLocalRandom.current().nextInt();
-    }
-    @PostMapping
-    public Person handlePost(@RequestBody Person person){
-        System.out.println("handlePost => person=" + person);
-        return person;
-    }
-}
-
-@Data
-class Person{
-    String name;
-}
-
-@ControllerAdvice
-class MyRequestInterceptor implements RequestBodyAdvice {
-    @Override
-    public boolean supports(MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) {
-        return true;
-    }
-
-    @Override
-    public HttpInputMessage beforeBodyRead(HttpInputMessage msg, MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) throws IOException {
-        return msg;
-    }
-
-    @Override
-    public Object afterBodyRead(Object body, HttpInputMessage msg, MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) {
-        System.out.println("afterBodyRead => method=" + mp.getMethod().getName() + ", body=" + body);
-        return body;
-    }
-
-    @Override
-    public Object handleEmptyBody(Object body, HttpInputMessage msg, MethodParameter mp, Type type, Class<? extends HttpMessageConverter<?>> cls) {
-        System.out.println("handleEmptyBody => method=" + mp.getMethod().getName() + ", body=" + body);
-        return body;
-    }
-}
-
-@ControllerAdvice
-class MyResponseInterceptor implements ResponseBodyAdvice<Object>{
-    @Override
-    public boolean supports(MethodParameter mp, Class cls) {
-        return true;
-    }
-
-    @Override
-    public Object beforeBodyWrite(Object body, MethodParameter mp, MediaType mediaType, Class cls, ServerHttpRequest req, ServerHttpResponse res) {
-        System.out.println("handleEmptyBody => url=" + req.getURI() + ", method=" + mp.getMethod().getName() + ", body=" + body);
-        return body;
-    }
-}
-
-
-class MyInterceptor implements HandlerInterceptor{
-    @Override
-    public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) throws Exception {
-        System.out.println("preHandle => url=" + req.getRequestURI() + ", handler=" + handler);
-        return true;
-    }
-
-    @Override
-    public void postHandle(HttpServletRequest req, HttpServletResponse res, Object handler, @Nullable ModelAndView modelAndView) throws Exception {
-        System.out.println("postHandle => url=" + req.getRequestURI() + ", handler=" + handler);
-    }
-
-    @Override
-    public void afterCompletion(HttpServletRequest req, HttpServletResponse res, Object handler, @Nullable Exception ex) throws Exception {
-        System.out.println("afterCompletion => url=" + req.getRequestURI() + ", handler=" + handler);
-    }
-}
-
 @Configuration
-class JavaConfig implements WebMvcConfigurer {
+class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new MyInterceptor());
+    public void configure(HttpSecurity http) throws Exception {
+        http.mvcMatcher("/api/**")
+            .addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class)
+            .authorizeRequests()
+            .anyRequest()
+            .hasRole("USER");
+    }
+}
+
+/**
+ * Using this class is the same as using WebSecurityConfigurerAdapter
+ * only difference is error message
+ * WebSecurityConfigurerAdapter => {"timestamp":"2020-07-24T15:04:27.861+0000","status":403,"error":"Forbidden","message":"Access Denied","path":"/api/info"}
+ * ResourceServerConfigurerAdapter => {"error":"unauthorized","error_description":"Full authentication is required to access this resource"}
+ */
+@Configuration
+@EnableResourceServer
+class ResourceServer extends ResourceServerConfigurerAdapter {
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        http.mvcMatcher("/api/**")
+            .addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class)
+            .authorizeRequests()
+            .anyRequest()
+            .hasRole("USER");
+    }
+}
+
+class HeaderFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        System.out.println("HeaderFilter.doFilter");
+        String authToken = ((HttpServletRequest)req).getHeader(App.AUTH_HEADER_NAME);
+        if (App.AUTH_HEADER_VALUE.equals(authToken)) {
+            Authentication auth = new UsernamePasswordAuthenticationToken("user", null, List.of(()->"ROLE_USER"));
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(auth);
+            SecurityContextHolder.setContext(context);
+        }
+        chain.doFilter(req, res);
+    }
+}
+
+@RestController
+class ApiController{
+    @GetMapping("/api/info")
+    public String getApiInfo(){
+        return "Api v1.0";
     }
 }
 ```
-`curl http://localhost:8080`
-```
-preHandle => url=/, handler=com.example.spring5.MyController#handleGet()
-handleEmptyBody => url=http://localhost:8080/, method=handleGet, body=handleGet => 1827543397
-postHandle => url=/, handler=com.example.spring5.MyController#handleGet()
-afterCompletion => url=/, handler=com.example.spring5.MyController#handleGet()
-```
+You may play to comment out one or another security classes and see results. So far the only difference is the error message
 
-`curl -H "Content-type: application/json" -d '{"name":"Jack"}' http://localhost:8080`
-```
-preHandle => url=/, handler=com.example.spring5.MyController#handlePost(Person)
-afterBodyRead => method=handlePost, body=Person(name=Jack)
-handlePost => person=Person(name=Jack)
-handleEmptyBody => url=http://localhost:8080/, method=handlePost, body=Person(name=Jack)
-postHandle => url=/, handler=com.example.spring5.MyController#handlePost(Person)
-afterCompletion => url=/, handler=com.example.spring5.MyController#handlePost(Person)
-```
 
 #### DB
-
 ###### Spring JDBC
 Before using spring jdbc, we can use standard jdk jdbc.
 Add this to your `pom.xml`
@@ -8591,379 +8960,3 @@ interface MailTemplate{
     }
 }
 ```
-
-###### 2 Security filters for 2 different urls
-When you add `spring-boot-starter-security` starter to your `pom.xml` all your urls automatically becomes secured.
-If you want to implement custom rules you should add class that extends from `WebSecurityConfigurerAdapter` and write your security rules there.
-But if you want to add custom filter to path you should add 2 security classes with `@Order`. Otherwise you would get unexpected behavior if you just write in one class
-```
-http.mvcMatcher("/api/**").addFilterBefore(new CookieFilter(), BasicAuthenticationFilter.class);
-http.mvcMatcher("/internal/**").addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class);
-```
-
-Spring docs also suggest to create [separate Spring Security @Configuration files](https://docs.spring.io/spring-security/site/docs/current/reference/html5/#multiple-httpsecurity)
-So below an example to implement 2 filters for 2 different pathes
-```java
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Stream;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-@SpringBootApplication
-public class App{
-    public static final String AUTH_COOKIE_NAME = "auth";
-    public static final String AUTH_COOKIE_VALUE = "admin";
-    public static final String AUTH_HEADER_NAME = "auth";
-    public static final String AUTH_HEADER_VALUE = "admin";
-
-    public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
-    }
-}
-
-@Configuration
-@EnableWebSecurity
-class SecurityConfig {
-    @Order(1)
-    @Configuration
-    public class ApiSecurityConfig extends WebSecurityConfigurerAdapter {
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            http.mvcMatcher("/api/**").addFilterBefore(new CookieFilter(), BasicAuthenticationFilter.class)
-                .authorizeRequests()
-                .anyRequest().authenticated();
-        }
-    }
-
-    @Order(2)
-    @Configuration
-    public class InternalSecurityConfig extends WebSecurityConfigurerAdapter {
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            http.mvcMatcher("/internal/**").addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class)
-                .authorizeRequests()
-                .anyRequest().authenticated();
-        }
-    }
-}
-
-class HeaderFilter implements Filter{
-    @Override
-    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
-        System.out.println("HeaderFilter.doFilter");
-        String authToken = ((HttpServletRequest)req).getHeader(App.AUTH_HEADER_NAME);
-        if (App.AUTH_HEADER_VALUE.equals(authToken)) {
-            Authentication auth = new UsernamePasswordAuthenticationToken("user", null, List.of(()->"ROLE_INTERNAL_USER"));
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(auth);
-            SecurityContextHolder.setContext(context);
-        }
-        chain.doFilter(req, res);
-    }
-}
-
-class CookieFilter implements Filter{
-    @Override
-    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
-        System.out.println("CookieFilter.doFilter");
-        var authToken = Stream.ofNullable(((HttpServletRequest)req).getCookies())
-            .flatMap(Arrays::stream)
-            .filter(c -> App.AUTH_COOKIE_NAME.equals(c.getName()))
-            .map(Cookie::getValue)
-            .findFirst()
-            .orElse(null);
-        if (App.AUTH_COOKIE_VALUE.equals(authToken)) {
-            Authentication auth = new UsernamePasswordAuthenticationToken("user", null, List.of(()->"ROLE_API_USER"));
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(auth);
-            SecurityContextHolder.setContext(context);
-        }
-        /**
-         * if you put this inside if condition, user won't proceed further and will not see 403 Forbidden error
-         */
-        chain.doFilter(req, res);
-    }
-}
-
-
-@RestController
-class ApiController{
-    @GetMapping("/pub/info")
-    public String getPubInfo(){
-        return "Public info";
-    }
-
-    @GetMapping("/api/info")
-    public String getApiInfo(){
-        return "Api app";
-    }
-
-    @GetMapping("/internal/info")
-    public String getInternalInfo(){
-        return "Internal app";
-    }
-}
-```
-You can check it by running
-```
-curl localhost:8080/pub/info
-curl --cookie "auth=admin" localhost:8080/api/info
-curl -H "auth: admin" localhost:8080/internal/info
-```
-**Pay attention once you do `http.mvcMatcher("/api/**")` all logic from here is applied only to this url. All other urls by default stays open.
-That's why we don't need to explicitly add `.mvcMathcers("/pub/**").permitAll()`. It's already public.
-
-
-###### Oauth2 and Spring Security
-Oauth (Open Authentication) - open standard (so it's not api or some service) for secured delegated access. There are 2 versions
-* Oauth 1.0 - old version, not used today
-* Oauth 2.0 - default version of today (so when someone says Oauth he probably means Oauth 2.0)
-
-SSO (Single Sing-on) - authentication into application using Identity Provider (app should trust IdP). You first authenticate into your IdP and get auth token. 
-Then app uses this token to verify your identity. This is basically Oauth, instead of giving username+password to app (so app would authenticate you in IdP)
-you request token from IdP and send this token to app with every request. App then verify that this token is valid by calling IdP.
-
-Oath include a few components
-* Scope - what app can do (allow scope) and what app can't do (deny scope). For example app can get email from IdP but can't get phone number.
-Big advantage that you can set time for which scope is valid. And also revoke app access in case you don't want this app to access your profile or run some actions on your behalf.
-* Actors:
-    * Resource Owner - user who has profile in IdP
-    * Resource Server - API that provides user's data
-    * Client - app that use Oath to access data from resource server
-    * Authorization Server - where token is generated and validated (usually can be a single app combined with resource server)
-* Flow - you app redirect you to your IdP, where you accept that app would authenticate you with this IdP. Then you get redirected back to app with access token in url.
-From here app use this token to authenticate you and to get some information (defined by allow scopes) from your IdP. This is called implicit flow cause all communication is done through browser.
-
-To work with oath2 in spring you should add to your `pom.xml` this dependency
-```
-<dependency>
-    <groupId>org.springframework.security.oauth</groupId>
-    <artifactId>spring-security-oauth2</artifactId>
-    <version>2.3.8.RELEASE</version>
-</dependency>
-```
-** Pay attention that starting form version 2.4.0 this whole package is considered [deprecated](https://stackoverflow.com/questions/59280271/authorizationserverconfigureradapter-is-deprecated).\
-
-The main class is `ResourceServerConfigurerAdapter`, so you extends your oath2 security config class from this class and override `configure(HttpSecurity http)` method.
-`@EnableResourceServer` convert your `ResourceServerConfigurer` into `WebSecurityConfigurerAdapter` with `@Order(3)`. It's done to separate security concern for oauth authentication.
-Here is example of oauth2.0 authentication service
-```java
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.config.annotation.configurers.ClientDetailsServiceConfigurer;
-import org.springframework.security.oauth2.config.annotation.web.configuration.AuthorizationServerConfigurerAdapter;
-import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
-import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
-import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
-import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
-import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
-import org.springframework.security.oauth2.provider.token.TokenStore;
-import org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-@SpringBootApplication
-public class App{
-    public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
-    }
-}
-
-@Configuration
-@EnableResourceServer
-class ResourceServer extends ResourceServerConfigurerAdapter {
-    @Override
-    public void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-            .antMatchers("/api/**").hasRole("USER");
-    }
-}
-
-@Configuration
-@EnableAuthorizationServer
-class AuthorizationServer extends AuthorizationServerConfigurerAdapter {
-    @Bean
-    public TokenStore tokenStore() {
-        return new InMemoryTokenStore();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder(4);
-    }
-
-    @Override
-    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
-        clients
-            .inMemory()
-            .withClient("username")
-            .secret(passwordEncoder().encode("password"))
-            .authorities("ROLE_USER")
-            .scopes("all")
-            .authorizedGrantTypes("client_credentials")
-            .accessTokenValiditySeconds(3600)
-            .refreshTokenValiditySeconds(24 * 3600);
-    }
-    @Override
-    public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
-        endpoints.tokenStore(tokenStore());
-    }
-
-    /**
-     * fot method /oauth/check_token?token={access_token} to work
-     */
-    @Override
-    public void configure(AuthorizationServerSecurityConfigurer oauthServer) throws Exception {
-        oauthServer.checkTokenAccess("permitAll()");
-    }
-}
-
-@RestController
-class ApiController{
-    @GetMapping("/api/info")
-    public String getApiInfo(){
-        return "Api v1.0";
-    }
-}
-```
-
-You can play by calling following commands.
-```
-# get access token
-curl -u username:password -X POST localhost:8080/oauth/token?grant_type=client_credentials
-
-# validate token
-curl -u username:password -X POST localhost:8080/oauth/check_token?token={access_token}
-
-# get resource by token
-curl -H "Authorization: Bearer {access_token}" localhost:8080/api/info
-```
-
-** Pay attention that classes `ResourceServerConfigurerAdapter` and `AuthorizationServerConfigurerAdapter`
-are for convenience purpose. You can build oauth service from scratch by creating controller+service that would
-generate token and adding `WebSecurityConfigurerAdapter` that would validate tokens. But basically this is what these 2 classes
-are doing, hiding all these boilerplate code.
-
-
-Since `ResourceServerConfigurerAdapter` in the end transforms into `WebSecurityConfigurerAdapter` with hardcoded order of 3, you can use it for security configuration.
-Although it's not logical error (cause it would be converted into `WebSecurityConfigurerAdapter`), it's more a semantical error, cause it's better to explicitly create security class
-
-```java
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-
-import java.io.IOException;
-import java.util.List;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
-import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-@SpringBootApplication
-public class App{
-    public static final String AUTH_HEADER_NAME = "auth";
-    public static final String AUTH_HEADER_VALUE = "admin";
-
-    public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
-    }
-}
-
-@Configuration
-class SecurityConfig extends WebSecurityConfigurerAdapter {
-    @Override
-    public void configure(HttpSecurity http) throws Exception {
-        http.mvcMatcher("/api/**")
-            .addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class)
-            .authorizeRequests()
-            .anyRequest()
-            .hasRole("USER");
-    }
-}
-
-/**
- * Using this class is the same as using WebSecurityConfigurerAdapter
- * only difference is error message
- * WebSecurityConfigurerAdapter => {"timestamp":"2020-07-24T15:04:27.861+0000","status":403,"error":"Forbidden","message":"Access Denied","path":"/api/info"}
- * ResourceServerConfigurerAdapter => {"error":"unauthorized","error_description":"Full authentication is required to access this resource"}
- */
-@Configuration
-@EnableResourceServer
-class ResourceServer extends ResourceServerConfigurerAdapter {
-    @Override
-    public void configure(HttpSecurity http) throws Exception {
-        http.mvcMatcher("/api/**")
-            .addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class)
-            .authorizeRequests()
-            .anyRequest()
-            .hasRole("USER");
-    }
-}
-
-class HeaderFilter implements Filter {
-    @Override
-    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
-        System.out.println("HeaderFilter.doFilter");
-        String authToken = ((HttpServletRequest)req).getHeader(App.AUTH_HEADER_NAME);
-        if (App.AUTH_HEADER_VALUE.equals(authToken)) {
-            Authentication auth = new UsernamePasswordAuthenticationToken("user", null, List.of(()->"ROLE_USER"));
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(auth);
-            SecurityContextHolder.setContext(context);
-        }
-        chain.doFilter(req, res);
-    }
-}
-
-@RestController
-class ApiController{
-    @GetMapping("/api/info")
-    public String getApiInfo(){
-        return "Api v1.0";
-    }
-}
-```
-You may play to comment out one or another security classes and see resutls. So far the only difference is the error message
