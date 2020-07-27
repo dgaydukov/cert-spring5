@@ -5102,6 +5102,100 @@ authenticate => admin/admin
 /api/info => admin/null
 ```
 
+The key here is that `BasicAuthenticationFilter` create `UsernamePasswordAuthenticationToken` (with username/password from basic http auth data provided in request) without third param, making it not fully authenticated.
+That means that if you call `isAuthenticated` you would got `false`. The same way you can create your custom filter (for example http header) and extract username/password from headers, and later pass it to `AuthenticationProvider`.
+So if you filter return `Authentication` object that is not authenticated then `AuthenticationProvider/UserDetailService` methods called, otherwise fully authenticated object is used.
+You can call it `curl -H "auth: admin" localhost:8080/api/info`.
+```java
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.util.List;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Configuration
+class SecurityConfig extends WebSecurityConfigurerAdapter{
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .authorizeRequests().anyRequest().authenticated()
+            .and().addFilterAt(new HeaderFilter(), BasicAuthenticationFilter.class);
+        ;
+    }
+
+    @Override
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        // when we are using AuthenticationProvider it overrides UserDetailsService
+        auth.authenticationProvider(new AuthenticationProvider() {
+            @Override
+            public Authentication authenticate(Authentication auth) throws AuthenticationException {
+                // here we have access to password
+                System.out.println("authenticate => " + auth.getPrincipal() + "/" + auth.getCredentials());
+                return new UsernamePasswordAuthenticationToken("admin", "admin", List.of(()->"ROLE_USER"));
+            }
+
+            @Override
+            public boolean supports(Class<?> cls) {
+                return true;
+            }
+        });
+    }
+}
+
+class HeaderFilter implements Filter{
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        System.out.println("HeaderFilter.doFilter");
+        String token = ((HttpServletRequest)req).getHeader("auth");
+        // if you path third param AuthenticationProvider won't be called cause Authentication object would be authenticated
+        Authentication auth = new UsernamePasswordAuthenticationToken(token, token);
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(auth);
+        SecurityContextHolder.setContext(context);
+        chain.doFilter(req, res);
+    }
+}
+
+@RestController
+class ApiController{
+    @GetMapping("/api/info")
+    public String getApiInfo(Authentication auth){
+        // we don't have access to password here
+        System.out.println("/api/info => " + auth.getPrincipal() + "/" + auth.getCredentials());
+        return "Api v2.0";
+    }
+}
+```
+```
+HeaderFilter.doFilter
+authenticate => admin/admin
+/api/info => admin/null
+```
 
 Same example using `FormLogin`
 * First authenticate by `curl -v -X POST -F username=admin -F password=admin localhost:8080/login`
@@ -5987,10 +6081,8 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
-
 import java.io.IOException;
 import java.util.List;
-
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Configuration;
@@ -6072,6 +6164,73 @@ class ApiController{
 ```
 You may play to comment out one or another security classes and see results. So far the only difference is the error message
 
+
+We can also authenticate user using `AuthenticationManager`, but again it's not best case, cause `ResourceServerConfigurerAdapter` design specifically for oauth2 provider server.
+You can call it by `curl -H "auth: admin" localhost:8080/api/info`.
+```java
+import java.util.List;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
+import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
+import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Configuration
+@EnableResourceServer
+class ResourceServer extends ResourceServerConfigurerAdapter {
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        http.mvcMatcher("/api/**")
+            .authorizeRequests()
+            .anyRequest()
+            .hasRole("USER");
+    }
+
+    @Override
+    public void configure(ResourceServerSecurityConfigurer resources) {
+        /**
+         * first extract token (username/password) from headers
+         * then authenticate user
+         */
+        resources
+            .authenticationManager(auth -> {
+                System.out.println("authenticationManager => " + auth.getPrincipal() + "/" + auth.getCredentials());
+                return new UsernamePasswordAuthenticationToken("token", "token", List.of(()->"ROLE_USER"));
+            })
+            .tokenExtractor(req -> {
+                String token = req.getHeader("auth");
+                System.out.println("tokenExtractor => " + token);
+                return new UsernamePasswordAuthenticationToken(token, token);
+            })
+        ;
+    }
+}
+
+
+@RestController
+class ApiController{
+    @GetMapping("/api/info")
+    public String getApiInfo(){
+        return "Api v1.0";
+    }
+}
+```
+```
+tokenExtractor => admin
+authenticationManager => admin/admin
+```
 
 #### DB
 ###### Spring JDBC
