@@ -56,6 +56,7 @@
 * 6.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
 * 6.2 [OutputCaptureRule](#outputcapturerule)
 * 6.3 [TestExecutionListener](#testexecutionlistener)
+* 6.4 [Mock WebServer](#mock-webserver)
 7. [Spring Monitoring](#spring-monitoring)
 * 7.1 [Jmx monitoring](#jmx-monitoring)
 * 7.2 [Spring Boot Actuator](#spring-boot-actuator)
@@ -7404,17 +7405,104 @@ public class BeansIntegrationTest {
 }
 ```
 
+###### Mock WebServer
+If you need to mock calls to external API from your tests you have 2 options
+* mock method invocation - in this case API method won't be called at all, instead just some mock object would be returned
+* mock api itself - you create mock web server that has same endpoints as original API, and pass it's url as base url to your test config
 
+To mock api itself you should use [MockServer](https://www.mock-server.com). First add this dependency to you pom.xml
+```
+<dependency>
+    <groupId>org.mock-server</groupId>
+    <artifactId>mockserver-netty</artifactId>
+    <version>5.11.1</version>
+</dependency>
+```
+Here is java code
+```java
+import static org.mockserver.model.HttpRequest.request;
+import static org.mockserver.model.HttpResponse.response;
+import javax.annotation.PostConstruct;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+import org.mockserver.client.MockServerClient;
+import org.mockserver.integration.ClientAndServer;
+import org.mockserver.model.HttpResponse;
+import org.mockserver.model.HttpStatusCode;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
 
+@RestController
+class MyController{
+    @GetMapping("/")
+    public String handleGet(){
+        return "It works!";
+    }
+    @GetMapping("/error")
+    public ResponseEntity<String> handleError1(){
+        return new ResponseEntity<>("oops 400", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
 
+/**
+ * Example of mock web server
+ * You can set host & port (host - usually localhost)
+ * And then add your methods and responses
+ */
+@Component
+class MockWebServer {
+    private static final int PORT = 8888;
+    private static final String HOST = "localhost";
+
+    private ClientAndServer mockServer;
+
+    @PostConstruct
+    public void startServer() {
+        mockServer = ClientAndServer.startClientAndServer(PORT);
+
+        new MockServerClient(HOST, PORT)
+            .when(request().withPath("/"))
+            .respond(response("It works!"));
+        /**
+         * You can set HTTP reason phrase, which you can't do with standard spring controllers
+         */
+        new MockServerClient(HOST, PORT)
+            .when(request().withPath("/error"))
+            .respond(new HttpResponse().withStatusCode(HttpStatusCode.INTERNAL_SERVER_ERROR_500.code()).withReasonPhrase(HttpStatusCode.INTERNAL_SERVER_ERROR_500.reasonPhrase()).withBody("something went wrong"));
+        new MockServerClient(HOST, PORT)
+            .when(request().withPath("/error2"))
+            .respond(new HttpResponse().withStatusCode(HttpStatusCode.INTERNAL_SERVER_ERROR_500.code()).withReasonPhrase("DB connection failed").withBody("something went wrong"));
+    }
+}
+```
+```
+# check that spring app works
+curl localhost:8080
+# check that mock webserver works
+curl localhost:8888
+
+# in response you see reason phrase: HTTP/1.1 500 Internal Server Error
+curl localhost:8888/error -v
+```
+As you see with mock web server you have full control, you can even set reason phrase in HTTP after status code.
+Generally reason phrase should [describe code](https://stackoverflow.com/questions/38654336/is-it-good-practice-to-modify-the-reason-phrase-of-an-http-response), but you can put any message there.
+Pay attention that in Http2.0 there is no reason phrase.
 
 #### Spring Monitoring
-
 ###### Jmx monitoring
-
 You can use jmx console with pure [java](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#jmx---java-management-extension)
-
 If we want to import spring beans to jmx we would need to add them to `MBeanExporter`. Spring will try to find running `MBeanServer`, and in case of web app it would be tomcat.
 ```java
 import java.util.HashMap;
