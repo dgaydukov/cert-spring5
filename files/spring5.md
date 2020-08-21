@@ -7423,6 +7423,8 @@ Here is java code
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 import javax.annotation.PostConstruct;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -7484,6 +7486,23 @@ class MockWebServer {
         new MockServerClient(HOST, PORT)
             .when(request().withPath("/error2"))
             .respond(new HttpResponse().withStatusCode(HttpStatusCode.INTERNAL_SERVER_ERROR_500.code()).withReasonPhrase("DB connection failed").withBody("something went wrong"));
+
+        /**
+         * Conditional response
+         * You can use lambda ExpectationResponseCallback to set any logic you want (response success on every third request, or success after 10 sec)
+         */
+        final AtomicInteger i = new AtomicInteger(1);
+        new MockServerClient(HOST, PORT)
+            .when(request().withPath("/profile"))
+            .respond(req -> {
+            // return success on every third request
+            if (i.getAndAdd(1) % 3 == 0) {
+                return new HttpResponse().withBody("{\"id\":1}");
+            }
+            return new HttpResponse()
+                .withStatusCode(HttpStatusCode.INTERNAL_SERVER_ERROR_500.code())
+                .withBody("no way to create profile");
+        });
     }
 }
 ```
