@@ -85,6 +85,7 @@
 * 9.18 [SPEL - Spring Expression Language](#spel---spring-expression-language)
 * 9.19 [Custom Framework Impl](#custom-framework-impl)
 * 9.20 [Spring Design Patterns](#spring-design-patterns)
+* 9.21 [Write object as JSON](#write-object-as-json)
 
 
 
@@ -9266,4 +9267,55 @@ interface MailTemplate{
         sender.register(getName(), this);
     }
 }
+```
+
+
+###### Write object as JSON
+Sometimes it can be useful for logging purposes not to log object, but json instead.
+For this we should use `ObjectMapper/ObjectWriter` from `jackson` library.
+
+```java
+import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.Data;
+import lombok.SneakyThrows;
+
+public class App{
+    @SneakyThrows
+    public static void main(String[] args) {
+        Person person = new Person();
+        person.setId(1);
+        person.setName("Jack");
+        person.setDate(LocalDate.now());
+
+        ObjectMapper mapper = new ObjectMapper();
+        // need this to remove nulls from json
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        /**
+         * display date as string, otherwise it would be object =>
+         * {"year":2020,"month":"AUGUST","monthValue":8,"dayOfMonth":28,"chronology":{"calendarType":"iso8601","id":"ISO"},"dayOfWeek":"FRIDAY","leapYear":true,"dayOfYear":241,"era":"CE"}
+         */
+        mapper.registerModule(new JavaTimeModule());
+        mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        ObjectWriter writer = mapper.writer();
+        System.out.println("person => " + person);
+        System.out.println("json => " + writer.writeValueAsString(person));
+    }
+}
+
+@Data
+class Person{
+    int id;
+    String name;
+    String email;
+    LocalDate date;
+}
+```
+```
+person => Person(id=1, name=Jack, email=null, date=2020-08-28)
+json => {"id":1,"name":"Jack","date":"2020-08-28"}
 ```
