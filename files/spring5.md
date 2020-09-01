@@ -86,6 +86,7 @@
 * 9.19 [Custom Framework Impl](#custom-framework-impl)
 * 9.20 [Spring Design Patterns](#spring-design-patterns)
 * 9.21 [Write object as JSON](#write-object-as-json)
+* 9.22 [Google Authenticator OTP](#google-authenticator-otp)
 
 
 
@@ -9318,4 +9319,44 @@ class Person{
 ```
 person => Person(id=1, name=Jack, email=null, date=2020-08-28)
 json => {"id":1,"name":"Jack","date":"2020-08-28"}
+```
+
+
+###### Google Authenticator OTP
+TOTP (time based one time password) - 6 digit password valid for 30 sec, used in MFA as something you have (as opposed to password - something you know)
+You can use [this library](https://github.com/wstrange/GoogleAuth). First add it to `pom.xml`
+```
+<dependency>
+    <groupId>com.warrenstrange</groupId>
+    <artifactId>googleauth</artifactId>
+    <version>1.5.0</version>
+</dependency>
+```
+You can validate otp codes [here](https://totp.danhersam.com)
+
+```java
+import com.warrenstrange.googleauth.GoogleAuthenticator;
+import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
+import com.warrenstrange.googleauth.GoogleAuthenticatorQRGenerator;
+
+public class App{
+    public static void main(String[] args) {
+        GoogleAuthenticator auth = new GoogleAuthenticator();
+        GoogleAuthenticatorKey key = auth.createCredentials();
+        String secretKey = key.getKey();
+        int otp = auth.getTotpPassword(secretKey);
+        System.out.println("secretKey => " + secretKey);
+        System.out.println("otp => " + otp);
+        System.out.println("validate => " + auth.authorize(secretKey, otp));
+
+        String qrCodeUrl = GoogleAuthenticatorQRGenerator.getOtpAuthURL("my.site.com", "user1", key);
+        System.out.println("qrCodeUrl => " + qrCodeUrl);
+    }
+}
+```
+```
+secretKey => C2ENZIHM7EMWAIHEXH3SI6IDTOF6XFCW
+otp => 758293
+validate => true
+qrCodeUrl => https://api.qrserver.com/v1/create-qr-code/?data=otpauth%3A%2F%2Ftotp%2Fmy.site.com%3Auser1%3Fsecret%3DC2ENZIHM7EMWAIHEXH3SI6IDTOF6XFCW%26issuer%3Dmy.site.com%26algorithm%3DSHA1%26digits%3D6%26period%3D30&size=200x200&ecc=M&margin=0
 ```
