@@ -87,8 +87,7 @@
 * 9.20 [Spring Design Patterns](#spring-design-patterns)
 * 9.21 [Write object as JSON](#write-object-as-json)
 * 9.22 [Google Authenticator OTP](#google-authenticator-otp)
-
-
+* 9.23 [Ant vs Maven vs Gradle](#ant-vs-maven-vs-gradle)
 
 
 
@@ -9360,3 +9359,20 @@ otp => 758293
 validate => true
 qrCodeUrl => https://api.qrserver.com/v1/create-qr-code/?data=otpauth%3A%2F%2Ftotp%2Fmy.site.com%3Auser1%3Fsecret%3DC2ENZIHM7EMWAIHEXH3SI6IDTOF6XFCW%26issuer%3Dmy.site.com%26algorithm%3DSHA1%26digits%3D6%26period%3D30&size=200x200&ecc=M&margin=0
 ```
+
+###### Ant vs Maven vs Gradle
+There are 3 main package builders for java app
+They are divided into 2 types
+* imperative (ant) - you tell how to do (you write instructions)
+* declarative (maven, gradle) - you tell what to do (builder itself knows how to do)
+Because Ant is imperative it's least interested. It's better not to use it nowdays.
+Maven is a good choice but have some disadvantages:
+* if you want custom build then `<build></build>` turns into hell
+* long xml
+* no DSL (domain specific language)
+Gradle has a few advantages:
+* if you have 2 projects and A depends on B, if you change B source, with maven you have to build B, but with gradle you can just rebuild A
+* maven is mostly for java, gradle is for everything
+* build language - groovy, no need to use xml
+* tasks run in parallel
+* incremental build - gradle determine which tasks should be run for our lifecycle (for example if java source hasn't change no need to run java compile task)
