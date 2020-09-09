@@ -36,8 +36,3 @@ By passing certification you will get 3 things
 * Detailed results on each topic:
 
 ![Exam score](https://github.com/dgaydukov/cert-spring5/blob/master/files/images/exam-score.png)
-
-### TODO
-* different security filters for different urls vs multiple times extending WebSecurityConfigurerAdapter
-* spring integration example with security
-* eureka/ribbon spring app load balancer example vs. aws lb

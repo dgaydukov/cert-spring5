@@ -88,6 +88,7 @@
 * 9.21 [Write object as JSON](#write-object-as-json)
 * 9.22 [Google Authenticator OTP](#google-authenticator-otp)
 * 9.23 [Ant vs Maven vs Gradle](#ant-vs-maven-vs-gradle)
+* 9.24 [Get OS & Browser info](#get-os--browser-info)
 
 
 
@@ -9376,3 +9377,56 @@ Gradle has a few advantages:
 * build language - groovy, no need to use xml
 * tasks run in parallel
 * incremental build - gradle determine which tasks should be run for our lifecycle (for example if java source hasn't change no need to run java compile task)
+
+###### Get OS & Browser info
+Sometimes it can be useful to get OS, browser and it's version for your app. You can use `User-Agent` header for this purpose.
+As always first add dependency to your `pom.xml`
+```
+<dependency>
+    <groupId>eu.bitwalker</groupId>
+    <artifactId>UserAgentUtils</artifactId>
+    <version>1.21</version>
+</dependency>
+```
+Here is full code
+```java
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import eu.bitwalker.useragentutils.UserAgent;
+
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@Controller
+@ResponseBody
+class MyController{
+    @GetMapping("/")
+    public void handleGet(HttpServletRequest request){
+        String userAgentHeader = request.getHeader("User-Agent");
+        UserAgent userAgent = UserAgent.parseUserAgentString(userAgentHeader);
+        System.out.println("userAgentHeader => " + userAgentHeader + ", userAgent => " + userAgent);
+        System.out.println("OS => " + userAgent.getOperatingSystem() + ", browser => " + userAgent.getBrowser());
+    }
+}
+```
+```
+# request from console with curl command
+userAgentHeader => curl/7.58.0, userAgent => UNKNOWN-DOWNLOAD
+OS => UNKNOWN, browser => DOWNLOAD
+
+# request from google chrome browser
+userAgentHeader => Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36, userAgent => LINUX-CHROME8
+OS => LINUX, browser => CHROME8
+```
