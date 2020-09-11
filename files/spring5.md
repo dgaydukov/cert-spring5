@@ -6730,7 +6730,10 @@ public class App{
 }
 ```
 
-Lazy loading example
+Lazy loading and `@Transactional`.
+If you just try to use lazy loading (load some bean and next line of code load collection of other beans) 
+you would get exception `lazy load instantiation`, but `@Transactional` annotation can solve this problem. Cause once you get your object in case you use this annotation you don't close session.
+So if you want to use lazy loading the simplest way is to use this annotation.
 ```java
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
