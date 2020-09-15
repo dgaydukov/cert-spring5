@@ -64,7 +64,7 @@ public class HibernateJavaConfig {
         Properties props = new Properties();
         /**
          * this config allows to lazy access after session is closed
-         * but you shouldn't use it cause it's antipattern
+         * but you shouldn't use it cause it's anti-pattern
          */
         //props.put("hibernate.enable_lazy_load_no_trans", true);
 

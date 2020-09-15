@@ -6382,9 +6382,10 @@ deleteById(28) => true
 ```
 
 There are 3 implementations of `DataSource` (all of them are not connection pools, so you can use it only for testing purpose and never in production)
-* `DriverManagerDataSource` - Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call. We can set just driver class name with `setDriverClassName`.
+* `SimpleDriverDataSource` - provides direct `java.sql.Driver` usage which helps in resolving general class loading issues with JDBC. We have to load driver with `setDriverClass`
+* `DriverManagerDataSource` - Simple implementation of the standard JDBC DataSource interface, configuring the plain old JDBC DriverManager via bean properties, and returning a new Connection from every getConnection call. We can set just driver class name with `setDriverClassName`. 
+But you can create it without driver class name, using `public DriverManagerDataSource(String url, String username, String password)` constructor. It will deduce driver from url. 
 * `SingleConnectionDataSource` - (extends `DriverManagerDataSource`, implement `SmartDataSource`) - use single connection without closing it
-* `SimpleDriverDataSource` - Similar to DriverManagerDataSource except that it provides direct Driver usage which helps in resolving general class loading issues with the JDBC DriverManager within special class loading environments such as OSGi. We should set driver class with `setDriverClass
 
 Although you can write your own implementation of `RowMapper` for each entity, if your db columns correspond to your model, you can
 use one of default impl like `BeanPropertyRowMapper`, or if you need to get a map (key - columns, value- values) you can use `ColumnMapRowMapper`.
@@ -6726,10 +6727,7 @@ public class App{
 }
 ```
 
-Lazy loading and `@Transactional`.
-If you just try to use lazy loading (load some bean and next line of code load collection of other beans) 
-you would get exception `lazy load instantiation`, but `@Transactional` annotation can solve this problem. Cause once you get your object in case you use this annotation you don't close session.
-So if you want to use lazy loading the simplest way is to use this annotation.
+Lazy loading example
 ```java
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -6757,11 +6755,152 @@ public class App {
 }
 ```
 
+Transactional lazy loading:
+```java
+import javax.persistence.Entity;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+import javax.sql.DataSource;
+import javax.transaction.Transactional;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import lombok.Data;
+import lombok.Setter;
+import lombok.ToString;
+
+
+public class App{
+    public static final String BASE_PACKAGE = App.class.getPackageName();
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(BASE_PACKAGE);
+        var service = context.getBean(DataService.class);
+        try {
+            service.fetch();
+        } catch (Exception ex){
+            System.out.println("ERR: " + ex);
+        }
+        service.txFetch();
+    }
+}
+
+@Service
+class DataService{
+    @Autowired
+    private DepartmentRepository repository;
+
+    /**
+     * If you just try to use lazy loading (load some bean and next line of code load collection of other beans), you get exception 
+     * `org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: com.example.spring5.DepartmentEntity.employees, could not initialize proxy - no Session`
+     * but `@Transactional` can solve this problem, cause in this case session is not closed until end of the method
+     */
+    public void fetch(){
+        var dep = repository.findById(1).get();
+        System.out.println(dep.getName());
+        System.out.println(dep.getEmployees());
+    }
+    @Transactional
+    public void txFetch(){
+        var dep = repository.findById(1).get();
+        System.out.println(dep.getName());
+        System.out.println(dep.getEmployees());
+    }
+}
+
+@Configuration
+@EnableJpaRepositories
+@EnableTransactionManagement
+// these 4 needed to put properties inside props variables
+@Setter
+@EnableConfigurationProperties
+@ConfigurationProperties
+@PropertySource("jdbc.properties")
+class AppConfig{
+    private String driverClassName;
+    private String url;
+    private String dbUser;
+    private String password;
+
+    @Bean
+    public DataSource dataSource(){
+        return new DriverManagerDataSource(url, dbUser, password);
+    }
+
+    @Bean
+    public EntityManagerFactory entityManagerFactory() {
+        var bean = new LocalContainerEntityManagerFactoryBean();
+        bean.setDataSource(dataSource());
+        bean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
+        bean.setPackagesToScan(App.BASE_PACKAGE);
+        bean.afterPropertiesSet();
+        return bean.getNativeEntityManagerFactory();
+    }
+
+    @Bean
+    public TransactionManager transactionManager(){
+        return new JpaTransactionManager(entityManagerFactory());
+    }
+}
+
+@Data
+@Entity
+@Table(name = "department")
+class DepartmentEntity{
+    @Id
+    private Integer id;
+    private String name;
+    private String type;
+    @OneToMany(mappedBy = "department")
+    private List<EmployeeEntity> employees;
+}
+@Data
+@Entity
+@Table(name = "employee")
+class EmployeeEntity{
+    @Id
+    private Integer id;
+    private String name;
+    private String salary;
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    @ToString.Exclude
+    private DepartmentEntity department;
+}
+
+
+@Repository
+interface DepartmentRepository extends JpaRepository<DepartmentEntity, Integer> {}
+```
+```
+Exchange
+ERR: org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: com.example.spring5.DepartmentEntity.employees, could not initialize proxy - no Session
+Exchange
+[EmployeeEntity(id=1, name=John, salary=100), EmployeeEntity(id=2, name=Mike, salary=200), EmployeeEntity(id=15, name=Jack, salary=300)]
+```
 
 ###### Spring Data
 `SessionFactory` extends `EntityManagerFactory`. You can call `entityManagerFactory.createEntityManager()` to get current `EntityManager` on which you can run queries like `update/remove/save`
 You can also inject it like that. Types should match exactly.
-```java
+```
 @PersistenceUnit
 EntityManagerFactory factory;
 @PersistenceContext

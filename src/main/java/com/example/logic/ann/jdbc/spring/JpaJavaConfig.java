@@ -15,7 +15,7 @@ import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
-import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @Configuration
@@ -54,7 +54,7 @@ public class JpaJavaConfig {
         Properties props = new Properties();
         /**
          * this config allows to lazy access after session is closed
-         * but you shouldn't use it cause it's antipattern
+         * but you shouldn't use it cause it's anti-pattern
          */
         //props.put("hibernate.enable_lazy_load_no_trans", true);
 
@@ -66,24 +66,22 @@ public class JpaJavaConfig {
     }
 
     @Bean
-    public JpaVendorAdapter jpaVendorAdapter(){
-        return new HibernateJpaVendorAdapter();
-    }
-
-    @Bean
     public EntityManagerFactory entityManagerFactory() {
         var bean = new LocalContainerEntityManagerFactoryBean();
-        bean.setPackagesToScan("com.example.logic.ann.jdbc.jpa");
+        bean.setPackagesToScan("com.example.logic.ann.jdbc.spring");
         bean.setDataSource(dataSource());
         bean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         bean.setJpaProperties(properties());
-        bean.setJpaVendorAdapter(jpaVendorAdapter());
         bean.afterPropertiesSet();
         return bean.getNativeEntityManagerFactory();
     }
 
+    /**
+     * bean should be named `transactionManager`, otherwise you got exception
+     * `No matching TransactionManager bean found for qualifier 'transactionManager' - neither qualifier match nor bean name match!`\
+     */
     @Bean
-    public PlatformTransactionManager platformTransactionManager(){
+    public TransactionManager transactionManager(){
         return new JpaTransactionManager(entityManagerFactory());
     }
 }
