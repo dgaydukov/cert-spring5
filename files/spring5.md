@@ -57,6 +57,7 @@
 * 6.2 [OutputCaptureRule](#outputcapturerule)
 * 6.3 [TestExecutionListener](#testexecutionlistener)
 * 6.4 [Mock WebServer](#mock-webserver)
+* 6.5 [MockBean with List of objects implemented by interface](#mockbean-with-list-of-objects-implemented-by-interface)
 7. [Spring Monitoring](#spring-monitoring)
 * 7.1 [Jmx monitoring](#jmx-monitoring)
 * 7.2 [Spring Boot Actuator](#spring-boot-actuator)
@@ -89,11 +90,6 @@
 * 9.22 [Google Authenticator OTP](#google-authenticator-otp)
 * 9.23 [Ant vs Maven vs Gradle](#ant-vs-maven-vs-gradle)
 * 9.24 [Get OS & Browser info](#get-os--browser-info)
-
-
-
-
-
 
 
 
@@ -7523,6 +7519,89 @@ curl localhost:8888/error -v
 As you see with mock web server you have full control, you can even set reason phrase in HTTP after status code.
 Generally reason phrase should [describe code](https://stackoverflow.com/questions/38654336/is-it-good-practice-to-modify-the-reason-phrase-of-an-http-response), but you can put any message there.
 Pay attention that in Http2.0 there is no reason phrase.
+
+###### MockBean with List of objects implemented by interface
+When you use `@SpringBootTest` and you have beans that were defined in config files by interface, `@MockBean` won't substitute the beans, but would instead create new beans
+```java
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
+
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+interface Car{}
+class SportCar implements Car{}
+class SuvCar implements Car{}
+
+@Configuration
+class MyConfig{
+    @Bean
+    public Car sportCar(){
+        return new SportCar();
+    }
+    @Bean
+    public Car suvCar(){
+        return new SuvCar();
+    }
+}
+
+@Service
+@RequiredArgsConstructor
+class MyService{
+    private final List<Car> cars;
+
+    public void print(){
+        var list = cars.stream()
+            .map(k->k.getClass().getName())
+            .collect(Collectors.toList());
+        System.out.println("cars => " + list);
+    }
+}
+```
+Test class
+```java
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.junit4.SpringRunner;
+
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class MySimpleTest {
+    @Autowired
+    private MyService service;
+
+    @MockBean
+    private SportCar sportCar;
+    @MockBean
+    private SuvCar suvCar;
+
+    @Test
+    public void test(){
+        service.print();
+    }
+}
+```
+```
+cars => [com.example.spring5.SportCar, com.example.spring5.SuvCar, com.example.spring5.SportCar$MockitoMock$1796575649, com.example.spring5.SuvCar$MockitoMock$1520031441]
+```
+As you see, our beans were not substituted in context, but instead were added there. There are a few ways to fix this
+* In project code: Define beans inside config class `MyConfig` as their bean types `SportCar/SuvCar`, not as interface or declare them as `@Component`
+* Inside test just replace list with desired beans: `ReflectionTestUtils.setField(service, "cars", List.of(sportCar, suvCar));`
+* Inside test load only single service `@SpringBootTest(classes = MyService.class)` - in this case other beans won't be loaded
 
 #### Spring Monitoring
 ###### Jmx monitoring
