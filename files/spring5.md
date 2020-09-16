@@ -32,12 +32,11 @@
 * 3.7 [Reactive WebFlux](#reactive-webflux)
 * 3.8 [Data Validation](#data-validation)
 * 3.9 [HATEOAS - Hypermedia as the Engine of Application State](#hateoas---hypermedia-as-the-engine-of-application-state)
-* 3.10 [RestTemplate and WebClient](#resttemplate-and-webclient)
-* 3.11 [Custom HttpMessageConverter](#custom-httpmessageconverter)
-* 3.12 [Spring ViewResolver](#spring-viewresolver)
-* 3.13 [HandlerMapping, HandlerAdapter, HttpRequestHandler](#handlermapping-handleradapter-httprequesthandler)
-* 3.14 [Controller's method params](#controllers-method-params)
-* 3.15 [RequestBodyAdvice/ResponseBodyAdvice and HandlerInterceptor](#requestbodyadviceresponsebodyadvice-and-handlerinterceptor)
+* 3.10 [Custom HttpMessageConverter](#custom-httpmessageconverter)
+* 3.11 [Spring ViewResolver](#spring-viewresolver)
+* 3.12 [HandlerMapping, HandlerAdapter, HttpRequestHandler](#handlermapping-handleradapter-httprequesthandler)
+* 3.13 [Controller's method params](#controllers-method-params)
+* 3.14 [RequestBodyAdvice/ResponseBodyAdvice and HandlerInterceptor](#requestbodyadviceresponsebodyadvice-and-handlerinterceptor)
 4.[Spring Security](#spring-security)
 * 4.1 [Security Filters](#security-filters)
 * 4.2 [Http security](#http-security)
@@ -92,7 +91,7 @@
 * 9.23 [Ant vs Maven vs Gradle](#ant-vs-maven-vs-gradle)
 * 9.24 [Get OS & Browser info](#get-os--browser-info)
 * 9.25 [3 ways to send email using aws with JavaMailSender/AmazonSimpleEmailService/AmazonSNS](#3-ways-to-send-email-using-aws-with-javamailsenderamazonsimpleemailserviceamazonsns)
-* 9.26 [RestTemplate vs OkHttpClient vs Retrofit2 vs Feign](#resttemplate-vs-okhttpclient-vs-retrofit2-vs-feign)
+* 9.26 [RestTemplate/WebClient vs HttpClient/OkHttpClient vs Retrofit2/Feign](#resttemplatewebclient-vs-httpclientokhttpclient-vs-retrofit2feign)
 
 
 
@@ -4487,50 +4486,6 @@ Response
     }
 ]
 ```
-
-
-###### RestTemplate and WebClient
-`org.springframework.web.client.RestTemplate` - synchronous web client to interact with REST (Representational state transfer) API
-`org.springframework.web.reactive.function.client.WebClient` - reactive asynchronous web client to interact with REST API
-
-
-`RestTemplate` just like `JdbcTemplate` frees you from low level http boiler-place (create client, send request, handle response ...).
-It automatically encodes passed url so `http://test.com/my list` => would be encoded into `my%20list`. 
-3 examples to get object. 
-```java
-package com.example.logic.ann.hateoas;
-
-import java.util.Map;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
-
-public class RestApiCall {
-    public void getForObject(){
-        RestTemplate rt = new RestTemplate();
-        int id = 1;
-        Person p1 = rt.getForObject("http://localhost:8080/person/{id}", Person.class, id);
-        Person p2 = rt.getForObject("http://localhost:8080/person/{id}", Person.class, Map.of("id", id));
-        Person p3 = rt.getForObject("http://localhost:8080/person/1", Person.class);
-    }
-    
-    public void getForEntity(){
-        RestTemplate rt = new RestTemplate();
-        int id = 1;
-        ResponseEntity<Person> p1 = rt.getForEntity("http://localhost:8080/person/{id}", Person.class, id);
-        ResponseEntity<Person> p2 = rt.getForEntity("http://localhost:8080/person/{id}", Person.class, Map.of("id", id));
-        ResponseEntity<Person> p3 = rt.getForEntity("http://localhost:8080/person/1", Person.class);
-    }
-}
-```
-
-If you have api with hypermedia (hateoas) you can use [traverson](https://github.com/traverson/traverson)
-```
-Traverson traverson = new Traverson(URI.create("http://localhost:8080/api"), MediaTypes.HAL_JSON);
-```
-
-
-
 
 ###### Custom HttpMessageConverter
 When we receive request with `Content-type` header, we must parse it according to this content-type.
@@ -9941,8 +9896,17 @@ class MailSender{
 }
 ```
 
-###### RestTemplate vs OkHttpClient vs Retrofit2 vs Feign
+###### RestTemplate/WebClient vs HttpClient/OkHttpClient vs Retrofit2/Feign
 There are a few rest client you may want to use. Here is a brief difference:
+* RestTemplate (imperative) - synchronous web client to interact with REST (Representational state transfer) API
+`RestTemplate` just like `JdbcTemplate` frees you from low level http boiler-place (create client, send request, handle response ...).
+It automatically encodes passed url so `http://test.com/my list` => would be encoded into `my%20list`.
+* WebClient (imperative) - reactive asynchronous web client to interact with REST API
+* HttpClient (imperative) - native java implementation of http client, all of work regarding body conversion (for example to json) should be done manually
+* OkHttpClient (imperative) - custom http client, but still not very useful, all of work regarding body conversion (for example to json) should be done manually
+* Retrofit2 (declarative) - you define method in interface and retrofit build classes to execute them
+* Feign (declarative) - just like retrofit, but more neat, and winner in my opinion
+
 Add following to your `pom.xml`
 ```
 <dependency>
@@ -9970,4 +9934,172 @@ Add following to your `pom.xml`
     <artifactId>feign-gson</artifactId>
     <version>11.0</version>
 </dependency>
+```
+5 examples to use rest clients
+```java
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import feign.Feign;
+import feign.Headers;
+import feign.RequestLine;
+import feign.gson.GsonDecoder;
+import feign.gson.GsonEncoder;
+import lombok.Data;
+import lombok.SneakyThrows;
+import okhttp3.Call;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.http.Body;
+import retrofit2.http.GET;
+import retrofit2.http.POST;
+
+
+public class App{
+    public static void main(String[] args) {
+        RestCall call = new RestCall();
+        call.sendWithFeign();
+    }
+}
+
+@Data
+class Person{
+    String name;
+    int age;
+}
+@Data
+class Response{
+    Object status;
+    Object headers;
+    Object body;
+}
+class RestCall{
+    private final static String BASE_URL = "https://httpbin.org";
+    private final static String GET_URL = "https://httpbin.org/get";
+    private final static String POST_URL = "https://httpbin.org/post";
+
+    private Person getPerson(){
+        Person person = new Person();
+        person.setName("Mike");
+        person.setAge(30);
+        return person;
+    }
+    private void printResponse(Object status, Object headers, Object body){
+        Response response = new Response();
+        response.setStatus(status);
+        response.setHeaders(headers);
+        response.setBody(body);
+        System.out.println(response);
+    }
+
+    public void sendWithRestTemplate(){
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<Object> res = restTemplate.getForEntity(GET_URL, Object.class);
+        printResponse(res.getStatusCode(), res.getHeaders(), res.getBody());
+
+        res = restTemplate.postForEntity(POST_URL, getPerson(), Object.class);
+        printResponse(res.getStatusCode(), res.getHeaders(), res.getBody());
+    }
+
+    @SneakyThrows
+    public void sendWithHttpClient(){
+        ObjectMapper mapper = new ObjectMapper();
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder(URI.create(GET_URL))
+            .build();
+
+        HttpResponse<String> res = client.send(request, HttpResponse.BodyHandlers.ofString());
+        printResponse(res.statusCode(), res.headers(), mapper.convertValue(res.body(), Object.class));
+
+        request = HttpRequest.newBuilder()
+            .uri(URI.create(POST_URL))
+            .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(getPerson())))
+            .build();
+
+        HttpResponse<?> postRes = client.send(request, HttpResponse.BodyHandlers.ofString());
+        printResponse(postRes.statusCode(), postRes.headers(), mapper.convertValue(postRes.body(), Object.class));
+    }
+
+    @SneakyThrows
+    public void sendWithOkHttpClient(){
+        final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        OkHttpClient client = new OkHttpClient.Builder()
+            .build();
+
+        Request request = new Request.Builder()
+            .url(GET_URL)
+            .build();
+
+        Call call = client.newCall(request);
+        okhttp3.Response res = call.execute();
+        printResponse(res.code(), res.headers(), mapper.convertValue(res.body().string(), Object.class));
+
+        request = new Request.Builder()
+            .url(POST_URL)
+            .post(RequestBody.create(mapper.writeValueAsString(getPerson()), JSON))
+            .build();
+        call = client.newCall(request);
+        res = call.execute();
+        printResponse(res.code(), res.headers(), mapper.convertValue(res.body().string(), Object.class));
+    }
+
+    @SneakyThrows
+    public void sendWithRetrofit2(){
+        OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
+        Retrofit retrofit = new Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(httpClient.build())
+            .build();
+
+        RetrofitClient service = retrofit.create(RetrofitClient.class);
+        retrofit2.Call<Object> call = service.getData();
+        retrofit2.Response<Object> res = call.execute();
+        printResponse(res.code(), res.headers(), res.body());
+
+
+        call = service.postData(getPerson());
+        res = call.execute();
+        printResponse(res.code(), res.headers(), res.body());
+    }
+
+    public void sendWithFeign(){
+        FeignClient client = Feign.builder()
+            .client(new feign.okhttp.OkHttpClient())
+            .encoder(new GsonEncoder())
+            .decoder(new GsonDecoder())
+            .target(FeignClient.class, BASE_URL);
+        System.out.println(client.getData());
+        System.out.println(client.postData(getPerson()));
+    }
+
+    interface RetrofitClient {
+        @GET("/get")
+        retrofit2.Call<Object> getData();
+
+        @POST("/post")
+        retrofit2.Call<Object> postData(@Body Person person);
+    }
+    interface FeignClient {
+        @RequestLine("GET /get")
+        @Headers("Content-Type: application/json")
+        Object getData();
+
+        @RequestLine("POST /post")
+        @Headers("Content-Type: application/json")
+        Object postData(Person person);
+    }
+}
 ```
