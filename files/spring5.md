@@ -52,6 +52,7 @@
 * 5.5 [DataSource Interceptor and Sql query counter](#datasource-interceptor-and-sql-query-counter)
 * 5.6 [@DynamicUpdate/@DynamicInsert and @NamedEntityGraph](#datasource-interceptor-and-sql-query-counter)
 * 5.7 [Cascade types](#cascade-types)
+* 5.8 [DB AutoConfiguration](#db-autoconfiguration)
 6. [Spring Testing](#spring-testing)
 * 6.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
 * 6.2 [OutputCaptureRule](#outputcapturerule)
@@ -6755,37 +6756,27 @@ public class App {
 }
 ```
 
-Transactional lazy loading:
+Transactional lazy loading using implicit configuration:
 ```java
 import javax.persistence.Entity;
-import javax.persistence.EntityManagerFactory;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
-import javax.sql.DataSource;
 import javax.transaction.Transactional;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.TransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import lombok.Data;
-import lombok.Setter;
 import lombok.ToString;
 
 
@@ -6809,7 +6800,7 @@ class DataService{
     private DepartmentRepository repository;
 
     /**
-     * If you just try to use lazy loading (load some bean and next line of code load collection of other beans), you get exception 
+     * If you just try to use lazy loading (load some bean and next line of code load collection of other beans), you get exception
      * `org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: com.example.spring5.DepartmentEntity.employees, could not initialize proxy - no Session`
      * but `@Transactional` can solve this problem, cause in this case session is not closed until end of the method
      */
@@ -6827,39 +6818,11 @@ class DataService{
 }
 
 @Configuration
+@EnableAutoConfiguration
 @EnableJpaRepositories
 @EnableTransactionManagement
-// these 4 needed to put properties inside props variables
-@Setter
-@EnableConfigurationProperties
-@ConfigurationProperties
 @PropertySource("jdbc.properties")
-class AppConfig{
-    private String driverClassName;
-    private String url;
-    private String dbUser;
-    private String password;
-
-    @Bean
-    public DataSource dataSource(){
-        return new DriverManagerDataSource(url, dbUser, password);
-    }
-
-    @Bean
-    public EntityManagerFactory entityManagerFactory() {
-        var bean = new LocalContainerEntityManagerFactoryBean();
-        bean.setDataSource(dataSource());
-        bean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        bean.setPackagesToScan(App.BASE_PACKAGE);
-        bean.afterPropertiesSet();
-        return bean.getNativeEntityManagerFactory();
-    }
-
-    @Bean
-    public TransactionManager transactionManager(){
-        return new JpaTransactionManager(entityManagerFactory());
-    }
-}
+class AppConfig{}
 
 @Data
 @Entity
@@ -7234,8 +7197,164 @@ class Account{
 }
 ```
 
+###### DB AutoConfiguration
+There are 2 ways you can work with spring
+* set up config file yourself and declare there `DataSource/EntityManagerFactory/TransactionManager` beans yourself
+* set up just env vars, and allow spring auto-configuration do all the magic by creating this beans
+
+First way with explicit configuration
+```java
+import javax.persistence.Entity;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.sql.DataSource;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.TransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import lombok.Data;
+import lombok.Setter;
 
 
+public class App{
+    public static final String BASE_PACKAGE = App.class.getPackageName();
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(BASE_PACKAGE);
+        var repository = context.getBean(DepartmentRepository.class);
+        System.out.println("department => " + repository.findById(1));
+        System.out.println("DataSource => " + context.getBean(DataSource.class).getClass().getName());
+        System.out.println("EntityManagerFactory => " + context.getBean(EntityManagerFactory.class).getClass().getName());
+        System.out.println("TransactionManager => " + context.getBean(TransactionManager.class).getClass().getName());
+    }
+}
+
+@Configuration
+@EnableJpaRepositories
+@EnableTransactionManagement
+// these 4 needed to put properties inside props variables
+@Setter
+@EnableConfigurationProperties
+@ConfigurationProperties
+@PropertySource("jdbc.properties")
+class AppConfig{
+    private String url;
+    private String dbUser;
+    private String password;
+
+    @Bean
+    public DataSource dataSource(){
+        return new DriverManagerDataSource(url, dbUser, password);
+    }
+
+    @Bean
+    public EntityManagerFactory entityManagerFactory() {
+        var bean = new LocalContainerEntityManagerFactoryBean();
+        bean.setDataSource(dataSource());
+        bean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
+        bean.setPackagesToScan(App.BASE_PACKAGE);
+        bean.afterPropertiesSet();
+        return bean.getNativeEntityManagerFactory();
+    }
+
+    @Bean
+    public TransactionManager transactionManager(){
+        return new JpaTransactionManager(entityManagerFactory());
+    }
+}
+
+@Data
+@Entity
+@Table(name = "department")
+class DepartmentEntity{
+    @Id
+    private Integer id;
+    private String name;
+    private String type;
+}
+
+@Repository
+interface DepartmentRepository extends JpaRepository<DepartmentEntity, Integer> {}
+```
+```
+department => Optional[DepartmentEntity(id=1, name=Exchange, type=IT)]
+DataSource => org.springframework.jdbc.datasource.DriverManagerDataSource
+EntityManagerFactory => org.hibernate.internal.SessionFactoryImpl
+TransactionManager => org.springframework.orm.jpa.JpaTransactionManager
+```
+
+Second way with implicit configuration
+```java
+import javax.persistence.Entity;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.sql.DataSource;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.TransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import lombok.Data;
+
+public class App{
+    public static final String BASE_PACKAGE = App.class.getPackageName();
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(BASE_PACKAGE);
+        var repository = context.getBean(DepartmentRepository.class);
+        System.out.println("department => " + repository.findById(1));
+        System.out.println("DataSource => " + context.getBean(DataSource.class).getClass().getName());
+        // if we use getClass() we would get com.sun.proxy.$Proxy86, cause transaction bean wrap it into proxy
+        System.out.println("EntityManagerFactory => " + context.getBean(EntityManagerFactory.class));
+        System.out.println("TransactionManager => " + context.getBean(TransactionManager.class).getClass().getName());
+    }
+}
+
+
+@Configuration
+@EnableAutoConfiguration
+@EnableJpaRepositories
+@EnableTransactionManagement
+// If we are using @SpringBootApplication, we don't need to load properties, cause this annotation would load them from application.yml
+@PropertySource("jdbc.properties")
+class AppConfig{
+}
+
+@Data
+@Entity
+@Table(name = "department")
+class DepartmentEntity{
+    @Id
+    private Integer id;
+    private String name;
+    private String type;
+}
+
+@Repository
+interface DepartmentRepository extends JpaRepository<DepartmentEntity, Integer> {}
+```
+```
+department => Optional[DepartmentEntity(id=1, name=Exchange, type=IT)]
+DataSource => com.zaxxer.hikari.HikariDataSource
+EntityManagerFactory => org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean@adc3344
+TransactionManager => org.springframework.orm.jpa.JpaTransactionManager
+```
+As you see it's better to use auto-configuration, so you don't waste time to create all configs by yourself.
 
 #### Spring Testing
 When you add spring test starter (`spring-boot-starter-test`), `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.

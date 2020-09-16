@@ -1,2 +1,5 @@
-age=21
-name=Mike
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/spring5
+    username: root
+    password:
