@@ -91,6 +91,7 @@
 * 9.22 [Google Authenticator OTP](#google-authenticator-otp)
 * 9.23 [Ant vs Maven vs Gradle](#ant-vs-maven-vs-gradle)
 * 9.24 [Get OS & Browser info](#get-os--browser-info)
+* 9.24 [4 ways to send email using aws with JavaMailSender/AmazonSimpleEmailService/AmazonSNS/NotificationMessagingTemplate](#4-ways-to-send-email-using-aws-with-javamailsenderamazonsimpleemailserviceamazonsnsnotificationmessagingtemplate)
 
 
 
@@ -7294,7 +7295,13 @@ EntityManagerFactory => org.hibernate.internal.SessionFactoryImpl
 TransactionManager => org.springframework.orm.jpa.JpaTransactionManager
 ```
 
-Second way with implicit configuration
+Second way with implicit configuration. For this to work you should set at least 3 props in your `jdbc.properties` file
+```
+spring.datasource.url=jdbc:mysql://localhost:3306/spring5
+spring.datasource.username=root
+spring.datasource.password=
+```
+You can't use yml for this, cause by default spring (without SpringBoot) can't read yml files.
 ```java
 import javax.persistence.Entity;
 import javax.persistence.EntityManagerFactory;
@@ -9769,4 +9776,165 @@ OS => UNKNOWN, browser => DOWNLOAD
 # request from google chrome browser
 userAgentHeader => Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36, userAgent => LINUX-CHROME8
 OS => LINUX, browser => CHROME8
+```
+
+###### 4 ways to send email using aws with JavaMailSender/AmazonSimpleEmailService/AmazonSNS/NotificationMessagingTemplate
+First add following env vars with secret values
+```
+AWS_ACCESS_KEY_ID={aws access key}
+AWS_SECRET_ACCESS_KEY={aws secret key}
+SES_SMTP_USERNAME={username credential from SES for SMTP access}
+SES_SMTP_PASSWORD={password credential from SES for SMTP access}
+SNS_TOPIC_ARN={arn of your email topic}
+```
+* `JavaMailSender` - spring base interface to work with mails. Add following to your `pom.xml` to work with mails
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-mail</artifactId>
+</dependency>
+```
+You can use gmail/SES mail server config. You can use either:
+* auto-configuration. For this add following props
+```
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=<login user to smtp server>
+spring.mail.password=<login password to smtp server>
+```
+After this you just autowire `JavaMailSender` where you need.
+* manually configure `JavaMailSenderImpl` by setting all these gmail props
+
+But we are going to use amazon settings. Go to `Services=>Customer Engagement=>Simple Email Service=>SMTP Settings`. Create credentials (username & password).
+You can get `org.springframework.mail.MailSendException: Failed messages: com.sun.mail.smtp.SMTPSendFailedException: 554 Message rejected: Email address is not verified. The following identities failed the check in region US-EAST-1: noreply@domain.com, gaydukov89@gmail.com`.
+That means your SES in [sandbox mode](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/request-production-access.html) so you have to add both `from/to` addresses to verified addresses before you can start sending emails.
+So we will use single email for both `from/to`. You can verify it in SES.
+
+* `AmazonSimpleEmailService`. To work with amazon sdk you have to add it to your `pom.xml`
+```
+<dependency>
+    <groupId>com.amazonaws</groupId>
+    <artifactId>aws-java-sdk</artifactId>
+    <version>1.11.861</version>
+</dependency>
+```
+If you want to use messaging templates `QueueMessagingTemplate/NotificationMessagingTemplate` you should also add
+```
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-aws-messaging</artifactId>
+    <version>2.2.4.RELEASE</version>
+</dependency>
+```
+Code to send emails
+```java
+
+import org.springframework.cloud.aws.messaging.core.NotificationMessagingTemplate;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
+import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder;
+import com.amazonaws.services.simpleemail.model.Body;
+import com.amazonaws.services.simpleemail.model.Content;
+import com.amazonaws.services.simpleemail.model.Destination;
+import com.amazonaws.services.simpleemail.model.Message;
+import com.amazonaws.services.simpleemail.model.SendEmailRequest;
+import com.amazonaws.services.simpleemail.model.SendEmailResult;
+import com.amazonaws.services.sns.AmazonSNS;
+import com.amazonaws.services.sns.AmazonSNSClient;
+import com.amazonaws.services.sns.model.PublishRequest;
+import com.amazonaws.services.sns.model.PublishResult;
+import lombok.Data;
+
+public class App{
+    public static void main(String[] args) {
+        MailSender sender = new MailSender();
+        //sender.sendWithMessageTemplate();
+    }
+}
+
+@Data
+class Person{
+    String name;
+    int age;
+}
+class MailSender{
+    private static final String SUBJECT = "What's up";
+    private static final String BODY_TEXT = "hello man";
+    private static final String FROM = "gaydukov89@gmail.com";
+    private static final String TO = "gaydukov89@gmail.com";
+
+    /**
+     * wrap sns client into spring cloud message template so we have same pattern for sqs/sns message system
+     */
+    public void sendWithMessageTemplate(){
+        AmazonSNS client = AmazonSNSClient
+            .builder()
+            .withRegion(Regions.US_EAST_1)
+            .build();
+
+        NotificationMessagingTemplate template = new NotificationMessagingTemplate(client);
+        Person person = new Person();
+        person.setName("Mike");
+        person.setAge(30);
+        template.convertAndSend(System.getenv("SNS_TOPIC_ARN"), person);
+    }
+
+    /**
+     * Send email with native sns client
+     */
+    public void sendWithSNS(){
+        AmazonSNS client = AmazonSNSClient
+            .builder()
+            .withRegion(Regions.US_EAST_1)
+            .build();
+
+        PublishRequest request = new PublishRequest(System.getenv("SNS_TOPIC_ARN"), "hello world");
+        PublishResult result = client.publish(request);
+        System.out.println("result => " + result); // result => {MessageId: cf7f76fc-fd35-52e3-9e71-212725b882af}
+    }
+
+    /**
+     * since we are using aws sdk, we should provide aws keys in order to access SES
+     * If you deploy it to ec2 you don't need to supply any keys from there, just add role to ec2 to send emails
+     */
+    public void sendWithSES(){
+        AmazonSimpleEmailService client = AmazonSimpleEmailServiceClientBuilder
+            .standard()
+            .withRegion(Regions.US_EAST_1)
+            .build();
+
+        SendEmailRequest request = new SendEmailRequest()
+            .withSource(FROM)
+            .withDestination(new Destination().withToAddresses(TO))
+            .withMessage(new Message()
+                .withSubject(new Content().withCharset("UTF-8").withData(SUBJECT))
+                .withBody(new Body().withText(new Content().withCharset("UTF-8").withData(BODY_TEXT)))
+            );
+
+        SendEmailResult result = client.sendEmail(request);
+        System.out.println("result => " + result); // result => {MessageId: 0100017496307ed6-79d17fca-9834-4166-bef2-d0db4b03ac8e-000000}
+    }
+
+    /**
+     * Since JavaMailSender is standard SMTP sender we have to provide default settings like host/port/username/password
+     * Inside aws SMTP credentials just transform into role and it's checked if this role can send emails
+     */
+    public void sendWithSpringMail(){
+        JavaMailSenderImpl client = new JavaMailSenderImpl();
+        client.setHost("email-smtp.us-east-1.amazonaws.com");
+        client.setPort(587);
+        client.setUsername(System.getenv("SES_SMTP_USERNAME"));
+        client.setPassword(System.getenv("SES_SMTP_PASSWORD"));
+
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setFrom(FROM);
+        msg.setTo(TO);
+        msg.setSubject(SUBJECT);
+        msg.setText(BODY_TEXT);
+
+        client.send(msg);
+    }
+}
 ```
