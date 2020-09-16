@@ -91,7 +91,8 @@
 * 9.22 [Google Authenticator OTP](#google-authenticator-otp)
 * 9.23 [Ant vs Maven vs Gradle](#ant-vs-maven-vs-gradle)
 * 9.24 [Get OS & Browser info](#get-os--browser-info)
-* 9.24 [4 ways to send email using aws with JavaMailSender/AmazonSimpleEmailService/AmazonSNS/NotificationMessagingTemplate](#4-ways-to-send-email-using-aws-with-javamailsenderamazonsimpleemailserviceamazonsnsnotificationmessagingtemplate)
+* 9.25 [3 ways to send email using aws with JavaMailSender/AmazonSimpleEmailService/AmazonSNS](#3-ways-to-send-email-using-aws-with-javamailsenderamazonsimpleemailserviceamazonsns)
+* 9.26 [RestTemplate vs OkHttpClient vs Retrofit2 vs Feign](#resttemplate-vs-okhttpclient-vs-retrofit2-vs-feign)
 
 
 
@@ -9778,8 +9779,8 @@ userAgentHeader => Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, li
 OS => LINUX, browser => CHROME8
 ```
 
-###### 4 ways to send email using aws with JavaMailSender/AmazonSimpleEmailService/AmazonSNS/NotificationMessagingTemplate
-First add following env vars with secret values
+###### 3 ways to send email using aws with JavaMailSender/AmazonSimpleEmailService/AmazonSNS
+First add following env vars with secret values are required to run the code
 ```
 AWS_ACCESS_KEY_ID={aws access key}
 AWS_SECRET_ACCESS_KEY={aws secret key}
@@ -9826,7 +9827,7 @@ If you want to use messaging templates `QueueMessagingTemplate/NotificationMessa
     <version>2.2.4.RELEASE</version>
 </dependency>
 ```
-Code to send emails
+This will allow to use same code for sqs/sns messages `convertAndSend` method from `AbstractMessageChannelMessagingSendingTemplate` (they both extend this class).
 ```java
 
 import org.springframework.cloud.aws.messaging.core.NotificationMessagingTemplate;
@@ -9865,34 +9866,25 @@ class MailSender{
     private static final String FROM = "gaydukov89@gmail.com";
     private static final String TO = "gaydukov89@gmail.com";
 
-    /**
-     * wrap sns client into spring cloud message template so we have same pattern for sqs/sns message system
-     */
-    public void sendWithMessageTemplate(){
-        AmazonSNS client = AmazonSNSClient
-            .builder()
-            .withRegion(Regions.US_EAST_1)
-            .build();
-
-        NotificationMessagingTemplate template = new NotificationMessagingTemplate(client);
-        Person person = new Person();
-        person.setName("Mike");
-        person.setAge(30);
-        template.convertAndSend(System.getenv("SNS_TOPIC_ARN"), person);
-    }
 
     /**
-     * Send email with native sns client
+     * Since JavaMailSender is standard SMTP sender we have to provide default settings like host/port/username/password
+     * Inside aws SMTP credentials just transform into role and it's checked if this role can send emails
      */
-    public void sendWithSNS(){
-        AmazonSNS client = AmazonSNSClient
-            .builder()
-            .withRegion(Regions.US_EAST_1)
-            .build();
+    public void sendWithSpringMail(){
+        JavaMailSenderImpl client = new JavaMailSenderImpl();
+        client.setHost("email-smtp.us-east-1.amazonaws.com");
+        client.setPort(587);
+        client.setUsername(System.getenv("SES_SMTP_USERNAME"));
+        client.setPassword(System.getenv("SES_SMTP_PASSWORD"));
 
-        PublishRequest request = new PublishRequest(System.getenv("SNS_TOPIC_ARN"), "hello world");
-        PublishResult result = client.publish(request);
-        System.out.println("result => " + result); // result => {MessageId: cf7f76fc-fd35-52e3-9e71-212725b882af}
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setFrom(FROM);
+        msg.setTo(TO);
+        msg.setSubject(SUBJECT);
+        msg.setText(BODY_TEXT);
+
+        client.send(msg);
     }
 
     /**
@@ -9918,23 +9910,64 @@ class MailSender{
     }
 
     /**
-     * Since JavaMailSender is standard SMTP sender we have to provide default settings like host/port/username/password
-     * Inside aws SMTP credentials just transform into role and it's checked if this role can send emails
+     * Send email with native sns client
      */
-    public void sendWithSpringMail(){
-        JavaMailSenderImpl client = new JavaMailSenderImpl();
-        client.setHost("email-smtp.us-east-1.amazonaws.com");
-        client.setPort(587);
-        client.setUsername(System.getenv("SES_SMTP_USERNAME"));
-        client.setPassword(System.getenv("SES_SMTP_PASSWORD"));
+    public void sendWithSNS(){
+        AmazonSNS client = AmazonSNSClient
+            .builder()
+            .withRegion(Regions.US_EAST_1)
+            .build();
 
-        SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setFrom(FROM);
-        msg.setTo(TO);
-        msg.setSubject(SUBJECT);
-        msg.setText(BODY_TEXT);
+        PublishRequest request = new PublishRequest(System.getenv("SNS_TOPIC_ARN"), "hello world");
+        PublishResult result = client.publish(request);
+        System.out.println("result => " + result); // result => {MessageId: cf7f76fc-fd35-52e3-9e71-212725b882af}
+    }
 
-        client.send(msg);
+    /**
+     * wrap sns client into spring cloud message template so we have same pattern for sqs/sns message system
+     */
+    public void sendWithMessageTemplate(){
+        AmazonSNS client = AmazonSNSClient
+            .builder()
+            .withRegion(Regions.US_EAST_1)
+            .build();
+
+        NotificationMessagingTemplate template = new NotificationMessagingTemplate(client);
+        Person person = new Person();
+        person.setName("Mike");
+        person.setAge(30);
+        template.convertAndSend(System.getenv("SNS_TOPIC_ARN"), person);
     }
 }
+```
+
+###### RestTemplate vs OkHttpClient vs Retrofit2 vs Feign
+There are a few rest client you may want to use. Here is a brief difference:
+Add following to your `pom.xml`
+```
+<dependency>
+    <groupId>com.squareup.okhttp3</groupId>
+    <artifactId>okhttp</artifactId>
+    <version>4.8.1</version>
+</dependency>
+<dependency>
+    <groupId>com.squareup.retrofit2</groupId>
+    <artifactId>retrofit</artifactId>
+    <version>2.9.0</version>
+</dependency>
+<dependency>
+    <groupId>com.squareup.retrofit2</groupId>
+    <artifactId>converter-gson</artifactId>
+    <version>2.9.0</version>
+</dependency>
+<dependency>
+    <groupId>io.github.openfeign</groupId>
+    <artifactId>feign-okhttp</artifactId>
+    <version>11.0</version>
+</dependency>
+<dependency>
+    <groupId>io.github.openfeign</groupId>
+    <artifactId>feign-gson</artifactId>
+    <version>11.0</version>
+</dependency>
 ```
