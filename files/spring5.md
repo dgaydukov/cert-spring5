@@ -9941,7 +9941,15 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.Feign;
@@ -9962,18 +9970,50 @@ import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
 
-
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
 public class App{
+    @SneakyThrows
     public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+        Thread.sleep(3000);
         RestCall call = new RestCall();
-        call.sendWithFeign();
+        System.out.println("------------Using RestTemplate------------");
+        call.useRestTemplate();
+        System.out.println("------------Using HttpClient------------");
+        call.useHttpClient();
+        System.out.println("------------Using OkHttpClient------------");
+        call.useOkHttpClient();
+        System.out.println("------------Using Retrofit2------------");
+        call.useRetrofit2();
+        System.out.println("------------Using Feign------------");
+        call.useFeign();
+    }
+}
+
+@Controller
+@ResponseBody
+class PersonController{
+    @GetMapping("/get")
+    public Person getPerson(){
+        Person person = new Person();
+        person.setId("1");
+        person.setName("Jack");
+        person.setEmail("jack@gmail.com");
+        return person;
+    }
+
+    @PostMapping("/post")
+    public Person postPerson(@org.springframework.web.bind.annotation.RequestBody Person person){
+        person.setId("2");
+        return person;
     }
 }
 
 @Data
 class Person{
+    String id;
     String name;
-    int age;
+    String email;
 }
 @Data
 class Response{
@@ -9982,14 +10022,14 @@ class Response{
     Object body;
 }
 class RestCall{
-    private final static String BASE_URL = "https://httpbin.org";
-    private final static String GET_URL = "https://httpbin.org/get";
-    private final static String POST_URL = "https://httpbin.org/post";
+    private final static String BASE_URL = "http://localhost:8080";
+    private final static String GET_URL = "/get";
+    private final static String POST_URL = "/post";
 
     private Person getPerson(){
         Person person = new Person();
         person.setName("Mike");
-        person.setAge(30);
+        person.setEmail("mike@yahoo.com");
         return person;
     }
     private void printResponse(Object status, Object headers, Object body){
@@ -10000,37 +10040,38 @@ class RestCall{
         System.out.println(response);
     }
 
-    public void sendWithRestTemplate(){
+    public void useRestTemplate(){
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<Object> res = restTemplate.getForEntity(GET_URL, Object.class);
+        ResponseEntity<Person> res = restTemplate.getForEntity(BASE_URL + GET_URL, Person.class);
         printResponse(res.getStatusCode(), res.getHeaders(), res.getBody());
 
-        res = restTemplate.postForEntity(POST_URL, getPerson(), Object.class);
+        res = restTemplate.postForEntity(BASE_URL + POST_URL, getPerson(), Person.class);
         printResponse(res.getStatusCode(), res.getHeaders(), res.getBody());
     }
 
     @SneakyThrows
-    public void sendWithHttpClient(){
+    public void useHttpClient(){
         ObjectMapper mapper = new ObjectMapper();
 
         HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder(URI.create(GET_URL))
+        HttpRequest request = HttpRequest.newBuilder(URI.create(BASE_URL + GET_URL))
             .build();
 
         HttpResponse<String> res = client.send(request, HttpResponse.BodyHandlers.ofString());
-        printResponse(res.statusCode(), res.headers(), mapper.convertValue(res.body(), Object.class));
+        printResponse(res.statusCode(), res.headers(), mapper.readValue(res.body(), Person.class));
 
         request = HttpRequest.newBuilder()
-            .uri(URI.create(POST_URL))
+            .uri(URI.create(BASE_URL + POST_URL))
+            .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(getPerson())))
             .build();
 
-        HttpResponse<?> postRes = client.send(request, HttpResponse.BodyHandlers.ofString());
-        printResponse(postRes.statusCode(), postRes.headers(), mapper.convertValue(postRes.body(), Object.class));
+        res = client.send(request, HttpResponse.BodyHandlers.ofString());
+        printResponse(res.statusCode(), res.headers(), mapper.readValue(res.body(), Person.class));
     }
 
     @SneakyThrows
-    public void sendWithOkHttpClient(){
+    public void useOkHttpClient(){
         final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
         ObjectMapper mapper = new ObjectMapper();
@@ -10039,24 +10080,24 @@ class RestCall{
             .build();
 
         Request request = new Request.Builder()
-            .url(GET_URL)
+            .url(BASE_URL + GET_URL)
             .build();
 
         Call call = client.newCall(request);
         okhttp3.Response res = call.execute();
-        printResponse(res.code(), res.headers(), mapper.convertValue(res.body().string(), Object.class));
+        printResponse(res.code(), res.headers(), mapper.readValue(res.body().string(), Person.class));
 
         request = new Request.Builder()
-            .url(POST_URL)
+            .url(BASE_URL + POST_URL)
             .post(RequestBody.create(mapper.writeValueAsString(getPerson()), JSON))
             .build();
         call = client.newCall(request);
         res = call.execute();
-        printResponse(res.code(), res.headers(), mapper.convertValue(res.body().string(), Object.class));
+        printResponse(res.code(), res.headers(), mapper.readValue(res.body().string(), Person.class));
     }
 
     @SneakyThrows
-    public void sendWithRetrofit2(){
+    public void useRetrofit2(){
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
         Retrofit retrofit = new Retrofit.Builder()
             .baseUrl(BASE_URL)
@@ -10065,41 +10106,41 @@ class RestCall{
             .build();
 
         RetrofitClient service = retrofit.create(RetrofitClient.class);
-        retrofit2.Call<Object> call = service.getData();
-        retrofit2.Response<Object> res = call.execute();
+        retrofit2.Call<Person> call = service.getPerson();
+        retrofit2.Response<Person> res = call.execute();
         printResponse(res.code(), res.headers(), res.body());
 
 
-        call = service.postData(getPerson());
+        call = service.postPerson(getPerson());
         res = call.execute();
         printResponse(res.code(), res.headers(), res.body());
     }
 
-    public void sendWithFeign(){
+    public void useFeign(){
         FeignClient client = Feign.builder()
             .client(new feign.okhttp.OkHttpClient())
             .encoder(new GsonEncoder())
             .decoder(new GsonDecoder())
             .target(FeignClient.class, BASE_URL);
-        System.out.println(client.getData());
-        System.out.println(client.postData(getPerson()));
+        System.out.println(client.getPerson());
+        System.out.println(client.postPerson(getPerson()));
     }
 
     interface RetrofitClient {
-        @GET("/get")
-        retrofit2.Call<Object> getData();
+        @GET(GET_URL)
+        retrofit2.Call<Person> getPerson();
 
-        @POST("/post")
-        retrofit2.Call<Object> postData(@Body Person person);
+        @POST(POST_URL)
+        retrofit2.Call<Person> postPerson(@Body Person person);
     }
     interface FeignClient {
-        @RequestLine("GET /get")
+        @RequestLine("GET " + GET_URL)
         @Headers("Content-Type: application/json")
-        Object getData();
+        Person getPerson();
 
-        @RequestLine("POST /post")
+        @RequestLine("POST " + POST_URL)
         @Headers("Content-Type: application/json")
-        Object postData(Person person);
+        Person postPerson(Person person);
     }
 }
 ```
