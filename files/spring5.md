@@ -92,6 +92,7 @@
 * 9.24 [Get OS & Browser info](#get-os--browser-info)
 * 9.25 [3 ways to send email using aws with JavaMailSender/AmazonSimpleEmailService/AmazonSNS](#3-ways-to-send-email-using-aws-with-javamailsenderamazonsimpleemailserviceamazonsns)
 * 9.26 [RestTemplate/WebClient vs HttpClient/OkHttpClient vs Retrofit2/Feign](#resttemplatewebclient-vs-httpclientokhttpclient-vs-retrofit2feign)
+* 9.27 [AWS Access with 2FA](#aws-access-with-2fa)
 
 
 
@@ -9648,6 +9649,8 @@ public class App{
         GoogleAuthenticatorKey key = auth.createCredentials();
         String secretKey = key.getKey();
         int otp = auth.getTotpPassword(secretKey);
+        // sometimes it return 5-digit number, so we should append 0
+        String otpCode = String.format("%06d", auth.getTotpPassword(secretKey));
         System.out.println("secretKey => " + secretKey);
         System.out.println("otp => " + otp);
         System.out.println("validate => " + auth.authorize(secretKey, otp));
@@ -9762,6 +9765,7 @@ After this you just autowire `JavaMailSender` where you need.
 * manually configure `JavaMailSenderImpl` by setting all these gmail props
 
 But we are going to use amazon settings. Go to `Services=>Customer Engagement=>Simple Email Service=>SMTP Settings`. Create credentials (username & password).
+Internally SES create user `ses-smtp-user.20200916-122952` with attached policy `AmazonSesSendingAccess` with single action `ses:SendRawEmail`. So if you want to remove SES SMPT credentials, just remove user from IAM.
 You can get `org.springframework.mail.MailSendException: Failed messages: com.sun.mail.smtp.SMTPSendFailedException: 554 Message rejected: Email address is not verified. The following identities failed the check in region US-EAST-1: noreply@domain.com, gaydukov89@gmail.com`.
 That means your SES in [sandbox mode](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/request-production-access.html) so you have to add both `from/to` addresses to verified addresses before you can start sending emails.
 So we will use single email for both `from/to`. You can verify it in SES.
@@ -10143,4 +10147,120 @@ class RestCall{
         Person postPerson(Person person);
     }
 }
+```
+
+###### AWS Access with 2FA
+If you care about security you probably have 2FA enabled. And if user use console he can use his mobile device to get OTP (one time password) code every time he logs in into console.
+But if you want ot use cli/sdk you would like to automate this process. To use below example you have to add 2 env vars with aws keys
+```
+AWS_ACCESS_KEY_ID={aws access key}
+AWS_SECRET_ACCESS_KEY={aws secret key}
+MFA_SECRET_CODE={secret mfa code which is used to generate mfa otp}
+MFA_DEVICE_ARN={arn resource of virtual mfa device}
+ASSUMED_ROLE_ARN={arn of role to be assumed by user}
+```
+Policy to use mfa `"NumericLessThan":{"aws:MultiFactorAuthAge":"300"}` - allow only if mfa was set up 300 seconds or less ago.
+To force user to assume role with 2fa you should enable in when you create role.
+```java
+import java.util.stream.Collectors;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.Bucket;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
+import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
+import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
+import com.amazonaws.services.securitytoken.model.Credentials;
+import com.amazonaws.services.securitytoken.model.GetSessionTokenRequest;
+import com.amazonaws.services.securitytoken.model.GetSessionTokenResult;
+import com.warrenstrange.googleauth.GoogleAuthenticator;
+
+public class App {
+    public static void main(String[] args) {
+        AwsClient client = new AwsClient();
+        try {
+            client.getBuckets();
+        } catch (Exception ex){
+            System.out.println("ERR => " + ex.getLocalizedMessage());
+        }
+        client.getBucketsWithRole();
+    }
+}
+
+class AwsClient{
+    private static final String MFA_SECRET_CODE = System.getenv("MFA_SECRET_CODE");
+    private static final String MFA_DEVICE_ARN = System.getenv("MFA_DEVICE_ARN");
+    private static final String ASSUMED_ROLE_ARN = System.getenv("ASSUMED_ROLE_ARN");
+
+    /**
+     * By default user has no access to any aws service
+     * So if you try to run this code you get `AmazonS3Exception: Access Denied (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied`
+     * If you want user to be able to access s3, attach `AmazonS3ReadOnlyAccess` policy to this user
+     */
+    public void getBuckets(){
+        AmazonS3 s3 = AmazonS3ClientBuilder.standard()
+            .build();
+        var buckets = s3.listBuckets().stream().map(Bucket::getName).collect(Collectors.toList());
+        System.out.println("buckets => " + buckets);
+    }
+
+    public void getBucketsWith2FA(){
+        GoogleAuthenticator auth = new GoogleAuthenticator();
+        String otpCode = String.format("%06d", auth.getTotpPassword(MFA_SECRET_CODE));
+
+        AWSSecurityTokenService client = AWSSecurityTokenServiceClientBuilder.standard()
+            .withRegion(Regions.US_EAST_1)
+            .build();
+
+        GetSessionTokenRequest req = new GetSessionTokenRequest();
+        req.setTokenCode(otpCode);
+        req.setSerialNumber(MFA_DEVICE_ARN);
+        req.setDurationSeconds(3600);
+
+        GetSessionTokenResult res = client.getSessionToken(req);
+        Credentials cred = res.getCredentials();
+        BasicSessionCredentials awsCred = new BasicSessionCredentials(cred.getAccessKeyId(), cred.getSecretAccessKey(), cred.getSessionToken());
+
+        AmazonS3 s3 = AmazonS3ClientBuilder.standard()
+            .withCredentials(new AWSStaticCredentialsProvider(awsCred))
+            .build();
+
+        var buckets = s3.listBuckets().stream().map(Bucket::getName).collect(Collectors.toList());
+        System.out.println("buckets => " + buckets);
+    }
+
+    public void getBucketsWithRole(){
+        GoogleAuthenticator auth = new GoogleAuthenticator();
+        String otpCode = String.format("%06d", auth.getTotpPassword(MFA_SECRET_CODE));
+
+        AWSSecurityTokenService client = AWSSecurityTokenServiceClientBuilder.standard()
+            .withRegion(Regions.US_EAST_1)
+            .build();
+
+        AssumeRoleRequest req = new AssumeRoleRequest();
+        req.setTokenCode(otpCode);
+        req.setSerialNumber(MFA_DEVICE_ARN);
+        req.setDurationSeconds(3600);
+        req.setRoleArn(ASSUMED_ROLE_ARN);
+        req.setRoleSessionName("s3ViewerSession");
+        AssumeRoleResult res = client.assumeRole(req);
+        Credentials cred = res.getCredentials();
+
+        BasicSessionCredentials awsCred = new BasicSessionCredentials(cred.getAccessKeyId(), cred.getSecretAccessKey(), cred.getSessionToken());
+
+        AmazonS3 s3 = AmazonS3ClientBuilder.standard()
+            .withCredentials(new AWSStaticCredentialsProvider(awsCred))
+            .build();
+
+        var buckets = s3.listBuckets().stream().map(Bucket::getName).collect(Collectors.toList());
+        System.out.println("buckets => " + buckets);
+    }
+}
+```
+```
+ERR => Access Denied (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied; Request ID: EFD2E4B07EC3DD90; S3 Extended Request ID: q/arWAVTPe3BHTNTIP4P2BFMWI44/4EQ/owRbQRx1tKPkda+NGsN2V25FAs/PNL/u7Kaq9BpYrk=; Proxy: null)
+buckets => [my-lifecycle-s3-bucket-1, my-object-lock-s3-bucket-1, my-test-s3-bucket-1, www.aumingo.com]
 ```
