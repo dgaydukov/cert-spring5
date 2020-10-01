@@ -43,6 +43,7 @@
 * 4.3 [Aop security](#aop-security)
 * 4.4 [2 Security filters for 2 different urls](#2-security-filters-for-2-different-urls)
 * 4.5 [Oauth2](#oauth2)
+* 4.6 [HttpSecurity exception handling](#httpsecurity-exception-handling)
 5. [DB](#db)
 * 5.1 [Spring JDBC](#spring-jdbc)
 * 5.2 [Hibernate](#hibernate)
@@ -4729,11 +4730,10 @@ class MyException2 extends RuntimeException{}
 
 
 @ControllerAdvice
-class MyExceptionHandler{
+class RestExceptionHandler{
     @ExceptionHandler(MyException2.class)
-    public ResponseEntity<String> handleMyException2(){
-        System.out.println("handleException");
-        return new ResponseEntity<>("oops 400", HttpStatus.NOT_FOUND);
+    public ResponseEntity<String> handleMyException2(MyException2 ex){
+        return new ResponseEntity<>(ex.getLocalizedMessage(), HttpStatus.NOT_FOUND);
     }
 }
 ```
@@ -5103,7 +5103,6 @@ class SecurityConfig extends WebSecurityConfigurerAdapter{
         http
             .authorizeRequests().anyRequest().authenticated()
             .and().addFilterAt(new HeaderFilter(), BasicAuthenticationFilter.class);
-        ;
     }
 
     @Override
@@ -6024,6 +6023,132 @@ tokenExtractor => admin
 authenticationManager => admin/admin
 ```
 
+###### HttpSecurity exception handling
+You can handle exceptions in spring by using `@ControllerAdvice` and `@ExceptionHandler`. But if you need to handle exception before authentication.
+In this case it happens before our advice, and our advice can't catch them. For this purpose you have to use `accessDeniedHandler/authenticationEntryPoint`.
+```java
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.List;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.access.ExceptionTranslationFilter;
+import org.springframework.security.web.authentication.preauth.RequestHeaderAuthenticationFilter;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@RestController
+@RequestMapping("/")
+class MyController{
+    @GetMapping("/public")
+    public String publicGet(){
+        throw new RuntimeException("public");
+    }
+    @GetMapping("/private/user")
+    public String privateUser(Authentication auth){
+        throw new RuntimeException("private/user");
+    }
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @GetMapping("/private/admin")
+    public String privateAdmin(Authentication auth){
+        throw new RuntimeException("private/admin");
+    }
+}
+
+@ControllerAdvice
+class RestExceptionHandler{
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<String> handleException(Exception ex){
+        System.out.println("handleException => " + ex);
+        return new ResponseEntity<>(ex.getLocalizedMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
+
+@Configuration
+@EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+class JavaConfig extends WebSecurityConfigurerAdapter{
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        var filter = new RequestHeaderAuthenticationFilter();
+        filter.setPrincipalRequestHeader("auth");
+        filter.setAuthenticationManager(auth -> {
+            if ("admin".equals(auth.getPrincipal())) {
+                return new UsernamePasswordAuthenticationToken("admin", null, List.of(()->"ROLE_ADMIN"));
+            }
+            if ("user".equals(auth.getPrincipal())) {
+                return new UsernamePasswordAuthenticationToken("admin", null, List.of(()->"ROLE_USER"));
+            }
+            throw new BadCredentialsException("Incorrect header auth key");
+        });
+
+        http
+            .anonymous().disable()
+            .mvcMatcher("/private/**")
+            .addFilterAfter(filter, ExceptionTranslationFilter.class)
+            .authorizeRequests().anyRequest().authenticated()
+        .and()
+            .exceptionHandling()
+            /**
+             * This handler is called when user is authenticated but don't have desired permissions (role)
+             * Since we are using @ControllerAdvice to catch exceptions, and we catch generic Exception, our advice handle this exception, not this code
+             * If you remove advice or change exception type to less generic, this handler would handle AccessDeniedException
+             */
+            .accessDeniedHandler((HttpServletRequest req, HttpServletResponse res, AccessDeniedException ex)->{
+                System.out.println("accessDeniedHandler => " + ex);
+            })
+            .authenticationEntryPoint((HttpServletRequest req, HttpServletResponse res, AuthenticationException ex)->{
+                System.out.println("authenticationEntryPoint => " + ex);
+                res.setContentType("application/json;charset=UTF-8");
+                res.setStatus(500);
+                res.getWriter().write(ex.getLocalizedMessage());
+            })
+        ;
+    }
+}
+```
+```
+# call public endpoint: curl http://localhost:8080/public
+handleException => java.lang.RuntimeException: public
+
+# call private endpoint: curl http://localhost:8080/private/user
+authenticationEntryPoint => org.springframework.security.web.authentication.preauth.PreAuthenticatedCredentialsNotFoundException: auth header not found in request.
+
+# call private endpoint with wrong header: curl -H "auth: wronguser" http://localhost:8080/private/user
+# Although original exception is `Incorrect header auth key` here we got a different one, cause spring our exception into this
+authenticationEntryPoint => org.springframework.security.authentication.AuthenticationCredentialsNotFoundException: An Authentication object was not found in the SecurityContext
+
+# call private endpoint with correct header: curl -H "auth: user" http://localhost:8080/private/user
+# here our advice was called
+handleException => java.lang.RuntimeException: private/user
+
+# call admin endpoint with user header: curl -H "auth: user" http://localhost:8080/private/admin
+handleException => org.springframework.security.access.AccessDeniedException: Access is denied
+```
+
 #### DB
 ###### Spring JDBC
 Before using spring jdbc, we can use standard jdk jdbc.
@@ -6893,7 +7018,7 @@ If you want to subscribe on events for some repository you can extend `AbstractR
 
 `@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into transactions.
 
-`Propagation` => 
+`Propagation` what to do when you call annotated method from another: 
 * `REQUIRED` - default value, if no transaction exists, create new, otherwise run in current
 * `SUPPORTS` - if transaction exists, run in int, otherwise run as non-transactional
 * `MANDATORY` - throw exception if method was called from non-transactional method
@@ -6902,7 +7027,7 @@ If you want to subscribe on events for some repository you can extend `AbstractR
 * `NEVER` - throw exception if there is active transaction
 * `NESTED` - if a transaction exists, create a savepoint. If method throws an exception, then transaction rollbacks to this savepoint. If there's no active transaction, it works like REQUIRED.
              
-`Isolation` =>
+`Isolation` what database isolation level to set for current transaction:
 * `READ_UNCOMMITTED` - dirty reads, repeatable reads, phantom reads
 * `READ_COMMITTED` - repeatable reads, phantom reads
 * `REPEATABLE_READ` - phantom reads
