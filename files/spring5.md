@@ -44,6 +44,7 @@
 * 4.4 [2 Security filters for 2 different urls](#2-security-filters-for-2-different-urls)
 * 4.5 [Oauth2](#oauth2)
 * 4.6 [HttpSecurity exception handling](#httpsecurity-exception-handling)
+* 4.7 [CSRF protection](#csrf-protection)
 5. [DB](#db)
 * 5.1 [Spring JDBC](#spring-jdbc)
 * 5.2 [Hibernate](#hibernate)
@@ -5183,7 +5184,6 @@ public class App{
 class SecurityConfig extends WebSecurityConfigurerAdapter{
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        // for simplicity we should disable csrf, cause we are testing from curl
         http
             .csrf().disable()
             .authorizeRequests().anyRequest().authenticated()
@@ -5270,9 +5270,9 @@ The idea is that `FilterChainProxy` (spring security creates `javax.servlet.Filt
 ```java
 import javax.annotation.Resource;
 import javax.servlet.Filter;
-
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.security.web.FilterChainProxy;
 
 @SpringBootApplication
 public class App {
@@ -5282,12 +5282,30 @@ public class App {
     public static void main(String[] args) {
         var context = SpringApplication.run(App.class, args);
         var app = context.getBean(App.class);
-        System.out.println("springSecurityFilterChain => " + app.filter);
+        ((FilterChainProxy)app.filter).getFilterChains()
+            .stream()
+            .flatMap(f -> f.getFilters().stream())
+            .map(f -> f.getClass().getName())
+            .forEach(System.out::println);
     }
 }
 ```
 ```
-springSecurityFilterChain => FilterChainProxy[Filter Chains: [[ any request, [org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@15ecde52, org.springframework.security.web.context.SecurityContextPersistenceFilter@770b5cd2, org.springframework.security.web.header.HeaderWriterFilter@6aed3675, org.springframework.security.web.csrf.CsrfFilter@e9c4c2d, org.springframework.security.web.authentication.logout.LogoutFilter@1175070a, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@51d5c50f, org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter@2b023506, org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter@3d39d68, org.springframework.security.web.authentication.www.BasicAuthenticationFilter@148f6fd5, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@295cb28f, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@34002c3d, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@401d9586, org.springframework.security.web.session.SessionManagementFilter@29a62c48, org.springframework.security.web.access.ExceptionTranslationFilter@9d3851, org.springframework.security.web.access.intercept.FilterSecurityInterceptor@2954b177]]]]
+org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter
+org.springframework.security.web.context.SecurityContextPersistenceFilter
+org.springframework.security.web.header.HeaderWriterFilter
+org.springframework.security.web.csrf.CsrfFilter
+org.springframework.security.web.authentication.logout.LogoutFilter
+org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter
+org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter
+org.springframework.security.web.authentication.www.BasicAuthenticationFilter
+org.springframework.security.web.savedrequest.RequestCacheAwareFilter
+org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter
+org.springframework.security.web.authentication.AnonymousAuthenticationFilter
+org.springframework.security.web.session.SessionManagementFilter
+org.springframework.security.web.access.ExceptionTranslationFilter
+org.springframework.security.web.access.intercept.FilterSecurityInterceptor
 ```
 
 For servlet-based security we configure `HttpSecurity`, for reactive we configure `ServerHttpSecurity`.
@@ -6148,6 +6166,15 @@ handleException => java.lang.RuntimeException: private/user
 # call admin endpoint with user header: curl -H "auth: user" http://localhost:8080/private/admin
 handleException => org.springframework.security.access.AccessDeniedException: Access is denied
 ```
+
+###### CSRF protection
+Cross Site Request Forgery - type of attack when user being logged in in site A, open site B in his browser with hidden form, and click submit and sends this hidden form into site A backend.
+So attacker can trick user and perform any acton on behalf of user. To protect against this attack, backend generate special token on login and insert it into each form user sends.
+So another site can't infer this token and by this can't trick backend.
+But this is not the case for REST/Stateless apps. There is no point in using scrf protection in such apps. Cause you are using jwt + same origin.
+But in spring this protection is enabled by default, so if you are developing REST api you have to explicitly disable it by calling `http.csrf().disable()`.
+Plz note if you don't disable it, GET reqeust would run fine, but POST/PUT/DELETE would return   `{"timestamp":"2020-10-02T11:52:04.767+0000","status":403,"error":"Forbidden","message":"Forbidden","path":"/private"}`
+Notice that error different from when you disable it, and try to call api without authentication `{"timestamp":"2020-10-02T11:53:04.396+0000","status":403,"error":"Forbidden","message":"Access Denied","path":"/private"}`
 
 #### DB
 ###### Spring JDBC
