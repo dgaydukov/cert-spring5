@@ -45,6 +45,7 @@
 * 4.5 [Oauth2](#oauth2)
 * 4.6 [HttpSecurity exception handling](#httpsecurity-exception-handling)
 * 4.7 [CSRF protection](#csrf-protection)
+* 4.8 [Session management](#session-management)
 5. [DB](#db)
 * 5.1 [Spring JDBC](#spring-jdbc)
 * 5.2 [Hibernate](#hibernate)
@@ -6175,6 +6176,81 @@ But this is not the case for REST/Stateless apps. There is no point in using scr
 But in spring this protection is enabled by default, so if you are developing REST api you have to explicitly disable it by calling `http.csrf().disable()`.
 Plz note if you don't disable it, GET reqeust would run fine, but POST/PUT/DELETE would return   `{"timestamp":"2020-10-02T11:52:04.767+0000","status":403,"error":"Forbidden","message":"Forbidden","path":"/private"}`
 Notice that error different from when you disable it, and try to call api without authentication `{"timestamp":"2020-10-02T11:53:04.396+0000","status":403,"error":"Forbidden","message":"Access Denied","path":"/private"}`
+
+###### Session management
+Spring security using session to manage access. By default sessions are enabled. So once you pass authentication you can pass sessionId as cookie param
+```java
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+import java.util.List;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.web.authentication.preauth.RequestHeaderAuthenticationFilter;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@RestController
+@RequestMapping("/")
+class MyController{
+    @GetMapping("/private")
+    public String privateGet(HttpServletRequest req){
+        HttpSession session = req.getSession();
+        Authentication auth = ((SecurityContext)session.getAttribute("SPRING_SECURITY_CONTEXT")).getAuthentication();
+        System.out.println("sessionId => " + session.getId() + ", auth => " + auth.getPrincipal());
+        return "get";
+    }
+}
+
+@Configuration
+@EnableWebSecurity
+class JavaConfig extends WebSecurityConfigurerAdapter{
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        var filter = new RequestHeaderAuthenticationFilter();
+        filter.setPrincipalRequestHeader("auth");
+        filter.setAuthenticationManager(auth -> {
+            System.out.println("auth => " + auth.getPrincipal());
+            if ("user".equals(auth.getPrincipal())) {
+                return new UsernamePasswordAuthenticationToken("admin", null, List.of(()->"ROLE_USER"));
+            }
+            throw new BadCredentialsException("Incorrect header auth key");
+        });
+
+        http
+            .csrf().disable()
+            .mvcMatcher("/private/**")
+            .addFilterBefore(filter, BasicAuthenticationFilter.class)
+            .authorizeRequests().anyRequest().authenticated()
+        ;
+    }
+}
+```
+```
+# call with header first time:  curl -v -H 'auth: user' http://localhost:8080/private, You will get `Set-Cookie: JSESSIONID=02387A53D2D68D783289B8591D151B94; Path=/; HttpOnly`
+auth => user
+sessionId => 02387A53D2D68D783289B8591D151B94, auth => admin
+# you can just call with this id: curl -v --cookie 'JSESSIONID=02387A53D2D68D783289B8591D151B94' http://localhost:8080/private
+sessionId => 02387A53D2D68D783289B8591D151B94, auth => admin
+```
+As you see second time our filter is not called. This is because spring see that we pass session and use it to get security object. If you pass wrong sessionId, spring would require you to re-authenticate
+If you are developing REST/Stateless apps, it's best practice to disable sessions and validate user on each request by jwt or other tokens `http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)`
 
 #### DB
 ###### Spring JDBC
