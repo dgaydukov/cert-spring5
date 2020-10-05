@@ -96,6 +96,7 @@
 * 9.25 [3 ways to send email using aws with JavaMailSender/AmazonSimpleEmailService/AmazonSNS](#3-ways-to-send-email-using-aws-with-javamailsenderamazonsimpleemailserviceamazonsns)
 * 9.26 [RestTemplate/WebClient vs HttpClient/OkHttpClient vs Retrofit2/Feign](#resttemplatewebclient-vs-httpclientokhttpclient-vs-retrofit2feign)
 * 9.27 [AWS Access with 2FA](#aws-access-with-2fa)
+* 9.28 [Lombok ToString parent class](#lombok-tostring-parent-class)
 
 
 
@@ -10523,4 +10524,61 @@ class AwsClient{
 ```
 ERR => Access Denied (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied; Request ID: EFD2E4B07EC3DD90; S3 Extended Request ID: q/arWAVTPe3BHTNTIP4P2BFMWI44/4EQ/owRbQRx1tKPkda+NGsN2V25FAs/PNL/u7Kaq9BpYrk=; Proxy: null)
 buckets => [my-lifecycle-s3-bucket-1, my-object-lock-s3-bucket-1, my-test-s3-bucket-1, www.aumingo.com]
+```
+
+###### Lombok ToString parent class
+If you want custom toString there are 2 options:
+* for parent class only - add `@ToString(callSuper = true)`
+* for complete custom method - override toString
+```java
+import lombok.Data;
+import lombok.ToString;
+
+public class App{
+    public static void main(String[] args) {
+        User user = new User();
+        user.setName("John");
+        user.setAge(30);
+        user.setEmail("jonh.doe@gmail.com");
+        System.out.println("user => " + user);
+
+        CustomUser customUser = new CustomUser();
+        customUser.setName("John");
+        customUser.setAge(30);
+        customUser.setEmail("jonh.doe@gmail.com");
+        System.out.println("customUser => " + user);
+    }
+}
+
+@Data
+class Person{
+    String name;
+    int age;
+}
+
+@Data
+/**
+ * Be default only fields present in current class goes to string
+ * If you want to include parent class, you have to explicitly define it
+ */
+@ToString(callSuper = true)
+class User extends Person{
+    String email;
+}
+
+/**
+ * If you want to have full control over toString, you have to manually override it
+ */
+@Data
+class CustomUser extends Person{
+    String email;
+    @Override
+    public String toString() {
+        return "User(name=" + name + ", age=" + age + ", email=" + email + ")";
+    }
+}
+```
+```
+user => User(super=Person(name=John, age=30), email=jonh.doe@gmail.com)
+customUser => User(super=Person(name=John, age=30), email=jonh.doe@gmail.com)
 ```
