@@ -98,6 +98,7 @@
 * 9.26 [RestTemplate/WebClient vs HttpClient/OkHttpClient vs Retrofit2/Feign](#resttemplatewebclient-vs-httpclientokhttpclient-vs-retrofit2feign)
 * 9.27 [AWS Access with 2FA](#aws-access-with-2fa)
 * 9.28 [Lombok ToString parent class](#lombok-tostring-parent-class)
+* 9.29 [Aws Sqs](#aws-sqs)
 
 
 
@@ -4047,7 +4048,8 @@ import org.springframework.context.annotation.ComponentScan;
  * is open, and no security filter blocking us
  * otherwise we won't be able to open localhost:8080/ws.html (would be redirected to login page)
  */
-@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
+
+
 @ComponentScan("com.example.logic.ann.ws")
 public class App {
     public static void main(String[] args) {
@@ -10139,10 +10141,11 @@ If you want to use messaging templates `QueueMessagingTemplate/NotificationMessa
 ```
 <dependency>
     <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-aws-messaging</artifactId>
-    <version>2.2.4.RELEASE</version>
+    <artifactId>spring-cloud-starter-aws-messaging</artifactId>
 </dependency>
 ```
+This dependency includes `spring-cloud-aws-messaging` with templates. But if you just add `spring-cloud-aws-messaging`, then `SqsListener` won't work.
+
 This will allow to use same code for sqs/sns messages `convertAndSend` method from `AbstractMessageChannelMessagingSendingTemplate` (they both extend this class).
 ```java
 
@@ -10677,4 +10680,171 @@ class CustomUser extends Person{
 ```
 user => User(super=Person(name=John, age=30), email=jonh.doe@gmail.com)
 customUser => User(super=Person(name=John, age=30), email=jonh.doe@gmail.com)
+```
+
+###### Aws Sqs
+Although you can use aws java sdk to work with sqs and create message request send it, then receive and delete message manually.
+```java
+import java.time.LocalDateTime;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClient;
+import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
+
+
+public class App{
+    private static final String QUEUE_NAME = "my";
+    public static void main(String[] args) {
+        AmazonSQS sqsClient = AmazonSQSClient
+            .builder()
+            .withRegion(Regions.US_EAST_1)
+            .build();
+
+        String queueUrl = sqsClient.getQueueUrl(QUEUE_NAME).getQueueUrl();
+
+        /**
+         * send message from queue
+         */
+        SendMessageRequest sendRequest = new SendMessageRequest()
+            .withQueueUrl(queueUrl)
+            .withMessageBody("current datetime " + LocalDateTime.now());
+        var sendResult = sqsClient.sendMessage(sendRequest);
+        System.out.println("sendResult => " + sendResult);
+
+        /**
+         * read 10 messages from queue
+         */
+        ReceiveMessageRequest receiveRequest = new ReceiveMessageRequest();
+        receiveRequest.setQueueUrl(queueUrl);
+        // default is 1, max - 10
+        receiveRequest.setMaxNumberOfMessages(10);
+        var messages = sqsClient
+            .receiveMessage(receiveRequest)
+            .getMessages();
+        System.out.println("found: " + messages.size());
+
+        /**
+         * View and delete message by receiptID
+         */
+        for(var msg: messages){
+            System.out.println("msgId => " + msg.getBody() + ", body => " + msg.getMessageId());
+            sqsClient.deleteMessage(queueUrl, msg.getReceiptHandle());
+        }
+    }
+}
+```
+
+But better approach is to use declarative style, where you have message handler and all reading logic hidden behind. For you it looks like that sqs pushes messages to your handler.
+You have to add to your `pom.xml`
+```
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-dependencies</artifactId>
+            <version>Hoxton.SR8</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependency>
+    <groupId`>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-aws-messaging</artifactId>
+</dependency>
+```
+Don't add following dependency
+```
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-aws-messaging</artifactId>
+    <version>2.2.4.RELEASE</version>
+</dependency>
+```
+Although it contains all classes, if you just add this without `spring-cloud-starter-aws-messaging`, `@SqsListener` won't work. You won't receive any messages.
+You have to add to `application.properties` cause auto-configuration need these values (otherwise you will get a lot of errors).
+```
+cloud.aws.region.static=us-east-1
+cloud.aws.stack.auto=false
+```
+
+There are 4 types of deletion `deletionPolicy`:
+* NO_REDRIVE - default policy, delete if no dead letter queue is set up. Otherwise if you manually delete it, it would be deleted, else after some attempts it goes to dead letter queue.
+* ALWAYS - always delete message, no matter what.
+* NEVER - never delete message. If you manually delete message - it would be deleted.
+* ON_SUCCESS - delete message only if method doesn't throw any exception.
+
+```java
+import java.time.LocalDateTime;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.aws.messaging.core.QueueMessagingTemplate;
+import org.springframework.cloud.aws.messaging.listener.SqsMessageDeletionPolicy;
+import org.springframework.cloud.aws.messaging.listener.annotation.SqsListener;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.Message;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.sqs.AmazonSQSAsync;
+import com.amazonaws.services.sqs.AmazonSQSAsyncClient;
+
+@SpringBootApplication
+public class App{
+    public static final String QUEUE_NAME = "my";
+    public static void main(String[] args) {
+        var context = SpringApplication.run(App.class, args);
+        var sender = context.getBean(MessageSender.class);
+        sender.send();
+    }
+}
+
+@Service
+class MessageSender{
+    @Autowired
+    private QueueMessagingTemplate template;
+
+    public void send(){
+        template.convertAndSend("time is " + LocalDateTime.now());
+    }
+
+}
+
+@Component
+class MessageHandler{
+    @Autowired
+    private AmazonSQSAsync sqsClient;
+
+    @SqsListener(value = App.QUEUE_NAME, deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
+    public void receive(Message message){
+        System.out.println("message => " + message);
+        /**
+         * you can manually delete messages using this
+         * sqsClient.deleteMessage(App.QUEUE_NAME, (String)message.getHeaders().get("ReceiptHandle"));
+         */
+    }
+}
+
+@Configuration
+class MyConfig {
+    @Bean
+    public AmazonSQSAsync amazonSQS() {
+        return AmazonSQSAsyncClient
+            .asyncBuilder()
+            .withRegion(Regions.US_EAST_1)
+            .build();
+    }
+
+    @Bean
+    public QueueMessagingTemplate queueMessagingTemplate() {
+        String queueUrl = amazonSQS().getQueueUrl(App.QUEUE_NAME).getQueueUrl();
+        QueueMessagingTemplate template = new QueueMessagingTemplate(amazonSQS());
+        template.setDefaultDestinationName(queueUrl);
+        return template;
+    }
+}
 ```
