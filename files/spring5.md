@@ -4934,7 +4934,6 @@ There are 2 default https filters (you can also create your custom filter, for e
 * You should add `BasicAuthenticationFilter` to chain of filters by adding `httpBasic()` to `HttpSecurity`
 * You should return `UserDetails` with valid username/password and spring will compare it with username/password form basic auth (extracted by `BasicAuthenticationFilter`)
 * You should use `@AuthenticationPrincipal` to populate `UserDetails` object
-* You can check app by calling `curl -u admin:admin localhost:8080/api/info`
 ```java
 import java.util.List;
 import org.springframework.boot.SpringApplication;
@@ -4963,8 +4962,8 @@ class SecurityConfig extends WebSecurityConfigurerAdapter{
     protected void configure(HttpSecurity http) throws Exception {
         http
             .authorizeRequests().anyRequest().authenticated()
-            .and().httpBasic()
-        ;
+            .and()
+            .httpBasic();
     }
 
     @Override
@@ -4987,6 +4986,7 @@ class ApiController{
 }
 ```
 ```
+# call: curl -u admin:admin localhost:8080/api/info
 username => admin
 org.springframework.security.authentication.UsernamePasswordAuthenticationToken@b0315e81: Principal: org.springframework.security.core.userdetails.User@586034f: Username: admin; Password: [PROTECTED]; Enabled: true; AccountNonExpired: true; credentialsNonExpired: true; AccountNonLocked: true; Granted Authorities: com.example.spring5.SecurityConfig$$Lambda$1145/0x00000008409ce440@4a483774; Credentials: [PROTECTED]; Authenticated: true; Details: org.springframework.security.web.authentication.WebAuthenticationDetails@957e: RemoteIpAddress: 127.0.0.1; SessionId: null; Granted Authorities: com.example.spring5.SecurityConfig$$Lambda$1145/0x00000008409ce440@4a483774
 org.springframework.security.core.userdetails.User@586034f: Username: admin; Password: [PROTECTED]; Enabled: true; AccountNonExpired: true; credentialsNonExpired: true; AccountNonLocked: true; Granted Authorities: com.example.spring5.SecurityConfig$$Lambda$1145/0x00000008409ce440@4a483774
@@ -5024,8 +5024,8 @@ class SecurityConfig extends WebSecurityConfigurerAdapter{
     protected void configure(HttpSecurity http) throws Exception {
         http
             .authorizeRequests().anyRequest().authenticated()
-            .and().httpBasic()
-        ;
+            .and()
+            .httpBasic();
     }
 
     @Override
@@ -5104,7 +5104,8 @@ class SecurityConfig extends WebSecurityConfigurerAdapter{
     protected void configure(HttpSecurity http) throws Exception {
         http
             .authorizeRequests().anyRequest().authenticated()
-            .and().addFilterAt(new HeaderFilter(), BasicAuthenticationFilter.class);
+            .and()
+            .addFilterAt(new HeaderFilter(), BasicAuthenticationFilter.class);
     }
 
     @Override
@@ -6180,8 +6181,13 @@ Notice that error different from when you disable it, and try to call api withou
 ###### Session management
 Spring security using session to manage access. By default sessions are enabled. So once you pass authentication you can pass sessionId as cookie param
 ```java
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 import java.util.List;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -6193,11 +6199,13 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.preauth.RequestHeaderAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.filter.GenericFilterBean;
 
 @SpringBootApplication
 public class App{
@@ -6223,12 +6231,35 @@ class MyController{
 class JavaConfig extends WebSecurityConfigurerAdapter{
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        class HeaderFilter extends GenericFilterBean {
+            @Override
+            public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException, ServletException {
+                try {
+                    String authHeader = ((HttpServletRequest) request).getHeader("auth");
+                    if (!"user".equals(authHeader)) {
+                        throw new BadCredentialsException("Incorrect header auth key");
+                    }
+                    Authentication auth = new UsernamePasswordAuthenticationToken("user", null, List.of(()->"ROLE_USER"));
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                } catch (Exception ex) {
+                    System.out.println("authError => " + ex);
+                    /**
+                     * This is necessary to remove dependency on sessions
+                     * If you don't explicitly remove sessions by setting `.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)`
+                     * And try to auth without header, but with session in cookie, since security context can be recovered from session you have to manually clear it
+                     * otherwise users would be able to authenticate without passing header, but just passing session
+                     */
+                    SecurityContextHolder.clearContext();
+                }
+                filterChain.doFilter(request, response);
+            }
+        }
+
         var filter = new RequestHeaderAuthenticationFilter();
         filter.setPrincipalRequestHeader("auth");
         filter.setAuthenticationManager(auth -> {
-            System.out.println("auth => " + auth.getPrincipal());
             if ("user".equals(auth.getPrincipal())) {
-                return new UsernamePasswordAuthenticationToken("admin", null, List.of(()->"ROLE_USER"));
+                return new UsernamePasswordAuthenticationToken("user", null, List.of(()->"ROLE_USER"));
             }
             throw new BadCredentialsException("Incorrect header auth key");
         });
@@ -6236,9 +6267,9 @@ class JavaConfig extends WebSecurityConfigurerAdapter{
         http
             .csrf().disable()
             .mvcMatcher("/private/**")
-            .addFilterBefore(filter, BasicAuthenticationFilter.class)
-            .authorizeRequests().anyRequest().authenticated()
-        ;
+            //.addFilterBefore(filter, BasicAuthenticationFilter.class)
+            .addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class)
+            .authorizeRequests().anyRequest().authenticated();
     }
 }
 ```
@@ -6249,7 +6280,8 @@ sessionId => 02387A53D2D68D783289B8591D151B94, auth => admin
 # you can just call with this id: curl -v --cookie 'JSESSIONID=02387A53D2D68D783289B8591D151B94' http://localhost:8080/private
 sessionId => 02387A53D2D68D783289B8591D151B94, auth => admin
 ```
-As you see second time our filter is not called. This is because spring see that we pass session and use it to get security object. If you pass wrong sessionId, spring would require you to re-authenticate
+As you see second time our filter is not called. This is because spring see that we pass session and use it to recreate security object. If you pass wrong sessionId, spring would require you to re-authenticate.
+But if you use custom filter and manually clear security context, even with correct sessionId user won't be able to authenticate without passing right header.
 If you are developing REST/Stateless apps, it's best practice to disable sessions and validate user on each request by jwt or other tokens `http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)`
 
 #### DB
