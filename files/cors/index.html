@@ -1,0 +1,31 @@
+<h1>CORS Example</h1>
+<div><button id="getButton">GET Request</button></div>
+<div><button id="postButton">POST Request</button></div>
+<div><button id="putButton">PUT Request</button></div>
+
+<style type="text/css">
+div {
+    height: 40px;
+}
+</style>
+
+<script type="text/javascript">
+console.log(`origin: ${window.location.origin}`);
+var req = function(method, url){
+    return function(){
+        var xhr = new XMLHttpRequest();
+        xhr.withCredentials = true;
+        xhr.onreadystatechange = function() {
+            if (this.readyState == 4) {
+                console.log(`status=${this.status}, response=${this.responseText}`);
+            }
+        };
+        xhr.open(method, "http://localhost:8080" + url);
+        xhr.setRequestHeader("auth", "user");
+        xhr.send();
+    }
+}
+document.getElementById("getButton").onclick = req("GET", "/api");
+document.getElementById("postButton").onclick = req("POST", "/api");
+document.getElementById("putButton").onclick = req("PUT", "/api");
+</script>

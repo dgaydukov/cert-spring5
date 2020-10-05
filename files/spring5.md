@@ -46,6 +46,7 @@
 * 4.6 [HttpSecurity exception handling](#httpsecurity-exception-handling)
 * 4.7 [CSRF protection](#csrf-protection)
 * 4.8 [Session management](#session-management)
+* 4.9 [CORS](#cors)
 5. [DB](#db)
 * 5.1 [Spring JDBC](#spring-jdbc)
 * 5.2 [Hibernate](#hibernate)
@@ -106,12 +107,10 @@
 
 #### DI and IoC
 ###### Dependency injection
-Singleton beans should be stateless and prototype beans should be stateful.
-stateless doesn't mean object doesn't have a state, it means that once objects was configured we don't change it's state
-compare to data object (like person), once you get it from hibernate you can change it's state and it's ok
+Singleton beans should be stateless and prototype beans should be stateful. 
+Stateless doesn't mean object doesn't have a state, it means that once objects was configured we don't change it's state compare to data object (like person), once you get it from hibernate you can change it's state and it's ok.
 Although both of them can have state, according to the Spring documentation, "you should use the prototype scope for all beans that are stateful, while the singleton scope should be used for stateless beans."
                                      
-
 Rewrite filed injection with `@Autowired` (performed by `AutowiredAnnotationBeanPostProcessor`), has one filed `boolean required default true`. If no dep found will throw `NoSuchBeanDefinitionException`, if set `required = false`, null will be injected.
 
 Pros of constructor injection
@@ -6283,12 +6282,109 @@ sessionId => 02387A53D2D68D783289B8591D151B94, auth => admin
 ```
 As you see second time our filter is not called. This is because spring see that we pass session and use it to recreate security object. If you pass wrong sessionId, spring would require you to re-authenticate.
 But if you use custom filter and manually clear security context, even with correct sessionId user won't be able to authenticate without passing right header.
-If you are developing REST/Stateless apps, it's best practice to disable sessions and validate user on each request by jwt or other tokens `http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)`
+If you are developing REST/Stateless apps, it's best practice to disable sessions and validate user on each request by jwt or other tokens `http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)`.
+Once you disabled, spring would still generate sessions, but won't use them to recreate security context object.
+
+###### CORS
+To test it fully you have to run ui (index.html) on some web server. For this do `cd files/cors && python3 -m http.server 3000`.
+There are 2 types of http requests:
+* simple (GET/HEAD/POST) - you backend should provide `Access-Control-Allow-Origin` header in response that matches the origin.
+    If POST include custom headers it would be non-simple request.
+* non-simple (PUT/PATCH/DELETE) - browser will make pre-flight request (`OPTIONS` request that made before non-simple http request) and backend should provide `Access-Control-Allow-Origin` header in this pre-flight request
+Pre-flight request should return 200, otherwise browser will not proceed. It sends 2 headers `Origin/Access-Control-Request-Method`.
+You can check pre-flight with `curl -v -X OPTIONS -H 'Origin: http://127.0.0.1:3000' -H 'Access-Control-Request-Method: PUT' http://localhost:8080/api`
+```java
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import java.util.List;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@SpringBootApplication
+public class App{
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+@RestController
+@RequestMapping("/")
+class MyController{
+    @RequestMapping("/api")
+    public String getPublic(){
+        return "API v2.0";
+    }
+}
+
+@Configuration
+@EnableWebSecurity
+class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        Filter filter = (ServletRequest req, ServletResponse res, FilterChain chain) -> {
+            try {
+                String authHeader = ((HttpServletRequest) req).getHeader("auth");
+                if (!"user".equals(authHeader)) {
+                    throw new BadCredentialsException("Incorrect header auth key");
+                }
+                Authentication auth = new UsernamePasswordAuthenticationToken("user", null, List.of(() -> "ROLE_USER"));
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            } catch (Exception ex) {
+                System.out.println("authError => " + ex);
+                SecurityContextHolder.clearContext();
+            }
+            chain.doFilter(req, res);
+        };
+        http
+            .csrf().disable()
+            /**
+             * cors should be enabled, otherwise OPTIONS pre-flight would return correct headers but 403
+             */
+            .cors()
+        .and()
+            .mvcMatcher("/**")
+            .addFilterBefore(filter, BasicAuthenticationFilter.class)
+            .authorizeRequests().anyRequest().authenticated()
+        ;
+    }
+}
+
+@Configuration
+class WebConfig implements WebMvcConfigurer {
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        /**
+         * If you make request with wrong Origin you got `403 Invalid CORS request`
+         */
+        registry.addMapping("/**")
+            .allowedOrigins("http://127.0.0.1:3000")
+            .allowedMethods("*")
+            .allowedHeaders("*")
+            .allowCredentials(true)
+            .maxAge(3600);
+    }
+}
+```
 
 #### DB
 ###### Spring JDBC
-Before using spring jdbc, we can use standard jdk jdbc.
-Add this to your `pom.xml`
+Before using spring jdbc, we can use standard jdk jdbc. Add this to your `pom.xml`
 ```
 <dependency>
     <groupId>mysql</groupId>
