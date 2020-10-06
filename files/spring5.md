@@ -56,6 +56,7 @@
 * 5.6 [@DynamicUpdate/@DynamicInsert and @NamedEntityGraph](#datasource-interceptor-and-sql-query-counter)
 * 5.7 [Cascade types](#cascade-types)
 * 5.8 [DB AutoConfiguration](#db-autoconfiguration)
+* 5.9 [MySql Sharding](#mysql-sharding)
 6. [Spring Testing](#spring-testing)
 * 6.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
 * 6.2 [OutputCaptureRule](#outputcapturerule)
@@ -98,7 +99,7 @@
 * 9.26 [RestTemplate/WebClient vs HttpClient/OkHttpClient vs Retrofit2/Feign](#resttemplatewebclient-vs-httpclientokhttpclient-vs-retrofit2feign)
 * 9.27 [AWS Access with 2FA](#aws-access-with-2fa)
 * 9.28 [Lombok ToString parent class](#lombok-tostring-parent-class)
-* 9.29 [Aws Sqs](#aws-sqs)
+* 9.29 [Aws Sqs and no_redrive deletion policy](#aws-sqs-and-no_redrive-deletion-policy)
 
 
 
@@ -7636,9 +7637,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import lombok.Data;
 
 public class App{
-    public static final String BASE_PACKAGE = App.class.getPackageName();
     public static void main(String[] args) {
-        var context = new AnnotationConfigApplicationContext(BASE_PACKAGE);
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
         var repository = context.getBean(DepartmentRepository.class);
         System.out.println("department => " + repository.findById(1));
         System.out.println("DataSource => " + context.getBean(DataSource.class).getClass().getName());
@@ -7678,6 +7678,233 @@ EntityManagerFactory => org.springframework.orm.jpa.LocalContainerEntityManagerF
 TransactionManager => org.springframework.orm.jpa.JpaTransactionManager
 ```
 As you see it's better to use auto-configuration, so you don't waste time to create all configs by yourself.
+
+###### MySql Sharding
+If you have a hot table with lots of read/write operations, you may soon hit natural limits of disk IO. To solve this problem, sharding was invented.
+Sharding - splitting single table between different physical databases, and have a mapping (in main db or replicated across all shards) that map some table key (called partitionKey) with proper shard.
+Sharding is well supported by hibernate/spring. But before use it you have to evaluate your db and answer do you really need it? 
+There are a few alternatives that you may want try first:
+* logical partition - if you have a single monolith and plan to go microsevices, maybe it's best time to divide you single db into several unrelated databases (so each service will have it's own db)
+* read replica - if your app read heavy, best solution create read replica and read from it, but write to master
+* caching (read optimization) - put some memory cache (Redis/Memcached) in front of db to reduce number of reads. Common reads served not from db, but from cache.
+* queueing (write optimization) - put some queue (RabbitMQ/ActiveMQ/Kafka) in front of db and store writes there. Then from app consume theses messages and write them into db with speed you want.
+There are a few optimizations that you may want try first:
+* hardware - maybe scaling up (adding more cpu/memory) can be a simpler choice
+* versioning - usually updating db software to latest version can speed up things
+* configuration - tuning db config params can speed up query performace
+* indexing - designing write schema and indexes can speed up query execution
+If both optimization/alternative not works for your case, and you still hit disk IO, try out this:
+* [MySQL Cluster](https://www.mysql.com/products/cluster/start.html) - sharding hidden under the hood. For you it's single db, but internally cluster distribute your data across several nodes.
+* NoSql solution - basically the same sharding, but designed for high-load from beginning. With sharding you will need to change app logic, so if you hit IO limit, maybe you should consider NoSql database.
+If you still want to implement sharding manually here is the way:
+* choose sharding type - how you would distribute you data across data:
+    * hash - use some key (like email) and some hash function to determine shard based on this key. Function should be deterministic - so for same values - always return same shard.
+    * range - use some key (like price) to distribute data across shards based on range (like < 100 -> shard1, > 100 - shard2).
+    * lookup table - create lookup table in main shard where you store userId/shardId, and for each user you store it shardId.
+Problems associated with sharding:
+* sql no declarative anymore - usually you write sql in declarative way, telling to db engine what you want, and db engine use it's own optimization to actually fetch data.
+Since you have to do join across several nodes, you will have to imperatively extract data from different nodes and joining them in code
+* network latency - since single query can request data across multiple nodes
+
+In the below example we will use simple hash function that would determine shard based on first letter of email (odd or even).
+First create 2 db (shards) using this script
+```
+drop database if exists shard1;
+drop database if exists shard2;
+create database shard1;
+create database shard2;
+
+use shard1;
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    email VARCHAR(255)
+)  ENGINE=INNODB;
+
+use shard2;
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    email VARCHAR(255)
+)  ENGINE=INNODB;
+```
+
+Create file `/src/main/resources/sharding.properties` and add following props there
+```
+main.url=jdbc:mysql://localhost:3306/spring5
+main.username=root
+main.password=
+
+shard1.url=jdbc:mysql://localhost:3306/shard1
+shard1.username=root
+shard1.password=
+
+shard2.url=jdbc:mysql://localhost:3306/shard2
+shard2.username=root
+shard2.password=
+```
+
+Below is spring code using sharding with the help of `AbstractRoutingDatasource`.
+Here we are using service to work with data save/find. If you would use directly repo you will got exception. But you can add AOP to change `DbContext` before calling any repository method.
+```java
+import javax.persistence.Entity;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.sql.DataSource;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import lombok.Data;
+import lombok.Setter;
+
+public class App{
+    public static final String BASE_PACKAGE = App.class.getPackageName();
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(BASE_PACKAGE);
+        var service = context.getBean(UserService.class);
+        UserEntity entity = new UserEntity();
+        entity.setName("John");
+        entity.setEmail("john.doe@gmail.com");
+        System.out.println("user => " + service.save(entity));
+        entity.setEmail("k@gmail.com");
+        System.out.println("user => " + service.save(entity));
+        System.out.println("user => " + service.findByEmail("john.doe@gmail.com"));
+    }
+}
+
+enum Shard {
+    MAIN,
+    SHARD1,
+    SHARD2
+}
+
+class DBContextHolder {
+    private static final ThreadLocal<Shard> contextHolder = new ThreadLocal<>();
+    public static void setShard(Shard shard) {
+        contextHolder.set(shard);
+    }
+    public static Shard getShard() {
+        return contextHolder.get();
+    }
+    public static void clear() {
+        contextHolder.remove();
+    }
+}
+
+class ShardingDataSource extends AbstractRoutingDataSource {
+    @Override
+    protected Object determineCurrentLookupKey() {
+        return DBContextHolder.getShard();
+    }
+}
+
+
+@Configuration
+@EnableJpaRepositories
+@EnableTransactionManagement
+@EnableConfigurationProperties
+@ConfigurationProperties
+@PropertySource("sharding.properties")
+@Setter
+class AppConfig{
+    private DbProps main;
+    private DbProps shard1;
+    private DbProps shard2;
+
+    @Data
+    static class DbProps{
+        String url;
+        String username;
+        String password;
+    }
+
+    @Bean
+    public DataSource dataSource(){
+        ShardingDataSource ds = new ShardingDataSource();
+        Map<Object, Object> shards = new HashMap<>();
+        shards.put(Shard.MAIN, new DriverManagerDataSource(main.url, main.username, main.password));
+        shards.put(Shard.SHARD1, new DriverManagerDataSource(shard1.url, shard1.username, shard1.password));
+        shards.put(Shard.SHARD2, new DriverManagerDataSource(shard2.url, shard2.username, shard2.password));
+        ds.setDefaultTargetDataSource(shards.get(Shard.MAIN));
+        ds.setTargetDataSources(shards);
+        return ds;
+    }
+
+    @Bean
+    public EntityManagerFactory entityManagerFactory() {
+        var bean = new LocalContainerEntityManagerFactoryBean();
+        bean.setDataSource(dataSource());
+        bean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
+        bean.setPackagesToScan(App.BASE_PACKAGE);
+        bean.afterPropertiesSet();
+        return bean.getNativeEntityManagerFactory();
+    }
+
+    @Bean
+    public TransactionManager transactionManager(){
+        return new JpaTransactionManager(entityManagerFactory());
+    }
+}
+
+@Data
+@Entity
+@Table(name = "users")
+class UserEntity{
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String name;
+    private String email;
+}
+
+@Repository
+interface UserRepository extends JpaRepository<UserEntity, Integer> {
+    Optional<UserEntity> findByEmail(String email);
+}
+
+@Service
+class UserService {
+    @Autowired
+    private UserRepository repository;
+
+    public void setShardByEmail(String email) {
+        if (((int)email.charAt(0)) % 2 == 0) {
+            DBContextHolder.setShard(Shard.SHARD1);
+        } else {
+            DBContextHolder.setShard(Shard.SHARD2);
+        }
+    }
+    public UserEntity save(UserEntity userEntity){
+        setShardByEmail(userEntity.getEmail());
+        return repository.save(userEntity);
+    }
+    public UserEntity findByEmail(String email){
+        setShardByEmail(email);
+        return repository.findByEmail(email).orElse(null);
+    }
+}
+```
 
 #### Spring Testing
 When you add spring test starter (`spring-boot-starter-test`), `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.
@@ -10682,7 +10909,7 @@ user => User(super=Person(name=John, age=30), email=jonh.doe@gmail.com)
 customUser => User(super=Person(name=John, age=30), email=jonh.doe@gmail.com)
 ```
 
-###### Aws Sqs
+###### Aws Sqs and no_redrive deletion policy
 Although you can use aws java sdk to work with sqs and create message request send it, then receive and delete message manually.
 ```java
 import java.time.LocalDateTime;

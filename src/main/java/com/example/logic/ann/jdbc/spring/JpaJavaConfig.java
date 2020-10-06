@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.JpaVendorAdapter;
@@ -38,16 +39,7 @@ public class JpaJavaConfig {
 
     @Bean
     public DataSource dataSource() {
-        try{
-            SimpleDriverDataSource ds = new SimpleDriverDataSource();
-            ds.setDriverClass((Class<? extends Driver>) Class.forName(driverClassName));
-            ds.setUrl(url);
-            ds.setUsername(username);
-            ds.setPassword(password);
-            return ds;
-        } catch (ClassNotFoundException ex){
-            throw new RuntimeException(ex);
-        }
+        return new DriverManagerDataSource(url, username, password);
     }
 
     private Properties properties() {

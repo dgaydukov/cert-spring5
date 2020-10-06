@@ -1,8 +1,7 @@
 package com.example.spring5;
-/**
- * spring & hibernate sharding (https://github.com/apache/shardingsphere)
- */
 
+public class App{
+    public static void main(String[] args) {
 
-
-
+    }
+}
