@@ -7695,6 +7695,7 @@ There are a few optimizations that you may want try first:
 * indexing - designing write schema and indexes can speed up query execution
 If both optimization/alternative not works for your case, and you still hit disk IO, try out this:
 * [MySQL Cluster](https://www.mysql.com/products/cluster/start.html) - sharding hidden under the hood. For you it's single db, but internally cluster distribute your data across several nodes.
+* [shardingsphere](https://shardingsphere.apache.org/document/legacy/3.x/document/en/overview) - java solution for sharding
 * NoSql solution - basically the same sharding, but designed for high-load from beginning. With sharding you will need to change app logic, so if you hit IO limit, maybe you should consider NoSql database.
 If you still want to implement sharding manually here is the way:
 * choose sharding type - how you would distribute you data across data:
@@ -7953,9 +7954,7 @@ public class JavaConfigTest {
     }
 }
 ```
-
-You can also use `MockEnvironment` and `MockPropertySource`
-
+You can also use `MockEnvironment` and `MockPropertySource`.
 
 ###### OutputCaptureRule
 This class helps to test what has been logged to console
@@ -8003,9 +8002,6 @@ There are default impl, but you can create your own impl. To add it to your clas
 ```
 Pay attention that adding it like that remove all default listeners, that's why we explicitly add `DI` listener.
 To preserve default listener add `mergeMode = MergeMode.MERGE_WITH_DEFAULTS`
-
-
-
 
 First let's add junit to `pom.xml`
 ```
@@ -8116,8 +8112,6 @@ So if you have one config for 10 tests, spring boot won't recreate context for a
 * If you need mock inside your test you should add `@MockBean` to property and use it later. But if you need mock only to build other objects, you can add them to class level like `@MockBean(MyService.class)`, it works since it repeatable.
 * You can also test web flux with `WebTestClient`
 
-
-
 Simple example to test mvc
 ```java
 import org.hamcrest.Matchers;
@@ -8218,7 +8212,6 @@ public class BeansIntegrationTest {
 If you need to mock calls to external API from your tests you have 2 options
 * mock method invocation - in this case API method won't be called at all, instead just some mock object would be returned
 * mock api itself - you create mock web server that has same endpoints as original API, and pass it's url as base url to your test config
-
 To mock api itself you should use [MockServer](https://www.mock-server.com). First add this dependency to you pom.xml
 ```
 <dependency>
