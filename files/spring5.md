@@ -6291,17 +6291,23 @@ Once you disabled, spring would still generate sessions, but won't use them to r
 ###### CORS
 To test it fully you have to run ui (index.html) on some web server. For this do `cd files/cors && python3 -m http.server 3000`.
 There are 2 types of http requests:
-* simple (GET/HEAD/POST) - you backend should provide `Access-Control-Allow-Origin` header in response that matches the origin.
-    If POST include custom headers it would be non-simple request.
-* non-simple (PUT/PATCH/DELETE) - browser will make pre-flight request (`OPTIONS` request that made before non-simple http request) and backend should provide `Access-Control-Allow-Origin` header in this pre-flight request
+* simple (GET/HEAD/POST) - when you make request you should provide `Origin` header, and your backend should provide `Access-Control-Allow-Origin` response header that matches the origin.
+If request include custom headers it would be non-simple request.
+* non-simple (PUT/PATCH/DELETE) - browser will make pre-flight request (`OPTIONS` request that made before non-simple http request) and backend should provide `Access-Control-Allow-Origin/Access-Control-Allow-Methods` headers in this pre-flight request
 Pre-flight request should return 200, otherwise browser will not proceed. It sends 2 headers `Origin/Access-Control-Request-Method`.
-You can check pre-flight with `curl -v -X OPTIONS -H 'Origin: http://127.0.0.1:3000' -H 'Access-Control-Request-Method: PUT' http://localhost:8080/api`
+Testing:
+* simple: `curl -v -H 'auth: user' -H 'Origin: http://127.0.0.1:3000' http://localhost:8080/api` => backend should respond with headers `Access-Control-Allow-Origin: http://127.0.0.1:3000`
+* non-simple: `curl -v -X OPTIONS -H 'Origin: http://127.0.0.1:3000' -H 'Access-Control-Request-Method: PUT' http://localhost:8080/api`
+You should also add `Access-Control-Allow-Credentials` header to both requests. This means that browser can expose cookies/headers with frontend javascript code.
+From ui you should set `XMLHttpRequest.withCredentials=true` for this to work. If it set to true you can't use `Access-Control-Allow-Origin: *`.
 ```java
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -6314,10 +6320,12 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
 
 @SpringBootApplication
 public class App{
@@ -6330,7 +6338,18 @@ public class App{
 @RequestMapping("/")
 class MyController{
     @RequestMapping("/api")
-    public String getPublic(){
+    public String getPublic(@CookieValue(value = "jwt", required = false) String jwt, HttpServletResponse res){
+        System.out.println("jwt => " + jwt);
+        /**
+         * There is no way to set SameSite attribute with Cookie. You have to add cookie manually with
+         * res.setHeader("Set-Cookie", "jwt=some_key; Domain=local.com; Path=/; Secure; HttpOnly; SameSite=None");
+         */
+        var cookie = new Cookie("jwt", "some_key");
+        cookie.setPath("/");
+        cookie.setSecure(true);
+        cookie.setHttpOnly(true);
+        cookie.setDomain("local.com");
+        res.addCookie(cookie);
         return "API v2.0";
     }
 }
@@ -6360,11 +6379,10 @@ class SecurityConfig extends WebSecurityConfigurerAdapter {
              * cors should be enabled, otherwise OPTIONS pre-flight would return correct headers but 403
              */
             .cors()
-        .and()
+            .and()
             .mvcMatcher("/**")
             .addFilterBefore(filter, BasicAuthenticationFilter.class)
-            .authorizeRequests().anyRequest().authenticated()
-        ;
+            .authorizeRequests().anyRequest().authenticated();
     }
 }
 
@@ -6376,7 +6394,7 @@ class WebConfig implements WebMvcConfigurer {
          * If you make request with wrong Origin you got `403 Invalid CORS request`
          */
         registry.addMapping("/**")
-            .allowedOrigins("http://127.0.0.1:3000")
+            .allowedOrigins("http://127.0.0.1:3000", "http://local.com:3000")
             .allowedMethods("*")
             .allowedHeaders("*")
             .allowCredentials(true)
