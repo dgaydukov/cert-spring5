@@ -100,6 +100,7 @@
 * 9.27 [AWS Access with 2FA](#aws-access-with-2fa)
 * 9.28 [Lombok ToString parent class](#lombok-tostring-parent-class)
 * 9.29 [Aws Sqs and no_redrive deletion policy](#aws-sqs-and-no_redrive-deletion-policy)
+* 9.30 [ChronicleMap vs ConcurrentMap](#chroniclemap-vs-concurrentmap)
 
 
 
@@ -6384,7 +6385,7 @@ class SecurityConfig extends WebSecurityConfigurerAdapter {
             .addFilterBefore(filter, BasicAuthenticationFilter.class)
             .authorizeRequests().anyRequest().authenticated();
     }
-}
+}~~~~
 
 @Configuration
 class WebConfig implements WebMvcConfigurer {
@@ -11085,4 +11086,57 @@ class MyConfig {
         return template;
     }
 }
+```
+
+###### ChronicleMap vs ConcurrentMap
+* ConcurrentMap - java interface
+* ChronicleMap - third-party high-speed implementation of `ConcurrentMap`
+
+To use `ChronicleMap` add this to your `pom.xml`
+```
+<dependency>
+    <groupId>net.openhft</groupId>
+    <artifactId>chronicle-map</artifactId>
+    <version>3.20.61</version>
+</dependency>
+```
+
+`ChronicleMap` required to set `averageValue`, cause it needs to know average size in advance, so it can allocate buffer.
+```java
+import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.map.ChronicleMap;
+
+public class App{
+    public static void main(String[] args) throws IOException {
+        ChronicleMap<LongValue, CharSequence> memoryMap = ChronicleMap
+            .of(LongValue.class, CharSequence.class)
+            .name("memory-map")
+            .entries(50)
+            .averageValue("exampleValue")
+            .create();
+
+        ChronicleMap<LongValue, CharSequence> diskMap = ChronicleMap
+            .of(LongValue.class, CharSequence.class)
+            .name("disk-map")
+            .entries(50)
+            .averageValue("exampleValue")
+            .createPersistedTo(new File("/tmp/details"));
+
+        System.out.println("memoryMap => " + memoryMap);
+        System.out.println("diskMap => " + diskMap);
+
+        ConcurrentMap<LongValue, CharSequence> map = new ConcurrentHashMap<>();
+        System.out.println("map => " + map);
+    }
+}
+```
+```
+memoryMap => {}
+diskMap => {}
+map => {}
 ```
