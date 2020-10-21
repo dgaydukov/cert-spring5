@@ -7269,8 +7269,7 @@ If you want to subscribe on events for some repository you can extend `AbstractR
 
 
 ###### JTA - java transaction API
-
-`@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into transactions.
+`@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into some transaction management code.
 
 `Propagation` what to do when you call annotated method from another: 
 * `REQUIRED` - default value, if no transaction exists, create new, otherwise run in current
@@ -7281,11 +7280,17 @@ If you want to subscribe on events for some repository you can extend `AbstractR
 * `NEVER` - throw exception if there is active transaction
 * `NESTED` - if a transaction exists, create a savepoint. If method throws an exception, then transaction rollbacks to this savepoint. If there's no active transaction, it works like REQUIRED.
              
-`Isolation` what database isolation level to set for current transaction:
+`Isolation` - how changes applied by concurrent transactions are visible to each other:
+There are 3 isolation level:
+* dirty read - read the uncommitted change of a concurrent transaction
+* nonrepeatable read - get different value on re-read of a row if a concurrent transaction updates the same row and commits
+* phantom read - get different rows after re-execution of a range query if another transaction adds or removes some rows in the range and commits
+There are 5 isolation types:
+* `DEFAULT` - use database default transaction level (be careful, cause if db admin change this, your transactional operations can start to behave different)
 * `READ_UNCOMMITTED` - dirty reads, repeatable reads, phantom reads
 * `READ_COMMITTED` - repeatable reads, phantom reads
 * `REPEATABLE_READ` - phantom reads
-* `SERIALIZABLE` - no reads available
+* `SERIALIZABLE` - prevent all 3 types of reads. So with this reads would be same as if 2 concurrent transaction run sequentially one after another.
 
 By default all `RuntimeException` and `Error` rollback transaction whereas checked exceptions don't. This is an EJB legacy. You can configure this by using `rollbackFor()` and `noRollbackFor()` annotation parameters `@Transactional(rollbackFor=Exception.class)`
 You can also pass array of strings for `rollbackForClassName/noRollbackForClassName`.
