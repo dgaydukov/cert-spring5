@@ -101,6 +101,7 @@
 * 9.28 [Lombok ToString parent class](#lombok-tostring-parent-class)
 * 9.29 [Aws Sqs and no_redrive deletion policy](#aws-sqs-and-no_redrive-deletion-policy)
 * 9.30 [ChronicleMap vs ConcurrentMap](#chroniclemap-vs-concurrentmap)
+* 9.31 [Cognito Auth Flow](#cognito-auth-flow)
 
 
 
@@ -11144,4 +11145,121 @@ public class App{
 memoryMap => {}
 diskMap => {}
 map => {}
+```
+
+###### Cognito Auth Flow
+You can use aws cogntito as identity provider to store your users. There are 2 types of functions:
+* those starts with `admin` - should be called only from backend, cause require aws iam credentials
+* normal function - can be called from any client (browser, android app)
+To signUp you need to have app client. It represents browser or mobile app. You can have many clients for single user pool.
+Client may have secret. In this case all requests should be signed with `BASE64(CLIENT_SECRET, (USERNAME+CLIENT_ID))`. 
+```java
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClientBuilder;
+import com.amazonaws.services.cognitoidp.model.AttributeType;
+import com.amazonaws.services.cognitoidp.model.AuthFlowType;
+import com.amazonaws.services.cognitoidp.model.ConfirmSignUpRequest;
+import com.amazonaws.services.cognitoidp.model.InitiateAuthRequest;
+import com.amazonaws.services.cognitoidp.model.InitiateAuthResult;
+import com.amazonaws.services.cognitoidp.model.SignUpRequest;
+import com.amazonaws.services.cognitoidp.model.SignUpResult;
+
+public class App{
+
+    public static void main(String[] args) {
+        var service = new CognitoService("client_id", "client_secret");
+        String email = "cognitouser11@mailinator.com";
+        String password = "P@1ssword";
+        // get code from email
+        String code = "716627";
+        System.out.println("userId => " + service.singUp(email, password, "John Doe"));
+        service.confirm(email, code);
+        System.out.println("idToken => " + service.singIn(email, password));
+    }
+}
+
+class CognitoService{
+    private final static String HMAC_SHA256_ALGORITHM = "HMACSHA256";
+
+    private String clientId;
+    private String clientSecret;
+
+    public CognitoService(String clientId){
+        this.clientId = clientId;
+    }
+    // if you set `GenerateSecret: true` in app client, use this constructor
+    public CognitoService(String clientId, String clientSecret){
+        this(clientId);
+        this.clientSecret = clientSecret;
+    }
+
+    private AWSCognitoIdentityProvider provider = AWSCognitoIdentityProviderClientBuilder
+        .standard()
+        .withRegion(Regions.US_EAST_1)
+        .build();
+
+    public String singUp(String email, String password, String name){
+        SignUpRequest req = new SignUpRequest();
+        req.setClientId(clientId);
+        req.setUsername(email);
+        req.setPassword(password);
+        if (clientSecret != null){
+            req.setSecretHash(calculateSecretHash(email));
+        }
+        req.setUserAttributes(List.of(
+            new AttributeType().withName("email").withValue(email),
+            new AttributeType().withName("name").withValue(name)
+        ));
+        SignUpResult res = provider.signUp(req);
+        return res.getUserSub();
+    }
+
+    //if confirm fails, exception would be thrown
+    public void confirm(String email, String code){
+        ConfirmSignUpRequest req = new ConfirmSignUpRequest();
+        req.setClientId(clientId);
+        req.setUsername(email);
+        req.setConfirmationCode(code);
+        if (clientSecret != null) {
+            req.setSecretHash(calculateSecretHash(email));
+        }
+        provider.confirmSignUp(req);
+    }
+
+    // return idToken
+    public String singIn(String email, String password){
+        InitiateAuthRequest req = new InitiateAuthRequest();
+        req.setClientId(clientId);
+        req.setAuthFlow(AuthFlowType.USER_PASSWORD_AUTH);
+        Map<String, String> params = new HashMap<>();
+        params.put("USERNAME", email);
+        params.put("PASSWORD", password);
+        if (clientSecret != null) {
+            params.put("SECRET_HASH", calculateSecretHash(email));
+        }
+        req.setAuthParameters(params);
+        InitiateAuthResult res = provider.initiateAuth(req);
+        return res.getAuthenticationResult().getIdToken();
+    }
+
+    private String calculateSecretHash(String email) {
+        try {
+            SecretKeySpec signingKey = new SecretKeySpec(clientSecret.getBytes(StandardCharsets.UTF_8), HMAC_SHA256_ALGORITHM);
+            Mac mac = Mac.getInstance(HMAC_SHA256_ALGORITHM);
+            mac.init(signingKey);
+            byte[] hmac = mac.doFinal((email + this.clientId).getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hmac);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+}
 ```
