@@ -4064,6 +4064,68 @@ public class App {
 If `WebSocket` is not supported by browser we call fallback to SockJs. For client take a [sockjs](https://github.com/sockjs/sockjs-client#getting-started).
 For server add this `withSockJS()` to `registry.addHandler().`
 
+You can use native javax websocket implementation. As you see there is no `main` function, you need `tomcat` to run this websocket server.
+```java
+import javax.websocket.OnClose;
+import javax.websocket.OnError;
+import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+@ServerEndpoint("/ws/endpoint")
+class MyWebSocket {
+    private Set<Session> sessions = ConcurrentHashMap.newKeySet();
+    @OnOpen
+    public void onOpen(Session session) {
+        System.out.println("onOpen => " + session.getId());
+        sessions.add(session);
+        broadcast();
+    }
+    @OnClose
+    public void onClose(Session session) {
+        System.out.println("onClose => " +  session.getId());
+    }
+
+    @OnMessage
+    public void onMessage(String msg, Session session) {
+        System.out.println("onMessage => " + session.getId() + ", msg => " + msg);
+        try {
+            session.getBasicRemote().sendText("Hello Client " + session.getId() + "!");
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @OnError
+    public void onError(Throwable ex) {
+        System.out.println("onError => " + ex.getLocalizedMessage());
+    }
+
+    /**
+     * Since every client creates new instance of class, in case of 1000 clients we would have to deal with 1000 instances of this class
+     * That's why for broadcast you can't call these method on all of them (otherwise each client would receive every 5 sec 1000 messages)
+     * So synchronized looks like nice solution, from all running instances only 1 would be called
+     * Another nice solution can be to create singleton class and to call it.
+     */
+    public synchronized void broadcast(){
+        while(true){
+            for(var session: sessions) {
+                try {
+                    session.getBasicRemote().sendText("broadcast " + LocalDateTime.now());
+                    Thread.sleep(5 * 1000);
+                } catch (IOException | InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        }
+    }
+}
+```
 
 
 ###### Reactive WebFlux
