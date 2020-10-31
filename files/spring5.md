@@ -69,7 +69,7 @@
 8. [Message Support](#message-support)
 * 8.1 [JMS](#jms)
 * 8.2 [AMQP (RabbitMQ)](#amqp-rabbitmq)
-* 8.3 [Kafka](#kafka)
+* 8.3 [Kafka & KafkaStreams](#kafka--kafkastreams)
 9. [Miscellaneous](#miscellaneous)
 * 9.1 [mvnw and mvnw.cmd](#mvnw-and-mvnwcmd)
 * 9.2 [Get param names](#get-param-names)
@@ -8913,9 +8913,8 @@ public class App{
 }
 ```
 
-###### Kafka
-Kafka is new generation message system offers clustering out of the box. 
-First you need to add to your `pom.xml`
+###### Kafka & KafkaStreams
+Kafka is new generation message system offers clustering out of the box. First you need to add to your `pom.xml`
 ```
 <dependency>
     <groupId>org.springframework.kafka</groupId>
@@ -9054,21 +9053,40 @@ public class App{
 }
 ```
 
+KafkaStreams - streaming library designed by creators of apache kafka. Add these 2 dependency to your `pom.xml`
+```
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka-streams</artifactId>
+    <version>1.0.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka-clients</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
 
+Kafka command line examples. For each examples we use `--bootstrap-server`, yet if we use multiple brokers, we may better use `--zookeeper=localhost:2181`, in this case zookeeper would know all brokers
+```
+# get list of all brokers
+./bin/zookeeper-shell.sh localhost:2181 ls /brokers/ids
 
-
-
-
+# list all topics
+./bin/kafka-topics.sh --list --bootstrap-server=localhost:4455
+# create new topic
+./bin/kafka-topics.sh --create --topic=source-topic --bootstrap-server=localhost:4455
+# open takfa consumer and send messages
+./bin/kafka-console-producer.sh --topic=source-topic --broker-list=localhost:4455
+```
 
 #### Miscellaneous
-
-
 ###### mvnw and mvnw.cmd
 When you download [spring boot](https://start.spring.io/) you have 2 files `mvnw` and `mvnw.cmd`. These 2 files from [Maven Wrapper Plugin](https://github.com/takari/takari-maven-plugin) 
 that allows you to run app on systems where there is no mvn installed. `mvnv` - script for linux, `mvnw.cmd` - for windows. Generally you don't need them in your work, so you may delete them.
 
 ###### Get param names
-Starting from `java9`, you can [get param names](#https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#get-param-names).
+Starting from `java9`, you can [get param names](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#get-param-names).
 But spring was using it's own utility classes, that could get param names from debug info, by using asm
 ```java
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
@@ -9477,11 +9495,82 @@ null
 ```
 
 ###### Spring Boot Logging
-There are a few types of logging in java
+Usually log levels goes in this direction `ERROR > WARN > INFO > DEBUG > TRACE`, next includes all previous (so if you set to `TRACE` all previous would be displayed)
+
+There are a few types of logging in java:
 * `java.util.logging` - standard package for logging from jdk
-* `logback` - custom logging implementation
+* `logback` - replacement for log4j
+To configure logback you should create file in `resources/logback.xml` with at least 1 appender and log level:
+```
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <root level="error">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>
+```
+You can also change log level directly from code
+```java
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class App{
+    public static void main(String[] args) {
+        System.setProperty("DEFAULT_LOG_LEVEL_KEY", "ERROR");
+        final App app = new App();
+        app.print();
+
+        /**
+         * notice that our change in App class, doesn't override MyService log level, here we using log level from logback.xml
+         */
+        final MyService service = new MyService();
+        service.print();
+    }
+    public void print(){
+        System.out.println("logger => " + log.getClass().getName());
+        if (log instanceof Logger) {
+            Logger logger = (Logger) log;
+            /**
+             * by default we set log level to error in logback.xml, but we can change it programmatically
+             */
+            logger.setLevel(Level.INFO);
+        }
+        log.error("App:error");
+        log.warn("App:warn");
+        log.info("App:info");
+        log.debug("App:debug");
+        log.trace("App:trace");
+    }
+}
+
+@Slf4j
+class MyService{
+    public void print(){
+        log.error("MyService:error");
+        log.warn("MyService:warn");
+        log.info("MyService:info");
+        log.debug("MyService:debug");
+        log.trace("MyService:trace");
+    }
+}
+```
+```
+logger => ch.qos.logback.classic.Logger
+2020-10-31 18:51:04.245 [main] ERROR com.example.spring5.App - App:error
+2020-10-31 18:51:04.247 [main] WARN  com.example.spring5.App - App:warn
+2020-10-31 18:51:04.248 [main] INFO  com.example.spring5.App - App:info
+2020-10-31 18:51:04.248 [main] ERROR com.example.spring5.MyService - MyService:error
+```
 * `apache common logging` - custom logging from apache
 * `slf4j` - simple logging facade for java
+
+
 
 By default spring uses 
 * `internal logging` => apache common logging
