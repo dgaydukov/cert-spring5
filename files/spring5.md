@@ -85,7 +85,7 @@
 * 9.12 [Spring Boot Logging](#spring-boot-logging)
 * 9.13 [Spring Caching](#spring-caching)
 * 9.14 [JavaBeans, POJO, Spring Beans](#javabeans-pojo-spring-beans)
-* 9.15 [Maven scope](#maven-scope)
+* 9.15 [Maven scope/optional/exclusions](#maven-scopeoptionalexclusions)
 * 9.16 [Spring Boot Starter](#spring-boot-starter)
 * 9.17 [Spring Context Indexer](#spring-context-indexer)
 * 9.18 [SPEL - Spring Expression Language](#spel---spring-expression-language)
@@ -9058,12 +9058,12 @@ KafkaStreams - streaming library designed by creators of apache kafka. Add these
 <dependency>
     <groupId>org.apache.kafka</groupId>
     <artifactId>kafka-streams</artifactId>
-    <version>1.0.0</version>
+    <version>2.5.1</version>
 </dependency>
 <dependency>
     <groupId>org.apache.kafka</groupId>
     <artifactId>kafka-clients</artifactId>
-    <version>1.0.0</version>
+    <version>5.5.0-ccs</version>
 </dependency>
 ```
 
@@ -9089,7 +9089,7 @@ sudo lsof -i | grep 9092
 ./bin/kafka-console-consumer.sh --topic=mytopic --bootstrap-server=localhost:4455 --partition=0
 ```
 
-Example of sending/polling data using `KafkaProducer/KafkaConsumer`
+Example of sending/polling data using `KafkaProducer/KafkaConsumer`. You should include either `kafka-clients` or `spring-kafka` (which already includes kafka-clients).
 ```java
 import java.util.List;
 import java.util.Properties;
@@ -9179,6 +9179,52 @@ public class App{
             System.out.println("closing consumer tcp connection...");
             consumer.close();
         }
+    }
+}
+```
+
+Example of using kafka stream. You should include `kafka-streams` dependency (`spring-kafka` won't help cause although it has `kafka-stream` dependency, but it declared as optional).
+```java
+import java.util.Arrays;
+import java.util.Properties;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Materialized;
+
+public class App {
+    private final static String TOPIC_NAME = "my";
+    private final static String BOOTSTRAP_SERVERS = "localhost:9092";
+    private final static String GROUP_ID = "STREAM_GROUP_ID";
+    private final static long TIMEOUT = 10000;
+
+    public static void main(String[] args) throws InterruptedException {
+        final Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, GROUP_ID);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+
+        StreamsBuilder builder = new StreamsBuilder();
+        KStream<String, String> textLines = builder.stream(TOPIC_NAME);
+        KTable<String, Long> wordCounts = textLines
+            .flatMapValues(line -> Arrays.asList(line.toLowerCase().split(" ")))
+            .groupBy((key, word) -> word)
+            .count(Materialized.as("counts-store"));
+        wordCounts
+            .toStream()
+            .foreach((w, c) -> System.out.println("word: " + w + " -> " + c));
+            //.to("my-output-topic", Produced.with(Serdes.String(), Serdes.Long()));
+
+        System.out.println("__START__");
+        KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+        streams.start();
+        Thread.sleep(TIMEOUT);
+        streams.close();
     }
 }
 ```
@@ -9897,22 +9943,40 @@ We associate Spring with `POJO` to express that with Spring, the beans stay simp
 
 
 
-###### Maven scope
+###### Maven scope/optional/exclusions
 There are 2 types of dependencies
 * Direct - directly included into project under `<dependency/>` tag
 * Transitive - dependencies of your direct dependencies. Although you don't explicitly add them to project, they are still there.
 We can list all of dependencies by running `mvn dependency:tree`
-
 Scopes can help to limit transitivity and modify classpath for different built tasks. There are 6 scopes:
 * `compile` - default scope if no other set. Dependencies with this scope available on the classpath for all builds. They are transitive.
 * `provided` - dependency should be provided by jdk or container. So it only available during compile-time. At run-time they won't be available. For example `spring-starter-tomcat` for `.war` application.
 * `runtime` - dependency only available at run-time not compile time. For example jdbc driver, since for compilation we are using `DataSource` to obtain connection we don't need driver at compile time, be we definitely need it during runtime.
-* `test` - means that junit types would be available only in testing scope, not inside main app. For example class `AopTestUtils` is available under test folder, but you can't import it into main code.
+* `test` - dependency of junit types would be available only in testing scope, not inside main app. For example class `AopTestUtils` is available under test folder, but you can't import it into main code.
 * `system` - similar to provided, but we should declare the exact path to jar file using `<systemPath/>` tag
 * `import` - available for type `pom`, should be replaced with all respective dependencies from it's pom.
-
 Dependencies with scopes provided and test will never be included in the main project.
 
+Optional - special tag that denotes, that dependency is non-transitive. Possible values are true/false. If you set false is the same as omit this tag, so it pretty useless to set optional=false.
+```
+<dependency>
+  <optional>true</optional>
+</dependency>
+```
+Declaring dependency as optional means, that project that depend on that project won't see this dependency. If we have A->B->C.
+If C is declared as optional inside B, B doesn't affect in anyway. But project A that depends on B, won't see this optional dependency.
+
+If you want to exclude any dependency (for example C wasn't declared as optional), inside A, when you import B, you should manually exclude C
+```
+<dependency>
+      <exclusions>
+        <exclusion>
+          <groupId>projectC</groupId>
+          <artifactId>artifactC</artifactId>
+        </exclusion>
+      </exclusions> 
+</dependency>
+```
 
 
 
