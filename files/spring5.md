@@ -9069,15 +9069,118 @@ KafkaStreams - streaming library designed by creators of apache kafka. Add these
 
 Kafka command line examples. For each examples we use `--bootstrap-server`, yet if we use multiple brokers, we may better use `--zookeeper=localhost:2181`, in this case zookeeper would know all brokers
 ```
+# run zookeeper & kafka locally
+./bin/zookeeper-server-start.sh -daemon config/zookeeper.properties
+./bin/kafka-server-start.sh -daemon config/server.properties
+
+# check that ports are available (2181 - default zookeeper port, 9092 - default kafka port)
+sudo lsof -i | grep 2181
+sudo lsof -i | grep 9092
+
 # get list of all brokers
 ./bin/zookeeper-shell.sh localhost:2181 ls /brokers/ids
-
 # list all topics
 ./bin/kafka-topics.sh --list --bootstrap-server=localhost:4455
 # create new topic
 ./bin/kafka-topics.sh --create --topic=source-topic --bootstrap-server=localhost:4455
 # open takfa consumer and send messages
 ./bin/kafka-console-producer.sh --topic=source-topic --broker-list=localhost:4455
+# read
+./bin/kafka-console-consumer.sh --topic=mytopic --bootstrap-server=localhost:4455 --partition=0
+```
+
+Example of sending/polling data using `KafkaProducer/KafkaConsumer`
+```java
+import java.util.List;
+import java.util.Properties;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
+
+public class App{
+    private final static String TOPIC_NAME = "my";
+    private final static String BOOTSTRAP_SERVERS = "localhost:9092";
+    private final static String GROUP_ID = "MY_GROUP_ID";
+    private final static long TIMEOUT = 10000;
+
+    public static void main(String[] args) {
+        final App app = new App();
+        new Thread(()->{
+            System.out.println("runProducer");
+            app.runProducer();
+        }).start();
+        new Thread(()->{
+            System.out.println("runConsumer");
+            app.runConsumer();
+        }).start();
+    }
+
+    public void runProducer(){
+        final Properties props = new Properties();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+        props.put(ProducerConfig.CLIENT_ID_CONFIG, GROUP_ID);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+
+        final KafkaProducer<String, String> producer = new KafkaProducer<>(props);
+        try {
+            long index = 0;
+            while (true) {
+                ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, String.valueOf(index), "message #" + index++);
+                RecordMetadata metadata = producer.send(record).get();
+                System.out.println("SEND: key=" + record.key() + ", value=" + record.value() + ", partition=" + metadata.partition() + ", offset=" + metadata.offset());
+                Thread.sleep(1000);
+                if(index == 10){
+                    throw new RuntimeException("oops");
+                }
+            }
+        } catch (Exception ex){
+            System.out.println(ex);
+        } finally {
+            System.out.println("closing producer tcp connection...");
+            producer.flush();
+            producer.close();
+        }
+    }
+
+    public void runConsumer(){
+        final Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID);
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+
+        final KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+        /**
+         * According to doc (https://kafka.apache.org/0102/javadoc/org/apache/kafka/clients/consumer/KafkaConsumer.html) we must close kafka connection to avoid tcp connection leakage
+         * But since KafkaConsumer is not thread-safe we cannot call `close` here, if we do this we would get: Exception in thread "Thread-0" java.util.ConcurrentModificationException: KafkaConsumer is not safe for multi-threaded access
+         * That's why we call wakeup here, which would abort poll with WakeupException
+         */
+        Runtime.getRuntime().addShutdownHook(new Thread(consumer::wakeup));
+        try {
+            consumer.subscribe(List.of(TOPIC_NAME));
+            while (true) {
+                long start = System.currentTimeMillis();
+                System.out.println("pooling...");
+                /**
+                 * if there are messages in buffer poll returns immediately, otherwise wait for specified timeout and returns empty
+                 */
+                final ConsumerRecords<String, String> records = consumer.poll(TIMEOUT);
+                System.out.println("done: " + (System.currentTimeMillis() - start) + ", messages=" + records.count());
+                records.forEach(r -> System.out.println("RECEIVE: key=" + r.key() + ", value=" + r.value() + ", partition=" + r.partition() + ", offset=" + r.offset()));
+            }
+        } finally {
+            System.out.println("closing consumer tcp connection...");
+            consumer.close();
+        }
+    }
+}
 ```
 
 #### Miscellaneous
@@ -9499,7 +9602,7 @@ Usually log levels goes in this direction `ERROR > WARN > INFO > DEBUG > TRACE`,
 
 There are a few types of logging in java:
 * `java.util.logging` - standard package for logging from jdk
-* `logback` - replacement for log4j
+* `logback` - replacement for log4j, natively support `slf4j`. By default it uses DEBUG log level.
 To configure logback you should create file in `resources/logback.xml` with at least 1 appender and log level:
 ```
 <configuration>
@@ -9512,6 +9615,19 @@ To configure logback you should create file in `resources/logback.xml` with at l
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>
+```
+You can add `scan="true"` to configuration, and then library would reload it, in case it was modified (no need to recompile app).
+You can add `debug="true"` to configuration, and see configuration internal logging.
+You can use conditional operation inside xml config, for example you can enable debug only for dev profile.
+```
+<property scope="context" resource="application.properties" />
+<if condition='property("profile").equals("dev")'>
+    <then>
+        <root level="DEBUG">
+            <appender-ref ref="STDOUT" />
+        </root>
+    </then>
+</if>
 ```
 You can also change log level directly from code
 ```java
@@ -9566,6 +9682,57 @@ logger => ch.qos.logback.classic.Logger
 2020-10-31 18:51:04.247 [main] WARN  com.example.spring5.App - App:warn
 2020-10-31 18:51:04.248 [main] INFO  com.example.spring5.App - App:info
 2020-10-31 18:51:04.248 [main] ERROR com.example.spring5.MyService - MyService:error
+```
+If you `debug`, but debug is not enabled, your string still would be evaluated. So it's better to check if debug enabled before calling debug. But in this case code would be bulky.
+That's why it's better to use lazy evaluation with help of `Supplier` functional interface. 
+```java
+import static com.example.spring5.LazyLogger.lazy;
+import java.util.function.Supplier;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class App{
+    public void print(){
+        // eager evaluation, id debug is disabled, getName function get executed
+        log.debug("name={}", getName());
+
+        // better approach, but a bit bulky
+        if (log.isDebugEnabled()) {
+            log.debug("name={}", getName());
+        }
+
+        // best approach, if debug enabled, than supplier would be executed
+        log.debug("name={}", (Supplier)()->getName());
+        // same way only with custom implementation
+        log.debug("name={}", lazy(()->getName()));
+
+    }
+    public String getName(){
+        System.out.println("getName");
+        return "Jack";
+    }
+    public static void main(String[] args) {
+        final App app = new App();
+        app.print();
+    }
+}
+
+class LazyLogger{
+    private Supplier<String> s;
+    public LazyLogger(Supplier<String> s){
+        this.s = s;
+    }
+    public static LazyLogger lazy(Supplier<String> s){
+        return new LazyLogger(s);
+    }
+    @Override
+    public String toString(){
+        return s.get();
+    }
+}
+```
+```
+getName
 ```
 * `apache common logging` - custom logging from apache
 * `slf4j` - simple logging facade for java
