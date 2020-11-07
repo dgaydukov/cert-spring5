@@ -9070,6 +9070,8 @@ KafkaStreams - streaming library designed by creators of apache kafka. Add these
 Kafka command line examples. For each examples we use `--bootstrap-server`, yet if we use multiple brokers, we may better use `--zookeeper=localhost:2181`, in this case zookeeper would know all brokers
 ```
 # run zookeeper & kafka locally
+cd ~/kafka
+
 ./bin/zookeeper-server-start.sh -daemon config/zookeeper.properties
 ./bin/kafka-server-start.sh -daemon config/server.properties
 
@@ -9080,14 +9082,36 @@ sudo lsof -i | grep 9092
 # get list of all brokers
 ./bin/zookeeper-shell.sh localhost:2181 ls /brokers/ids
 # list all topics
-./bin/kafka-topics.sh --list --bootstrap-server=localhost:4455
+./bin/kafka-topics.sh --list --bootstrap-server=localhost:9092
 # create new topic
-./bin/kafka-topics.sh --create --topic=source-topic --bootstrap-server=localhost:4455
+./bin/kafka-topics.sh --create --topic=my --bootstrap-server=localhost:9092
+# get topic description (with all partitions)
+./bin/kafka-topics.sh --describe --topic=my --bootstrap-server=localhost:9092
 # open takfa consumer and send messages
-./bin/kafka-console-producer.sh --topic=source-topic --broker-list=localhost:4455
-# read
-./bin/kafka-console-consumer.sh --topic=mytopic --bootstrap-server=localhost:4455 --partition=0
+./bin/kafka-console-producer.sh --topic=my --broker-list=localhost:9092
+# read from kafka topic
+./bin/kafka-console-consumer.sh --topic=my --bootstrap-server=localhost:9092
+
+# create topic with 4 partitions
+./bin/kafka-topics.sh --create --topic=my4 --partitions=4 --bootstrap-server=localhost:9092
 ```
+
+Run kafka from docker
+```
+cd files/docker
+docker-compose -f docker-compose.kafka.yml up -d
+```
+There are a few things you need to know how to run single broker kafka and multiple-broker kafka:
+* 
+
+https://github.com/bitnami/bitnami-docker-kafka
+https://www.confluent.io/blog/kafka-listeners-explained
+https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc
+
+
+
+
+
 
 Example of sending/polling data using `KafkaProducer/KafkaConsumer`. You should include either `kafka-clients` or `spring-kafka` (which already includes kafka-clients).
 ```java
@@ -9644,7 +9668,19 @@ null
 ```
 
 ###### Spring Boot Logging
-Usually log levels goes in this direction `ERROR > WARN > INFO > DEBUG > TRACE`, next includes all previous (so if you set to `TRACE` all previous would be displayed)
+By default spring uses 
+* `internal logging` => apache common logging
+* `external logging` => slf4j(with logback). So you don't need to manually include these dependency:
+```
+<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+    <version>1.2.3</version>
+</dependency>
+```
+It's already included when you add `spring-boot-starter` to your `pom.xml`.
+
+Log levels goes in this direction `ERROR > WARN > INFO > DEBUG > TRACE`, next includes all previous (so if you set to `TRACE` all previous would be displayed)
 
 There are a few types of logging in java:
 * `java.util.logging` - standard package for logging from jdk
@@ -9781,57 +9817,86 @@ class LazyLogger{
 getName
 ```
 * `apache common logging` - custom logging from apache
-* `slf4j` - simple logging facade for java
-
-
-
-By default spring uses 
-* `internal logging` => apache common logging
-* `external logging` => slf4j(with logback)
-
+* `slf4j` - simple logging facade for java. To use it you should have some logging implementation underneath like logback/log4j
+* `log4f` - add this to your `pom.xml`
+```
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-core</artifactId>
+    <version>2.13.3</version>
+</dependency>
+```
+You should also add config `resources/log4j2.xml`
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="LogToConsole" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="INFO">
+            <AppenderRef ref="LogToConsole"/>
+        </Root>
+    </Loggers>
+</Configuration>
+```
+Example how to use logging
 ```java
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.slf4j.LoggerFactory;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class App{
+    private static final Logger log = LogManager.getLogger(App.class);
+    public void print(){
+        System.out.println("logger=" + log.getClass().getName() + ", level=" + log.getLevel());
+        log.error("error");
+        log.warn("warn");
+        log.info("info");
+        log.debug("debug");
+        log.trace("trace");
+    }
     public static void main(String[] args) {
-        String className = App.class.getName();
-
-        System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS %4$s %2$s %5$s%6$s%n");
-        Logger javaLog = Logger.getLogger(className);
-        javaLog.info("hello");
-        javaLog.log(Level.SEVERE, "my ex");
-
-        org.slf4j.Logger log = LoggerFactory.getLogger(className);
-        log.info("hello");
-        log.error("my ex");
-
-        Log commonLog = LogFactory.getLog(className);
-        commonLog.info("hello");
-        commonLog.error("my ex");
-
-
-        ch.qos.logback.classic.Logger logback = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(className);
-        logback.info("hello");
-        logback.error("my ex");
+        final App app = new App();
+        app.print();
     }
 }
 ```
 ```
-2020-04-18 17:21:15 INFO com.example.spring5.App main hello
-2020-04-18 17:21:15 SEVERE com.example.spring5.App main my ex
-17:21:15.396 [main] INFO com.example.spring5.App - hello
-17:21:15.400 [main] ERROR com.example.spring5.App - my ex
-17:21:15.409 [main] INFO com.example.spring5.App - hello
-17:21:15.409 [main] ERROR com.example.spring5.App - my ex
-17:21:15.409 [main] INFO com.example.spring5.App - hello
-17:21:15.410 [main] ERROR com.example.spring5.App - my ex
+logger=org.apache.logging.log4j.core.Logger, level=INFO
+2020-11-07 12:48:39.271 [main] ERROR com.example.demo.App - error
+2020-11-07 12:48:39.275 [main] WARN  com.example.demo.App - warn
+2020-11-07 12:48:39.275 [main] INFO  com.example.demo.App - info
 ```
+Compare to logback, log4j doesn't have default sl4j binder. So you have to manually add this dependency to your pom
+```
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-slf4j-impl</artifactId>
+    <version>2.13.3</version>
+</dependency>
+```
+Now you can use sl4f facade, and it will bind your log4j logger
+```java
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
+public class App{
+    public void print(){
+        System.out.println("logger=" + log.getClass().getName());
+        log.error("error");
+        log.warn("warn");
+        log.info("info");
+        log.debug("debug");
+        log.trace("trace");
+    }
+    public static void main(String[] args) {
+        final App app = new App();
+        app.print();
+    }
+}
+```
 
 
 ###### Spring Caching
