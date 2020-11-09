@@ -9681,9 +9681,211 @@ By default spring uses
 It's already included when you add `spring-boot-starter` to your `pom.xml`.
 
 Log levels goes in this direction `ERROR > WARN > INFO > DEBUG > TRACE`, next includes all previous (so if you set to `TRACE` all previous would be displayed)
+There are 5 types of logging:
+* java.util.logging
+* log4j
+* logback
+* apache common logging
+* slf4j
 
-There are a few types of logging in java:
+
+More detailed overview:
 * `java.util.logging` - standard package for logging from jdk
+Add config file `jul.logging` 
+```
+handlers= java.util.logging.ConsoleHandler
+.level=ALL
+java.util.logging.ConsoleHandler.level = ALL
+java.util.logging.ConsoleHandler.formatter = java.util.logging.SimpleFormatter
+java.util.logging.SimpleFormatter.format= %1$tF %1$tT  %4$-7s  %2$-1s  %5$s %n
+```
+Run you app with following `-Djava.util.logging.config.file=src/main/resources/jul.properties`
+```java
+import java.util.logging.Logger;
+
+public class App{
+    private static Logger log = Logger.getLogger(App.class.getName());
+    public void print(){
+        System.out.println("logger=" + log.getClass().getName());
+        log.severe("error");
+        log.warning("warn");
+        log.info("info");
+        log.fine("debug");
+        log.finest("trace");
+    }
+    public static void main(String[] args) {
+        final App app = new App();
+        app.print();
+    }
+}
+```
+```
+2020-11-07 17:41:57  SEVERE   com.example.demo.App print  error 
+2020-11-07 17:41:57  WARNING  com.example.demo.App print  warn 
+2020-11-07 17:41:57  INFO     com.example.demo.App print  info 
+2020-11-07 17:41:57  FINE     com.example.demo.App print  debug 
+2020-11-07 17:41:57  FINEST   com.example.demo.App print  trace 
+```
+If you want to use util.logging with sl4j you should add bindings to your `pom.xml`
+```
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-jdk14</artifactId>
+    <version>1.7.30</version>
+</dependency>
+```
+This will add wrapper class `JDK14LoggerAdapter`, which is used by slf4j, which internally call util.logging.Logger.log method.
+```java
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class App{
+    public void print(){
+        System.out.println("logger=" + log.getClass().getName());
+        log.error("error");
+        log.warn("warn");
+        log.info("info");
+        log.debug("debug");
+        log.trace("trace");
+    }
+    public static void main(String[] args) {
+        final App app = new App();
+        app.print();
+    }
+}
+```
+```
+logger=org.slf4j.impl.JDK14LoggerAdapter
+2020-11-07 18:19:42  SEVERE   com.example.demo.App print  error 
+2020-11-07 18:19:42  WARNING  com.example.demo.App print  warn 
+2020-11-07 18:19:42  INFO     com.example.demo.App print  info 
+2020-11-07 18:19:42  FINE     com.example.demo.App print  debug 
+2020-11-07 18:19:42  FINEST   com.example.demo.App print  trace
+```
+* `apache common logging` - common interface for other logging (java logging, log4j, avalon logkit, simplelog). It provides universal interface `org.apache.commons.logging.Log` which underneath use one of 3 logging implementation.
+This also means there is no point to use it with slf4j. Cause they both basically interfaces and neither has logging implementation.
+It search classpath and choose most appropriate logging. Below example where it uses uitl.logging
+We should run it with `-Djava.util.logging.config.file=src/main/resources/jul.properties` and have props file in place.
+```java
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+public class App{
+    private static final Log log = LogFactory.getLog(App.class);
+    public void print(){
+        System.out.println("logger=" + log.getClass().getName());
+        log.error("error");
+        log.warn("warn");
+        log.info("info");
+        log.debug("debug");
+        log.trace("trace");
+    }
+    public static void main(String[] args) {
+        final App app = new App();
+        app.print();
+    }
+}
+```
+```
+logger=org.apache.commons.logging.impl.Jdk14Logger
+2020-11-09 09:51:28  SEVERE   com.example.demo.App print  error 
+2020-11-09 09:51:28  WARNING  com.example.demo.App print  warn 
+2020-11-09 09:51:28  INFO     com.example.demo.App print  info 
+2020-11-09 09:51:28  FINE     com.example.demo.App print  debug 
+2020-11-09 09:51:28  FINEST   com.example.demo.App print  trace 
+```
+If nothing is found it would use `SimpleLog` - it's own default implementation. Since util.logging is always included when you run from `intellij` we would set `SimpleLog` as default logger.
+Add this to file `src/main/resources/commons-logging.properties`:
+```
+org.apache.commons.logging.Log=org.apache.commons.logging.impl.SimpleLog
+```
+Now if you run above code with new settings you will see this output:
+```
+logger=org.apache.commons.logging.impl.SimpleLog
+[ERROR] App - error
+[WARN] App - warn
+[INFO] App - info
+```
+* `log4f` - add this to your `pom.xml`
+```
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-core</artifactId>
+    <version>2.13.3</version>
+</dependency>
+```
+You should also add config `resources/log4j2.xml`
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="LogToConsole" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="INFO">
+            <AppenderRef ref="LogToConsole"/>
+        </Root>
+    </Loggers>
+</Configuration>
+```
+Example how to use logging
+```java
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+public class App{
+    private static final Logger log = LogManager.getLogger(App.class);
+    public void print(){
+        System.out.println("logger=" + log.getClass().getName() + ", level=" + log.getLevel());
+        log.error("error");
+        log.warn("warn");
+        log.info("info");
+        log.debug("debug");
+        log.trace("trace");
+    }
+    public static void main(String[] args) {
+        final App app = new App();
+        app.print();
+    }
+}
+```
+```
+logger=org.apache.logging.log4j.core.Logger, level=INFO
+2020-11-07 12:48:39.271 [main] ERROR com.example.demo.App - error
+2020-11-07 12:48:39.275 [main] WARN  com.example.demo.App - warn
+2020-11-07 12:48:39.275 [main] INFO  com.example.demo.App - info
+```
+Compare to logback, log4j doesn't have default sl4j binder. So you have to manually add this dependency to your pom
+```
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-slf4j-impl</artifactId>
+    <version>2.13.3</version>
+</dependency>
+```
+Now you can use sl4f facade, and it will bind your log4j logger
+```java
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class App{
+    public void print(){
+        System.out.println("logger=" + log.getClass().getName());
+        log.error("error");
+        log.warn("warn");
+        log.info("info");
+        log.debug("debug");
+        log.trace("trace");
+    }
+    public static void main(String[] args) {
+        final App app = new App();
+        app.print();
+    }
+}
+```
+
 * `logback` - replacement for log4j, natively support `slf4j`. By default it uses DEBUG log level.
 To configure logback you should create file in `resources/logback.xml` with at least 1 appender and log level:
 ```
@@ -9816,88 +10018,8 @@ class LazyLogger{
 ```
 getName
 ```
-* `apache common logging` - custom logging from apache
-* `slf4j` - simple logging facade for java. To use it you should have some logging implementation underneath like logback/log4j
-* `log4f` - add this to your `pom.xml`
-```
-<dependency>
-    <groupId>org.apache.logging.log4j</groupId>
-    <artifactId>log4j-core</artifactId>
-    <version>2.13.3</version>
-</dependency>
-```
-You should also add config `resources/log4j2.xml`
-```
-<?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN">
-    <Appenders>
-        <Console name="LogToConsole" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-        </Console>
-    </Appenders>
-    <Loggers>
-        <Root level="INFO">
-            <AppenderRef ref="LogToConsole"/>
-        </Root>
-    </Loggers>
-</Configuration>
-```
-Example how to use logging
-```java
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-public class App{
-    private static final Logger log = LogManager.getLogger(App.class);
-    public void print(){
-        System.out.println("logger=" + log.getClass().getName() + ", level=" + log.getLevel());
-        log.error("error");
-        log.warn("warn");
-        log.info("info");
-        log.debug("debug");
-        log.trace("trace");
-    }
-    public static void main(String[] args) {
-        final App app = new App();
-        app.print();
-    }
-}
-```
-```
-logger=org.apache.logging.log4j.core.Logger, level=INFO
-2020-11-07 12:48:39.271 [main] ERROR com.example.demo.App - error
-2020-11-07 12:48:39.275 [main] WARN  com.example.demo.App - warn
-2020-11-07 12:48:39.275 [main] INFO  com.example.demo.App - info
-```
-Compare to logback, log4j doesn't have default sl4j binder. So you have to manually add this dependency to your pom
-```
-<dependency>
-    <groupId>org.apache.logging.log4j</groupId>
-    <artifactId>log4j-slf4j-impl</artifactId>
-    <version>2.13.3</version>
-</dependency>
-```
-Now you can use sl4f facade, and it will bind your log4j logger
-```java
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
-public class App{
-    public void print(){
-        System.out.println("logger=" + log.getClass().getName());
-        log.error("error");
-        log.warn("warn");
-        log.info("info");
-        log.debug("debug");
-        log.trace("trace");
-    }
-    public static void main(String[] args) {
-        final App app = new App();
-        app.print();
-    }
-}
-```
-
+* `slf4j` - simple logging facade for java. To use it you should have some logging implementation underneath like logback/log4j.
+So it's the same as apache logging. It doesn't have default implementation, you can use it only as facade to some other implementation.
 
 ###### Spring Caching
 You should enable cache with `@EnableCaching` 
