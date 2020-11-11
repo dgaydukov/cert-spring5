@@ -2558,30 +2558,21 @@ public class App{
 class MyService{}
 ```
 
-
-
-
-
-
 ###### Spring bean scopes (singleton vs. application)
 There are 6 scopes for spring beans, you can also create your own by implementing `Scope` interface.
-2 are common for all apps
+By default all beans get `singleton` scope. But you can add `@Scope("prototype")` annotation to any class/bean to change it scope.
+2 are common for all apps:
 * `singleton` - one instance per app context
 * `prototype` - new instance every time other bean call it
-4 are for web only
+4 are for web only:
 * `request` - instance per http request
 * `session` - instance per http session
-* `application` - instance per `ServletContext`
+* `application` - instance per `ServletContext` - somewhat similar to a spring `singleton` bean but differs in two important ways: 
+    * it is a singleton per `ServletContext`, not per Spring `ApplicationContext` (or which there may be several in any given web application)
+    * it is actually exposed and therefore visible as a `ServletContext` attribute
 * `websocket` - instance per web socket connection
 
-`application` is somewhat similar to a Spring `singleton` bean but differs in two important ways: It is a singleton per ServletContext, not per Spring 'ApplicationContext' (or which there may be several in any given web application), 
-and it is actually exposed and therefore visible as a ServletContext attribute
-
-
-
-
 ### AOP
-
 * spring aspects fire before custom BPP
 * if class implements at least 1 interface with 1 method, aspect will create dynamic proxy (until forced to use cglib by setting `proxyTargetClass` to true), otherwise will use cglib
 * spring aop can work only with public methods for jdk proxies and with public/protected/package-private for cglib
@@ -2639,7 +2630,6 @@ m2
 ```
 
 ###### Aop basics
-
 Spring aop keywords
 * `Join point` - well-defined point during code execution (e.g. method call, object instantiation). In Spring AOP it's always method call. 
 * `Pointcut` - expression that select particular join point. They can be combined using the logical operators && (and), || (or) and ! (not).
@@ -2803,7 +2793,6 @@ java.lang.SecurityException: java.lang.RuntimeException: m2 failed
 Caused by: java.lang.RuntimeException: m2 failed
 ```
 
-
 By default `addAdvice` add advice to all methods and all possible classes of `ProxyFactory`. If you want to limit classes as well as method you should use `Advisor` (aspect in spring aop terminology => advice+pointcut).
 For method matching you can use 2 classes `StaticMethodMatcherPointcut` & `DynamicMethodMatcherPointcut`, the difference is that with dynamic you can also filter by a list of method arguments (like only apply advice if first argument is "Jack").
 In both cases you have to implement method `matches`. It also recommended (yet not forced) to override method `getClassFilter` for better control.
@@ -2888,8 +2877,6 @@ I'm Jack
 done
 done
 ```
-
-
 
 If we want filter only by method name (without signature), we can use `NameMatchMethodPointcut` or `JdkRegexpMethodPointcut`.
 We can also use `AspectJExpressionPointcut` for native aspectJ patterns.
@@ -3234,7 +3221,6 @@ Hello, I'm Person
 printing...
 ```
 
-
 We can rewrite it using `@DeclareParents`
 ```java
 import org.aspectj.lang.annotation.Aspect;
@@ -3280,7 +3266,6 @@ class PrinterImpl implements Printer{
     }
 }
 ```
-
 
 You can use `throwing` (we should pass name of exception variable) value of `@AfterThrowing` advice to filter on which exceptions to catch
 ```java
@@ -3472,8 +3457,7 @@ I'm AopSimpleBean
 printing...
 ```
 
-Pointcut Designators
-
+Pointcut Designators:
 * `execution([method visibility] [return type] [package].[class].[method]([parameters] [throws exceptions]))` (method visibility can be omitted) - for matching method execution join points, this is the primary pointcut designator you will use when working with Spring AOP.
 * `within([package].[class])` - limits matching to join points within certain types (simply the execution of a method declared within a matching type when using Spring AOP).
 * `this(MyInterface)` - limits matching to join points (the execution of methods when using Spring AOP) where the bean reference (Spring AOP proxy) is an instance of the given type
@@ -3635,15 +3619,10 @@ isCglibProxy => false
 isJdkDynamicProxy => true
 ```
 
-
 ###### Native AspectJ
 You can also write your aspects in native aspectj language. For this you first need to add `AspectJ Weaver` plugin to your IDE. You can create a class with extension `*.aj`
 
-
-
-
 ### Spring MVC
-
 Safe methods: `GET` (applying it to a resource does not result in a state change of the resource)
 Idempotent (produce same result no matter how many times called) methods: `GET, PUT, DELETE` (applying them multiple times to a resource results in the same state change of the resource as applying them once, though the response might differ)
 `PATCH` changes the resources attributes. The change may require a concrete previous value of the attribute, which makes it NON idempotent. `From Name=John to Name=Mike`. After applying the name will be `Mike` and repeated patch will fail, since it requires the name to be `John` before the change.
@@ -3655,7 +3634,6 @@ Idempotent (produce same result no matter how many times called) methods: `GET, 
 `PUT` vs. `PATCH`. put - opposite to get, so it to replace whole object for url. Patch - is to replace some fields within the object.
 `@RequestParam/@PathVariable` - have field `required` (default true), so if you don't pass param field you got exception. If you set it to false value would be null (if your value is primitive you got `IllegalStateException: Optional int parameter 'id' is present but cannot be translated into a null value due to being declared as a primitive type. Consider declaring it as object wrapper for the corresponding primitive type.`)
 `ContextLoaderListener` (implements `ServletContextListener`) load root web app context (we would also need dispatcher servlet to communicate with this context)
-
 
 You can also use `web.xml` to register your web app. Here you can register 
 * root web app context
@@ -3709,7 +3687,6 @@ but not custom beans like `ViewResolver/MultipartResolver`. DispatcherServlet lo
 
 As you see, we have 2 types of params `context-param` - common for whole app, and `init-param` - common for current servlet. So both `contextClass/contextConfigLocation` can be in both sections.
 
-
 It's important to return correct value
 ```
 curl http://localhost:8080/m1  # => javax.servlet.ServletException: Circular view path [m1]
@@ -3745,13 +3722,9 @@ public class MyController {
 }
 ```
 
-
 In Spring Web MVC you can use any object as a command or form-backing object; you do not need to implement a framework-specific interface or base class
 The type-level `@SessionAttributes` annotation declares session attributes used by a specific handler. This will typically list the names of model attributes or 
 types of model attributes which should be transparently stored in the session or some conversational storage, serving as form-backing beans between subsequent requests
-
-
-
 
 ###### DispatcherServlet
 `org.springframework.web.servlet.DispatcherServlet` - is entry point of every web app, it's main purpose to handle http requests (it extends in the end `HttpServlet` which itself in the end implements `Servlet`).
@@ -3760,13 +3733,8 @@ Each `DispatcherServlet` has its own `WebApplicationContext`, which inherits all
 Beans inherited from root app context can be overridden in the servlet-specific scope, and you can define new scope-specific beans local to a given Servlet instance.
 If you have a `<bean/>` declaration with the same name or id in both the root context and the servlet context, the servlet context one will overwrite the root context one.
 
-
-
-
 ###### Build .war file with pure java
 You can even build servlet app with pure [java](https://github.com/dgaydukov/cert-ocpjp11/blob/master/files/ocpjp11.md#java-servlet-webapp)
-
-
 
 ###### Build .war file with Spring
 Before the advent of spring boot for building web app we were using `.war` files (web archive).
@@ -3779,7 +3747,6 @@ g
 Tomcat 3.0+ search for `javax.servlet.ServletContainerInitializer` through the SPI and load that class.
 Spring has default implementation `org.springframework.web.SpringServletContainerInitializer` with annotation `@HandlesTypes({WebApplicationInitializer.class})`.
 So when you create a class from `WebApplicationInitializer` it get hooked by `SpringServletContainerInitializer` which in turn get hooked by tomcat and that's why you implement it, and not directly `ServletContainerInitializer`.
-
 
 Example using `AbstractAnnotationConfigDispatcherServletInitializer`
 ```java
@@ -3854,11 +3821,9 @@ public class App implements WebApplicationInitializer {
 }
 ```
 
-
 ###### Build .war file with Spring Boot
 If you have spring boot project, that you are going to build into war, it has a class `SpringBootServletInitializer` which implements `WebApplicationInitializer`, so you don't have to write your own implementation. You will have main entry point, and spring boot will do this under the hood.
 If you choose `war` packaging spring boot will create 2 classes one is `ServletInitializer` another is `DemoApplication` with main method. You can rewrite them into one. 
-
 ```java
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -3893,8 +3858,6 @@ To run `.war` in tomcat do:
 * Run `chmod +x ./bin/catalina.sh` and then just run `./bin/catalina.sh run`
 * Copy your file `target/spring-boot-app.war` to `/tomcat/webapps`. This will force tomcat to extract `.war` file into folder
 * Navigate to `http://localhost:8080/spring-boot-app/` - here your app.
-
-
 
 
 ###### Spring Boot
@@ -3949,7 +3912,6 @@ public class FilterJavaConfig {
 }
 ```
 
-
 ###### WebSocket API
 To work with spring websocket we should add to `pom.xml`. Since we most likely to work with json it's better to add jackson library too
 ```
@@ -3963,9 +3925,7 @@ To work with spring websocket we should add to `pom.xml`. Since we most likely t
     <version>2.2.6.RELEASE</version>
 </dependency>
 ```
-
 Working example. This file should be places in `main/resources/static/ws.html` and it would be accessible on `http://localhost:8080/ws.html`
-
 `ws.html`
 ```
 <html>
@@ -4128,7 +4088,6 @@ class MyWebSocket {
 }
 ```
 
-
 ###### Reactive WebFlux
 For java reactive api there are 4 nested interfaces in  `java.util.concurrent.Flow` class. `Publisher` produces data that it sends to a `Subscriber` per a `Subscription`. And `Processor` is both publisher & subscriber to create pipes.
 Since in java we have only interfaces of reactive, you should use either Reactor (spring use it) or RxJava
@@ -4176,8 +4135,6 @@ Useful functions:
 * `all` - take predicate, verify that all elements comply to it (`allMatch` in stream api)
 * `yan` - take predicate, verify that at least one element comply to it (`anyMatch` in stream api)
 
-
-
 To use project Reactor you should add to your `pom.xml`
 ```
 <dependency>
@@ -4206,7 +4163,6 @@ public class App {
 }
 ```
 
-
 If you want to work with reactive spring data, your repo should extends from `ReactiveCrudRepository` where all calls return `Flux/Mono`. Notice that only cassandra and mongodb support true reactive programming.
 Controller stay the same, but it returns not values but also Flux/Mono, and media type should be `MediaType.TEXT_EVENT_STREAM_VALUE` (server will create a response with `Content-Type: text/event-stream`).
 Relational databases don't support reactive, due to blocking nature of `JDBC`. Although you can use `ReactiveCrudRepository` for relational db, it just wrap all calls to `JDBC` into `Flux/Mono`.
@@ -4219,7 +4175,6 @@ To work with cassandra you should add to your `pom.xml`
 </dependency>
 ```
 For both mongo & cassandra we have reactive as well as non-reactive starters.
-
 
 You can also use functional controllers. The idea is not to use annotation, but instead create beans with type `RouterFunction` and return routes there.
 For this to work you should remove `spring-boot-starter-web` from `pom.xml`, or exclude tomcat from it.
@@ -4245,11 +4200,9 @@ public class MyFunctionalController {
     }
 }
 ```
-
 When you add `webflux` starter, it also add `Reactor IPC` to work with reactive servers like `ne.tty` (framework for asynchronous operations)
 Comparing to tomcat, which for every request create new thread and block it until work is done netty has 1 process, when it get request it use ChannelOperation to pass request to `DispatcherHandler` which pass request to spring controllers.
 When controller done his work, it calls publisher to `ChannelOperation` where subscribe is called and netty returns result.
-
 
 ###### Data Validation
 `@Valid` vs. `@Validated`. They work the same, but `@Validated` can be useful when you have multiple step validation and in each step you want to validate some of fields of your model
@@ -4415,7 +4368,6 @@ public class App{
 }
 ```
 
-
 ###### HATEOAS - Hypermedia as the Engine of Application State
 HATEOAS (Hypermedia as the Engine of Application State) - when response return also other possible resources, and you don't need to hardcode them in client side. Add this to `pom.xml`
 ```
@@ -4424,7 +4376,6 @@ HATEOAS (Hypermedia as the Engine of Application State) - when response return a
     <artifact`Id>spring-boot-starter-hateoas</artifactId>
 </dependency>
 ```
-
 Data model should be extended from `RepresentationModel`
 ```java
 package com.example.logic.ann.hateoas;
@@ -4662,7 +4613,6 @@ public class MyController {
 }
 ```
 
-
 ```java
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -4683,20 +4633,15 @@ curl -H "Accept: text/person" http://localhost:8080/person
 curl -H "Content-Type: text/person" -d "30/Jack" http://localhost:8080/person
 ```
 
-
-
 ###### Spring ViewResolver
 `ViewResolver` - special interface to determine which view to show. There are several implementation:
 * `InternalResourceViewResolver extends UrlBasedViewResolver` - allows to set prefix & suffix to view name
 * `BeanNameViewResolver` - resolves views declared as beans
 
-
-
 ###### HandlerMapping, HandlerAdapter, HttpRequestHandler
 * `HttpRequestHandler` - special interface to handle requests
 * `HandlerMapping` - define a mapping between request and `HandlerAdapter`
 * `HandlerAdapter` - handler that executed when some url called
-
 ```java
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -4714,7 +4659,6 @@ class JavaConfig{
 }
 ```
 You can go to `curl http://localhost:8080/test`.
-
 
 ###### Controller's method params
 Method of controller can take following params
@@ -4840,9 +4784,6 @@ class WebConfig implements WebMvcConfigurer {
 }
 ```
 If we hit ` curl http://localhost:8080/a/1/matrixId=2?id=3` we got `pathId => 1, paramId => 3, matrixId => 2`
-
-
-
 
 ###### RequestBodyAdvice/ResponseBodyAdvice and HandlerInterceptor
 These 3 interceptors allows to intercept request (both before and after controller's method execution) and add some custom logic like logging, modifiing headers/body, checking security and so on.
@@ -5060,7 +5001,6 @@ org.springframework.security.authentication.UsernamePasswordAuthenticationToken@
 org.springframework.security.core.userdetails.User@586034f: Username: admin; Password: [PROTECTED]; Enabled: true; AccountNonExpired: true; credentialsNonExpired: true; AccountNonLocked: true; Granted Authorities: com.example.spring5.SecurityConfig$$Lambda$1145/0x00000008409ce440@4a483774
 ```
 
-
 `AuthenticationProvider` - can authenticate your user
 * It uses `Authentication` object provided by `BasicAuthenticationFilter` (which extract username/password from basic auth credentials)
 * check `curl -u admin:admin localhost:8080/api/info`
@@ -5224,7 +5164,6 @@ HeaderFilter.doFilter
 authenticate => admin/admin
 /api/info => admin/null
 ```
-
 Same example using `FormLogin`
 * First authenticate by `curl -v -X POST -F username=admin -F password=admin localhost:8080/login`
 * Then call api with cookie `curl --cookie "JSESSIONID={session_from_first_request}" localhost:8080/api/info`
@@ -5325,14 +5264,11 @@ We can also use `filter-chain` to set filters that would handle particular `patt
 </bean>
 ```
 
-
 * `antMatcher(String antPattern)` - allows configuring the `HttpSecurity` to only be invoked when matching the provided ant pattern.
 * `mvcMatcher(String mvcPattern)` - allows configuring the `HttpSecurity` to only be invoked when matching the provided Spring MVC pattern.
-
 Generally mvcMatcher is more secure than an antMatcher. As an example:
 `antMatchers("/secured")` matches only the exact `/secured` URL
 `mvcMatchers("/secured")` matches `/secured` as well as `/secured/`, `/secured.html`, `/secured.xyz`
-
 Servlet has a concept of filters, where each request first goes through a list of filters
 One of the filter is `DelegatingFilterProxy` - builds a link between servlet lifecycle and app context, by including filters from context to servlet
 Internally it uses `FilterChainProxy` that internally has a list of `SecurityFilterChain`.
@@ -5418,7 +5354,6 @@ public class ReactiveJavaConfig {
     }
 }
 ```
-
 
 Simple security example
 ```java
@@ -5593,11 +5528,9 @@ If we want to allow only certain roles to access some method, add this to any me
 Old way to configure security was in xml files
 ```
 security.xml:
-
 <intercept-url pattern="/myrul" access="hasRole('ROLE_ADMIN')" method="POST" requires-channel="https" filters="none"/>
 
 MyController.java:
-
 @PostMapping("/myrul")
 @PreAuthorize("hasRole('ROLE_ADMIN')")
 public void doWork(){}
@@ -5677,7 +5610,6 @@ But if you want to add custom filter to path you should add 2 security classes w
 http.mvcMatcher("/api/**").addFilterBefore(new CookieFilter(), BasicAuthenticationFilter.class);
 http.mvcMatcher("/internal/**").addFilterBefore(new HeaderFilter(), BasicAuthenticationFilter.class);
 ```
-
 Spring docs also suggest to create [separate Spring Security @Configuration files](https://docs.spring.io/spring-security/site/docs/current/reference/html5/#multiple-httpsecurity)
 So below an example to implement 2 filters for 2 different pathes
 ```java
@@ -5813,7 +5745,6 @@ curl -H "auth: admin" localhost:8080/internal/info
 **Pay attention once you do `http.mvcMatcher("/api/**")` all logic from here is applied only to this url. All other urls by default stays open.
 That's why we don't need to explicitly add `.mvcMathcers("/pub/**").permitAll()`. It's already public.
 
-
 ###### Oauth2
 Oauth (Open Authentication) - open standard (so it's not api or some service) for secured delegated access. There are 2 versions
 * Oauth 1.0 - old version, not used today
@@ -5943,16 +5874,13 @@ curl -u username:password -X POST localhost:8080/oauth/check_token?token={access
 # get resource by token
 curl -H "Authorization: Bearer {access_token}" localhost:8080/api/info
 ```
-
 ** Pay attention that classes `ResourceServerConfigurerAdapter` and `AuthorizationServerConfigurerAdapter`
 are for convenience purpose. You can build oauth service from scratch by creating controller+service that would
 generate token and adding `WebSecurityConfigurerAdapter` that would validate tokens. But basically this is what these 2 classes
 are doing, hiding all these boilerplate code.
 
-
 Since `ResourceServerConfigurerAdapter` in the end transforms into `WebSecurityConfigurerAdapter` with hardcoded order of 3, you can use it for security configuration.
 Although it's not logical error (cause it would be converted into `WebSecurityConfigurerAdapter`), it's more a semantical error, cause it's better to explicitly create security class
-
 ```java
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -6042,7 +5970,6 @@ class ApiController{
 }
 ```
 You may play to comment out one or another security classes and see results. So far the only difference is the error message
-
 
 We can also authenticate user using `AuthenticationManager`, but again it's not best case, cause `ResourceServerConfigurerAdapter` design specifically for oauth2 provider server.
 You can call it by `curl -H "auth: admin" localhost:8080/api/info`.
@@ -6449,7 +6376,7 @@ class SecurityConfig extends WebSecurityConfigurerAdapter {
             .addFilterBefore(filter, BasicAuthenticationFilter.class)
             .authorizeRequests().anyRequest().authenticated();
     }
-}~~~~
+}
 
 @Configuration
 class WebConfig implements WebMvcConfigurer {
@@ -6615,7 +6542,7 @@ public class MySqlExTranslator extends SQLErrorCodeSQLExceptionTranslator {
 ```
 
 Before use it, you should register it in your jdbc template
-```java
+```
 @Bean
 public JdbcTemplate jdbcTemplate(){
     DataSource ds = sql();
@@ -6629,7 +6556,7 @@ public JdbcTemplate jdbcTemplate(){
 ```
 
 We can pass params in 2 ways: `Object[]` or `Map`. If you want to use map you should use `NamedParameterJdbcTemplate` and put all params into map.
-```java
+```
 var r1 = jdbcTemplate.queryForObject("select * from department where id=?", new Object[]{id}, new DepartmentModelMapper());
 NamedParameterJdbcTemplate template = new NamedParameterJdbcTemplate(jdbcTemplate);
 Map<String, Object> params = new HashMap<>();
@@ -6791,10 +6718,9 @@ But you can create it without driver class name, using `public DriverManagerData
 
 Although you can write your own implementation of `RowMapper` for each entity, if your db columns correspond to your model, you can
 use one of default impl like `BeanPropertyRowMapper`, or if you need to get a map (key - columns, value- values) you can use `ColumnMapRowMapper`.
-
 If you want to manipulate the whole result set you can use `ResultSetExtractor` (stateless cause all logic is handled inside `extractData` method).
 `RowCallbackHandler` can be used in `query` (stateful cause `processRow` returns void, so you have to keep state outside of this function).
-```java
+```
 private DepartmentModel resultSetToModel(ResultSet rs) throws SQLException {
     DepartmentModel model = new DepartmentModel();
     model.setId(rs.getInt("id"));
@@ -6823,14 +6749,12 @@ You can change file location with this configs.
 spring.datasource.schema=db/schema.sql
 spring.datasource.data=db/test-data.sql
 ```
-
 spring jdbc also provides several classes
 `MappingSqlQuery<T>` - allows you to create query+rowmapper into single class
 `SqlUpdate` - to execute insert/update/delete
 `BatchSqlUpdate` - execute batch insert/update/delete (multiple inserts in one db query)
 `SqlFunction<T>` - work with functions and stored procedure
 You usually create your class by extending one of these and implement one abstract method.
-
 
 
 ###### Hibernate
@@ -7298,7 +7222,6 @@ public interface MyEntityRepository extends JpaRepository <MyEntity, Long> {
 This query will use named query automatically. But if we add `@Query` it will override named query.
 It takes precedence over named queries, which are annotated with `@NamedQuery` or defined in an orm.xml file. For native queries pagination can be enabled by setting `countQuery` to some native sql.
 
-
 Also spring data can build all api endpoint for your repos. For this just add following to your `pom.xml`
 ```
 <dependency>
@@ -7308,7 +7231,6 @@ Also spring data can build all api endpoint for your repos. For this just add fo
 ```
 Internally it create new controller with `@RepositoryRestController` for every repository. So if you need some customization you can create new controller with this annotation.
 You can go `curl localhost:8080/api` and see all endpoints created. By default it will pluralize all names, so person would be persons. But if you want custom names you should add to your repository `@RestResource(rel="person", path="people")`
-
 You can easily add auditing to any entity by adding `@EntityListeners(AuditingEntityListener.class)` - we are adding spring data auditor, you can also create your own auditors.
 And then have 4 columns with following annotations `@CreatedDate/@CreatedBy/@LastModifiedBy/@LastModifiedDate`
 You should add to your config `@EnableJpaAuditing(auditorAwareRef =  "auditorAwareBean")` and finally
@@ -7329,8 +7251,6 @@ Generally you should prefer `EntityManager` over `Session`, cause it jpa standar
 By default `delete` return void, but you still can verify that row was deleted. If row doesn't exist, `EmptyResultDataAccessException` would be thrown. So you can catch it and do something.
 
 If you want to subscribe on events for some repository you can extend `AbstractRepositoryEventListener<YourRepo>` and implements methods like `afterCreate` and have some custom logic there.
-
-
 
 ###### JTA - java transaction API
 `@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into some transaction management code.
@@ -7438,7 +7358,6 @@ To work with global tx you should add to your `pom.xml`
 </dependency>
 ```
 
-
 ###### DataSource Interceptor and Sql query counter
 You can add these 2 libraries to your `pom.xml` to get ability to count how many queries actually has been sent to db `SQLStatementCountValidator.assertSelectCount(1);` and intercept all queries.
 ```
@@ -7454,11 +7373,9 @@ You can add these 2 libraries to your `pom.xml` to get ability to count how many
 </dependency>
 ```
 
-
 ###### @DynamicUpdate/@DynamicInsert and @NamedEntityGraph
 By default when you update entity, even if you set 1 fields, orm will generate sql update with all fields in entity. If you want short update with only your field you should use dynamic update annotations. Same true for dynamic insert.
 Entity graph - can be used to lazy/eager data loading.
-
 
 ###### Cascade types
 When one entity A depends on entity B, we can either, first save B, and then A, or set `cascade` for Entity A, and just save A, and B would be saved automatically
@@ -7607,7 +7524,6 @@ class Account{
 There are 2 ways you can work with spring
 * set up config file yourself and declare there `DataSource/EntityManagerFactory/TransactionManager` beans yourself
 * set up just env vars, and allow spring auto-configuration do all the magic by creating this beans
-
 First way with explicit configuration
 ```java
 import javax.persistence.Entity;
@@ -8077,12 +7993,10 @@ public class MySimpleTest {
 }
 ```
 
-
-
 ###### TestExecutionListener
 This is special interface that helps to manage test lifecycle. kind of `@BeforeEach, @AfterEach, @BeforeAll, and @AfterAll`
 There are default impl, but you can create your own impl. To add it to your class use 
-```java
+```
 @TestExecutionListeners(value = {
   CustomTestExecutionListener.class,
   DependencyInjectionTestExecutionListener.class
@@ -8090,7 +8004,6 @@ There are default impl, but you can create your own impl. To add it to your clas
 ```
 Pay attention that adding it like that remove all default listeners, that's why we explicitly add `DI` listener.
 To preserve default listener add `mergeMode = MergeMode.MERGE_WITH_DEFAULTS`
-
 First let's add junit to `pom.xml`
 ```
 <dependency>
@@ -8099,7 +8012,6 @@ First let's add junit to `pom.xml`
     <scope>test</scope>
 </dependency>
 ```
-
 By default this starter come with junit4 and junit-vintage. If you want to use new junit5 jupiter, you should exclude these 2 and add jupiter explicitly
 ```
 <dependency>
@@ -8234,7 +8146,7 @@ To get access to shared context you can also extend your class from abstract `Ab
 If you don't specify any data to this annotation, it will load inner classes marked with `@Configuration`
 If you use this annotation across multiple test, spring will automatically cache context, when you use the same `locations`. This will enable to speed up your tests.
 If you want to have separate contexts for different tests you should use `@ContextHierarchy`. Order of configuration is important, if A depends on B, then B should go first.
-```java
+```
 @ContextHierarchy({
     @ContextConfiguration("/parent-config.xml"),
     @ContextConfiguration("/child-config.xml")
@@ -8535,15 +8447,12 @@ You can also use declarative approach to register beans with jmx console using f
 * `@ManagedResource(description = "JMX managed resource", objectName = "jmxDemo:name=myService")` to your bean directly.
 * `@ManagedOperation` to any method you want to be able to call from jmx console. If you want to expose property add `@ManagedAttribute(description = "myProp")`
 
-
 You can also add hibernate to jmx console by adding following props
 ```java
 props.put("hibernate.jmx.enabled", true);
 props.put("hibernate.generate_statistics", true);
 props.put("hibernate.session_factory_name", "sessionFactory");
 ```
-
-
 
 ###### Spring Boot Actuator
 First you should add this dependency 
@@ -8608,7 +8517,7 @@ You can also create custom endpoint. For this annotate class with `@Endpoint`, m
 The reason actuator use it's own annotation instead of `@Controller`, is that actuator is not just controller, it's also expose data to JMX console. So that's why adding only ``@Controller` not enough.
 
 To secure actuator you should use spring security. Since `/actuator` path can be changed from config file, it's better to use `EndpointRequest` like
-```java
+```
 protected void configure(HttpSecurity http) throws Exception {
     http
     .requestMatcher(EndpointRequest.toAnyEndpoint().excluding("health", "info"))
@@ -8628,17 +8537,7 @@ If you want to have nice ui to view actuator endpoints you should add spring boo
 ```
 And add `@EnableAdminServer`.
 
-
-
-
-
-
-
-
-
-
 #### Message Support
-
 ###### JMS
 To work with jms you should add to `pom.xml`
 ```
@@ -9038,7 +8937,6 @@ public class MyKafkaListener implements MessageListener<String, String> {
 }
 ```
 
-
 Main file
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -9053,7 +8951,6 @@ public class App{
     }
 }
 ```
-
 KafkaStreams - streaming library designed by creators of apache kafka. Add these 2 dependency to your `pom.xml`
 ```
 <dependency>
@@ -9102,17 +8999,13 @@ Run kafka from docker
 cd files/docker
 docker-compose -f docker-compose.kafka.yml up -d
 ```
+
+TODO:
 There are a few things you need to know how to run single broker kafka and multiple-broker kafka:
 * 
-
 https://github.com/bitnami/bitnami-docker-kafka
 https://www.confluent.io/blog/kafka-listeners-explained
 https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc
-
-
-
-
-
 
 Example of sending/polling data using `KafkaProducer/KafkaConsumer`. You should include either `kafka-clients` or `spring-kafka` (which already includes kafka-clients).
 ```java
@@ -9285,7 +9178,6 @@ class Person{
 [name, age]
 ```
 
-
 ###### Pom vs Bom
 POM - project object model. BOM - bill of materials.
 Bom - special kind of pom, that helps control versions, and provide a central place to update these versions,
@@ -9311,9 +9203,7 @@ In case you already have a parent, you can just import it
     <scope>import</scope>
 </dependency>
 ```
-
 So bom allows you to not include version in your pom, cause it can be already in bom.
-
 
 ###### Spring Batch
 Batch processing is using when you need to process a batch of data. First let's add starter to `pom.xml`
@@ -9323,7 +9213,6 @@ Batch processing is using when you need to process a batch of data. First let's 
     <artifactId>spring-boot-starter-batch</artifactId>
 </dependency>
 ```
-
 By default all jobs starts automatically, but you can turn off them in `application.properties`, just add `spring.batch.job.enabled=false`.
 ```java
 import java.time.LocalDateTime;
@@ -9363,7 +9252,6 @@ after => StepExecution: id=1, version=2, name=myStep, status=COMPLETED, exitStat
 2020-04-07 20:13:45.730  INFO 5685 --- [           main] o.s.batch.core.step.AbstractStep         : Step: [myStep] executed in 3s31ms
 2020-04-07 20:13:45.736  INFO 5685 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : Job: [SimpleJob: [name=myJob]] completed with the following parameters: [{date=2020-04-07T20:13:42.503241}] and the following status: [COMPLETED] in 3s59ms
 ```
-
 
 ###### Spring Integration
 First you need to add integration starter and message security to your `pom.xml`
@@ -9418,13 +9306,8 @@ There are several building blocks of integration
 * `Gateway` (interface with `@MessagingGateway`) - entry point to which third-party app send data for spring integration
 * `Channel Adapter` (Bean with `@InboundChannelAdapter` returning `MessageSource<T>`) - entry point
 
-
-
-
-
 ###### Spring XD
 Spring XD (eXtreme Data) - command line tool to set up jobs and execute them on distributed system in real-time.
-
 
 ###### Spring DevTools
 They allowed
@@ -9440,17 +9323,9 @@ To use devtools add this to your `pom.xml`
 </dependency>
 ```
 
-
-
-
-
-
-
 ###### YML Autocompletion
-
 By default auto-completion work in ultimate ide for both `.yml` and `.properties`.
 If you are using `CE (community edition)` you should download plugin `Spring Assistant`, it will enable auto-completion for `.yml` files.
-
 You can also have auto-completion for your custom props, you should add this to your `pom.xml`
 ```
 <dependency>
@@ -9513,12 +9388,6 @@ public class MyConfig {
 
 And then also use auto-complete to tune your starter from main project
 
-
-
-
-
-
-
 ###### Spring Cloud
 Spring Cloud - allows easy production deployment. It consist of
 * `Eureka` (service discovery from Netflix) - distinct service that store all services by name and provide them to other services
@@ -9546,7 +9415,7 @@ In client-side (microservice that would use eureka) you should add
 This dependency add both `eureka` client and `ribbon`. You should add name of your service to `spring.application.name=myService`. And it would be available in eureka dashboard.
 By default client will try to connect to eureka at localhost:8761. But you can change eureka url with property `eureka.client.service-url`
 Once you enable client eureka you can create load-balanced `RestTemplate` or `WebClient` like
-```java
+```
 @Bean
 @LoadBalanced
 public RestTemplate restTemplate() {
@@ -9568,7 +9437,7 @@ You can also use `feign` client, that works like spring data, automatically gene
 </dependency>
 ```
 First enable feign config
-```java
+```
 @Configuration
 @EnableFeignClients
 public RestClientConfiguration {
@@ -9585,7 +9454,6 @@ public interface EmployeeClient {
 }
 ```
 
-
 To create config server, add this to your `pom.xml`
 ```
 <dependency>
@@ -9598,7 +9466,6 @@ You should also add git url, where properties are located `spring.cloud.config.s
 After it's done you can access config server in `http://localhost:8888/{nameOfYourApp}/{profile}/{gitBranchName}`.
 If git server has auth you should add to your props `spring.cloud.config.server.username` and `spring.cloud.config.server.password`
 The best practice is first to deploy config server, and all microservices connect to it to get eureka server url as property param.
-
 For client to consume properties from config server add this dependency
 ```
 <dependency>
@@ -9606,7 +9473,6 @@ For client to consume properties from config server add this dependency
     <artifactId>spring-cloud-starter-config</artifactId>
 </dependency>
 ```
-
 
 Hystrix implemented as an aspect applied to a method that triggers a fallback method should the target method fail. Aspect also tracks how frequently the target method fails and then forwards all requests to the fallback if the failure rate exceeds some threshold.
 To work with hystrix add it to your `pom.xml`
@@ -9627,10 +9493,6 @@ You can monitor hystrix from actuator, or create new project with hystrix dashbo
 </dependency>
 ```
 Then add to your config `@EnableHystrixDashboard`
-
-
-
-
 
 ###### Spring Utils
 `AnnotationUtils` - can be useful when you want to find some annotation that you can't get by default. 
@@ -10111,8 +9973,6 @@ public class App{
 First time you run ` curl http://localhost:8080/` you will wait for 3 sec, later you would get response immediately.
 To clear cache call `curl -X POST http://localhost:8080/`
 
-
-
 ###### JavaBeans, POJO, Spring Beans
 JavaBean - a bean with public no-arg constructor, private fields and public getter/setter. The best example is simple model
 ```java
@@ -10132,10 +9992,6 @@ We are using lombok to generate getter/setter but you can also write them by han
 Spring Bean - a java object managed by spring container. Since POJO = plain old java object, so any class is a POJO, so spring beans also POJO.
 We associate Spring with `POJO` to express that with Spring, the beans stay simple, testable, adaptable, etc..., not or rather few coupled to specific framework interfaces or implementations.
 `POJO` brings a low coupling by using generally metadata such as XML or code annotations (often preferred as less verbose and located directly in the concerning class) to bind the beans to the framework.
-
-
-
-
 
 ###### Maven scope/optional/exclusions
 There are 2 types of dependencies
@@ -10172,9 +10028,6 @@ If you want to exclude any dependency (for example C wasn't declared as optional
 </dependency>
 ```
 
-
-
-
 ###### Spring Boot Starter
 Core starter, including auto-configuration support, logging and YAML is:
 ```
@@ -10184,11 +10037,6 @@ Core starter, including auto-configuration support, logging and YAML is:
 </dependency>
 ```
 Although you should omit it, cause most starters (for example `spring-boot-starter-web`) include it as transitive dependency, but not all. If you want to use jpa you should include both `spring-boot-starter-data-jpa` and `spring-boot-starter`.
-
-
-
-
-
 
 ###### Spring Context Indexer
 If you need to scan your project to search for some components, it may take some time. So you may add a dependency
@@ -10201,13 +10049,10 @@ If you need to scan your project to search for some components, it may take some
 ```
 And it will generate during compile time file `/META-INF/spring.components` in your jar with all your stereotype components.
 
-
-
 ###### SPEL - Spring Expression Language
 It is separate language from `OGNL` (Object-Graph Navigation Language - open-source Expression Language for Java)
 It supports regular expression
 'hello world' - is valid `SPEL` expression
-
 You can evaluate spel expressions in any `@Value` attribute, but also with programmatic evaluation using `SpelExpressionParser`
 ```java
 import org.springframework.beans.factory.BeanFactory;
@@ -10273,12 +10118,8 @@ STATIC_METHOD_CALL => static
 INSTANCE_METHOD_CALL => instance
 ```
 
-
-
-
 ###### Custom Framework Impl
 To better understand how spring works you should implement your own micro-framework, to get the idea, how it works and why it works this way and not another.
-
 Why do we need di. Imagine that you create your dependencies with the `new` keyword inside your classes. Suppose you  have a code
 ```java
 interface Paint{
@@ -10556,17 +10397,12 @@ msg => hello, paint => black, name => Good Printer
 ***** end logging ******
 ```
 
-
-
 ###### Spring Design Patterns
 There are several design patterns that can be easily implemented in spring
 * Singleton
 * Chain of responsibility
 * Strategy
-
-
 `Singleton` - is both a very useful pattern and anti-pattern at the same time. The question is how to use it.
-
 Here is example of anti-pattern singleton cause it creates tight coupling and it's impossible to create unit tests.
 ```java
 class CurrencyConverter{
@@ -10630,7 +10466,6 @@ class RubCurrencyRate implements CurrencyRate{
 }
 ```
 
-
 `Chain of responsibility`. Suppose we have a code
 ```java
 class Operation{
@@ -10651,7 +10486,6 @@ class Operation{
 }
 ```
 The problem is that it breaks open-closed principle. The point if you want to add task4 to a list you have to open your app and modify code.
-
 Here is correct way with spring
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10675,10 +10509,7 @@ interface Task{
 ```
 
 From now on you can add as many tasks as you want, and also decide the order in which they are executed.
-
-
 `Strategy` - if we have some logic that depends on condition run one or another code, instead of using long switch we can use this pattern.
-
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -10756,9 +10587,7 @@ interface MailTemplate{
 
 
 ###### Write object as JSON
-Sometimes it can be useful for logging purposes not to log object, but json instead.
-For this we should use `ObjectMapper/ObjectWriter` from `jackson` library.
-
+Sometimes it can be useful for logging purposes not to log object, but json instead. For this we should use `ObjectMapper/ObjectWriter` from `jackson` library.
 ```java
 import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -10805,7 +10634,6 @@ person => Person(id=1, name=Jack, email=null, date=2020-08-28)
 json => {"id":1,"name":"Jack","date":"2020-08-28"}
 ```
 
-
 ###### Google Authenticator OTP
 TOTP (time based one time password) - 6 digit password valid for 30 sec, used in MFA as something you have (as opposed to password - something you know)
 You can use [this library](https://github.com/wstrange/GoogleAuth). First add it to `pom.xml`
@@ -10817,7 +10645,6 @@ You can use [this library](https://github.com/wstrange/GoogleAuth). First add it
 </dependency>
 ```
 You can validate otp codes [here](https://totp.danhersam.com)
-
 ```java
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
@@ -11091,7 +10918,6 @@ It automatically encodes passed url so `http://test.com/my list` => would be enc
 * OkHttpClient (imperative) - custom http client, but still not very useful, all of work regarding body conversion (for example to json) should be done manually
 * Retrofit2 (declarative) - you define method in interface and retrofit build classes to execute them
 * Feign (declarative) - just like retrofit, but more neat, and winner in my opinion
-
 Add following to your `pom.xml`
 ```
 <dependency>
@@ -11590,13 +11416,11 @@ You have to add to `application.properties` cause auto-configuration need these 
 cloud.aws.region.static=us-east-1
 cloud.aws.stack.auto=false
 ```
-
 There are 4 types of deletion `deletionPolicy`:
 * NO_REDRIVE - default policy, delete if no dead letter queue is set up. Otherwise if you manually delete it, it would be deleted, else after some attempts it goes to dead letter queue.
 * ALWAYS - always delete message, no matter what.
 * NEVER - never delete message. If you manually delete message - it would be deleted.
 * ON_SUCCESS - delete message only if method doesn't throw any exception.
-
 ```java
 import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11673,7 +11497,6 @@ class MyConfig {
 ###### ChronicleMap vs ConcurrentMap
 * ConcurrentMap - java interface
 * ChronicleMap - third-party high-speed implementation of `ConcurrentMap`
-
 To use `ChronicleMap` add this to your `pom.xml`
 ```
 <dependency>
@@ -11682,7 +11505,6 @@ To use `ChronicleMap` add this to your `pom.xml`
     <version>3.20.61</version>
 </dependency>
 ```
-
 `ChronicleMap` required to set `averageValue`, cause it needs to know average size in advance, so it can allocate buffer.
 ```java
 import java.io.File;
