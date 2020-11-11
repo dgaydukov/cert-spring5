@@ -3913,7 +3913,7 @@ public class FilterJavaConfig {
 ```
 
 ###### WebSocket API
-To work with spring websocket we should add to `pom.xml`. Since we most likely to work with json it's better to add jackson library too
+To work with spring websocket you should add to `pom.xml`. Since we most likely to work with json it's better to add jackson library too
 ```
 <dependency>
     <groupId>org.springframework.boot</groupId>
@@ -3922,7 +3922,6 @@ To work with spring websocket we should add to `pom.xml`. Since we most likely t
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-json</artifactId>
-    <version>2.2.6.RELEASE</version>
 </dependency>
 ```
 Working example. This file should be places in `main/resources/static/ws.html` and it would be accessible on `http://localhost:8080/ws.html`
@@ -3967,11 +3966,12 @@ document.getElementById("send").addEventListener("click", (event) => {
 });
 </script>
 ```
-
-`WsJavaConfig.java`
+You can use `wscat -c ws://localhost:8080/ws` utility to talk with websocket.
 ```java
-package com.example.logic.ann.ws;
-
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -3980,9 +3980,20 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+/**
+ * Since we have one pom.xml for all examples we exclude security so our socket is open, and no security filter blocking us
+ * otherwise we won't be able to open localhost:8080/ws.html (would be redirected to login page)
+ */
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
+public class App {
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
 @Configuration
 @EnableWebSocket
-public class WsJavaConfig implements WebSocketConfigurer {
+class WsJavaConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         /**
@@ -3995,37 +4006,13 @@ public class WsJavaConfig implements WebSocketConfigurer {
                 System.out.println("handleTextMessage => " + message);
                 session.sendMessage(new TextMessage("response => " + message.getPayload()));
             }
-        }, "/socket");
+        }, "/ws");
     }
 }
 ```
-
-`App.java`
-```java
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
-
-/**
- * Since we have one pom.xml for all examples we exclude security so our socket
- * is open, and no security filter blocking us
- * otherwise we won't be able to open localhost:8080/ws.html (would be redirected to login page)
- */
-
-
-@ComponentScan("com.example.logic.ann.ws")
-public class App {
-    public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
-    }
-}
-```
-
-If `WebSocket` is not supported by browser we call fallback to SockJs. For client take a [sockjs](https://github.com/sockjs/sockjs-client#getting-started).
-For server add this `withSockJS()` to `registry.addHandler().`
-
+If `WebSocket` is not supported by browser we call fallback to SockJs. For client take a [sockjs](https://github.com/sockjs/sockjs-client#getting-started). For server add this `withSockJS()` to `registry.addHandler().`
 You can use native javax websocket implementation. As you see there is no `main` function, you need `tomcat` to run this websocket server.
+You can't use it with spring boot, only if you compile it as `.war` file and run from tomcat.
 ```java
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
@@ -4038,7 +4025,7 @@ import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@ServerEndpoint("/ws/endpoint")
+@ServerEndpoint("/ws")
 class MyWebSocket {
     private Set<Session> sessions = ConcurrentHashMap.newKeySet();
     @OnOpen
