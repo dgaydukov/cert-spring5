@@ -102,6 +102,7 @@
 * 9.29 [Aws Sqs and no_redrive deletion policy](#aws-sqs-and-no_redrive-deletion-policy)
 * 9.30 [ChronicleMap vs ConcurrentMap](#chroniclemap-vs-concurrentmap)
 * 9.31 [Cognito Auth Flow](#cognito-auth-flow)
+* 9.32 [Jackson Serialization](#jackson-serialization)
 
 
 
@@ -9806,7 +9807,7 @@ logger=org.apache.commons.logging.impl.SimpleLog
 [WARN] App - warn
 [INFO] App - info
 ```
-* `log4f` - add this to your `pom.xml`
+* `log4j` - log implementation, add this to your `pom.xml`.
 ```
 <dependency>
     <groupId>org.apache.logging.log4j</groupId>
@@ -9814,7 +9815,9 @@ logger=org.apache.commons.logging.impl.SimpleLog
     <version>2.13.3</version>
 </dependency>
 ```
-You should also add config `resources/log4j2.xml`
+You should also add config `resources/log4j2.xml`. If you don't have this config file default level is `ERROR`.
+Please notice that you can also use `log4j2.properties` file. If both are used (.properties & .xml), then properties take over (xml config would never be used in this case)
+You can use different appenders and log to console or to file (change to `<AppenderRef ref="LogToFile"/>`). If you log to file you should set filename, here we create file `logs/app.log` in the project directory.
 ```
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
@@ -9822,14 +9825,18 @@ You should also add config `resources/log4j2.xml`
         <Console name="LogToConsole" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
         </Console>
+        <FILE name="LogToFile" fileName="logs/app.log">
+            <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </FILE>
     </Appenders>
     <Loggers>
-        <Root level="INFO">
+        <Root level="DEBUG">
             <AppenderRef ref="LogToConsole"/>
         </Root>
     </Loggers>
 </Configuration>
 ```
+Multiple config - you can create several config files based on your env (like log4j2-dev.xml & log4j2-prod.xml) and then set them as java param `-Dlog4j.configurationFile=log4j2-dev.xml`
 Example how to use logging
 ```java
 import org.apache.logging.log4j.LogManager;
@@ -11831,4 +11838,93 @@ class CognitoService{
         }
     }
 }
+```
+
+###### Jackson Serialization
+Jackson handle serialization out-of-the-box. But if you use circular dependency, jackson can't serialize properly.
+```
+import java.util.List;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Data;
+import lombok.ToString;
+
+public class App{
+    public static void main(String[] args) throws JsonProcessingException {
+        User user = new User();
+        Booking booking = new Booking();
+        booking.setId(1);
+        booking.setUser(user);
+        user.setBookings(List.of(booking));
+        ObjectMapper mapper = new ObjectMapper();
+        System.out.println("user => " + mapper.writeValueAsString(user));
+        System.out.println("booking => " + mapper.writeValueAsString(booking));
+    }
+}
+
+@Data
+class User{
+    private int id;
+    private List<Booking> bookings;
+}
+
+@Data
+class Booking{
+    private int id;
+    @ToString.Exclude
+    private User user;
+}
+```
+```
+Exception in thread "main" com.fasterxml.jackson.databind.JsonMappingException: Infinite recursion (StackOverflowError) (through reference chain: com.example.spring5.User["bookings"]->java.util.ImmutableCollections$List12[0]->com.example.spring5.Booking["user"]->....
+```
+To solve this problem you can use 2 annotations:
+* `@JsonManagedReference` - serialized normally.
+* `@JsonBackReference` - omitted from serialization. But during deserialization, it can be recovered (compare to `@JsonIgnore` which would ignore field even if you try to deserialize it)
+You can also use `@JsonIgnore` to just ignore single field.
+No if we rewrite code, we would get expected result
+```java
+import java.util.List;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Data;
+import lombok.ToString;
+
+public class App{
+    public static void main(String[] args) throws JsonProcessingException {
+        User user = new User();
+        Booking booking = new Booking();
+        booking.setId(1);
+        booking.setUser(user);
+        user.setBookings(List.of(booking));
+        ObjectMapper mapper = new ObjectMapper();
+        System.out.println("user => " + mapper.writeValueAsString(user));
+        System.out.println("booking => " + mapper.writeValueAsString(booking));
+
+        Booking deserialized = mapper.readValue("{\"id\":1, \"user\":{\"id\":1}}", Booking.class);
+        System.out.println(deserialized.getUser());
+    }
+}
+
+@Data
+class User{
+    private int id;
+    @JsonManagedReference
+    private List<Booking> bookings;
+}
+
+@Data
+class Booking{
+    private int id;
+    @ToString.Exclude
+    @JsonBackReference
+    private User user;
+}
+```
+```
+user => {"id":0,"bookings":[{"id":1}]}
+booking => {"id":1}
+User(id=1, bookings=null)
 ```
