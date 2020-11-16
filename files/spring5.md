@@ -3966,8 +3966,11 @@ document.getElementById("send").addEventListener("click", (event) => {
 });
 </script>
 ```
-You can use `wscat -c ws://localhost:8080/ws` utility to talk with websocket.
+You can use `wscat -c ws://localhost:8080/ws` utility to talk with websocket. You can subscribe/unsubscribe for time events
 ```java
+import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -3979,6 +3982,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import lombok.SneakyThrows;
 
 /**
  * Since we have one pom.xml for all examples we exclude security so our socket is open, and no security filter blocking us
@@ -3996,17 +4000,51 @@ public class App {
 class WsJavaConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        /**
-         * By default only same url can access socket, if you want disable this add
-         * setAllowedOrigins("*") to addHandler
-         */
-        registry.addHandler(new TextWebSocketHandler(){
-            @Override
-            protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-                System.out.println("handleTextMessage => " + message);
-                session.sendMessage(new TextMessage("response => " + message.getPayload()));
+        // By default only same url can access socket, if you want disable this add setAllowedOrigins("*") after addHandler
+        registry.addHandler(new WsBroadcastHandler(), "/ws");
+    }
+}
+
+// single class is shared across all ws connections
+class WsBroadcastHandler extends TextWebSocketHandler {
+    private static final String SUBSCRIBE = "subscribe";
+    private static final String UNSUBSCRIBE = "unsubscribe";
+    private static final Set<WebSocketSession> subscribers = ConcurrentHashMap.newKeySet();
+
+    @SneakyThrows
+    public WsBroadcastHandler(){
+        System.out.println("running broadcast...");
+        new Thread(this::broadcast).start();
+    }
+
+    @SneakyThrows
+    private void broadcast(){
+        while (true){
+            Thread.sleep(1000);
+            for (var session: subscribers){
+                session.sendMessage(new TextMessage("time= " + LocalDateTime.now()));
             }
-        }, "/ws");
+        }
+    }
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception{
+        System.out.println("onConnect: session=" + session);
+    }
+
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage msg) throws Exception {
+        System.out.println("onMessage session=" + session + ", msg=" + msg);
+        final String payload = msg.getPayload();
+        String response = "response => " + payload;
+        if (SUBSCRIBE.equals(payload)) {
+            subscribers.add(session);
+            response = "user " + session.getId() + " subscribed to broadcast";
+        } else if (UNSUBSCRIBE.equals(payload)) {
+            subscribers.remove(session);
+            response = "user " + session.getId() + " unsubscribed from broadcast";
+        }
+        session.sendMessage(new TextMessage(response));
     }
 }
 ```
@@ -4024,15 +4062,18 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.SneakyThrows;
 
 @ServerEndpoint("/ws")
 class MyWebSocket {
+    public MyWebSocket(){
+        new Thread(this::broadcast).start();
+    }
     private Set<Session> sessions = ConcurrentHashMap.newKeySet();
     @OnOpen
     public void onOpen(Session session) {
         System.out.println("onOpen => " + session.getId());
         sessions.add(session);
-        broadcast();
     }
     @OnClose
     public void onClose(Session session) {
@@ -4060,15 +4101,12 @@ class MyWebSocket {
      * So synchronized looks like nice solution, from all running instances only 1 would be called
      * Another nice solution can be to create singleton class and to call it.
      */
+    @SneakyThrows
     public synchronized void broadcast(){
         while(true){
             for(var session: sessions) {
-                try {
-                    session.getBasicRemote().sendText("broadcast " + LocalDateTime.now());
-                    Thread.sleep(5 * 1000);
-                } catch (IOException | InterruptedException ex) {
-                    throw new RuntimeException(ex);
-                }
+                session.getBasicRemote().sendText("broadcast " + LocalDateTime.now());
+                Thread.sleep(5 * 1000);
             }
         }
     }
