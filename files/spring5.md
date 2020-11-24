@@ -2571,6 +2571,7 @@ By default all beans get `singleton` scope. But you can add `@Scope("prototype")
     * it is a singleton per `ServletContext`, not per Spring `ApplicationContext` (or which there may be several in any given web application)
     * it is actually exposed and therefore visible as a `ServletContext` attribute
 * `websocket` - instance per web socket connection
+In spring4 there is also `globalSession` scope - applicable in the context of Portlet based web apps. If used with simple web app, then behavior is same as for `session`.
 
 ### AOP
 * spring aspects fire before custom BPP
