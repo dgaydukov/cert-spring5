@@ -9557,26 +9557,121 @@ null
 ```
 
 ###### Spring Boot Logging
-By default spring uses 
+By default spring uses:
 * `internal logging` => apache common logging
-* `external logging` => slf4j(with logback). So you don't need to manually include these dependency:
+* `external logging` => slf4j(with logback). So you don't need to manually include `logback-classic` dependency. It's already included when you add `spring-boot-starter` to your `pom.xml`.
+Log levels goes in this direction `ERROR > WARN > INFO > DEBUG > TRACE`, next includes all previous (so if you set to `TRACE` all previous would be displayed)
+
+You can use spring boot + lombok and use logback logger (again no need to add it explicitly to pom.xml)
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import lombok.extern.slf4j.Slf4j;
+
+@SpringBootApplication
+@Slf4j
+public class App {
+    public void print(){
+        System.out.println("logger=" + log.getClass().getName());
+        log.error("error");
+        log.warn("warn");
+        log.info("info");
+        log.debug("debug");
+        log.trace("trace");
+    }
+    public static void main(String[] args) {
+        var context = SpringApplication.run(App.class, args);
+        final App app = context.getBean(App.class);
+        app.print();
+    }
+}
+```
+```
+2020-11-26 16:17:52.570  INFO 13407 --- [           main] com.example.demo.App                     : Starting App on pc with PID 13407
+2020-11-26 16:17:52.572  INFO 13407 --- [           main] com.example.demo.App                     : No active profile set, falling back to default profiles: default
+2020-11-26 16:17:52.940  INFO 13407 --- [           main] com.example.demo.App                     : Started App in 0.676 seconds (JVM running for 0.951)
+logger=ch.qos.logback.classic.Logger
+2020-11-26 16:17:52.945 ERROR 13407 --- [           main] com.example.demo.App                     : error
+2020-11-26 16:17:52.945  WARN 13407 --- [           main] com.example.demo.App                     : warn
+2020-11-26 16:17:52.945  INFO 13407 --- [           main] com.example.demo.App                     : info
+```
+By default `INFO` level active, but you can set other level in 3 ways:
+* set in `application.properties` log level `logging.level.root=DEBUG`
+* add `--debug` to program arguments when you run app
+* create `logback.xml` or `logback-spring.xml` file with log settings
+Order of execution (from least to most strong, next overwrites previous): 
+* `logback-spring.xml`
+* `logback.xml`
+* `application.properties`
+* program arguments param (most strong overwrites all other)
+
+Logging group - you can group several packages to have same level (instead of assigning this level to each package). Add this to you `application.properties` file:
+```
+logging.group.tomcat=org.apache.catalina, org.apache.coyote, org.apache.tomcat
+logging.level.tomcat=TRACE
+```
+
+If you want to use other logger (for example log4j you should exclude logback and include desired logger)
 ```
 <dependency>
-    <groupId>ch.qos.logback</groupId>
-    <artifactId>logback-classic</artifactId>
-    <version>1.2.3</version>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-logging</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-log4j2</artifactId>
 </dependency>
 ```
-It's already included when you add `spring-boot-starter` to your `pom.xml`.
+Or exclude/include not starters but loggers itself.
+For log4j you can also use 2 config files `log4j2-spring.xml` or `log4j2.xml`
 
-Log levels goes in this direction `ERROR > WARN > INFO > DEBUG > TRACE`, next includes all previous (so if you set to `TRACE` all previous would be displayed)
+ElasticSearch - require json output. For this you can use (logstash integration with logback):
+```
+<dependency>
+    <groupId>net.logstash.logback</groupId>
+    <artifactId>logstash-logback-encoder</artifactId>
+    <version>6.4</version>
+</dependency>
+```
+Add this `logback.xml` file:
+```
+<configuration>
+    <springProfile name="default">
+        <include resource="org/springframework/boot/logging/logback/base.xml"/>
+    </springProfile>
+
+    <springProfile name="prod">
+        <appender name="jsonConsoleAppender" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="jsonConsoleAppender"/>
+        </root>
+    </springProfile>
+</configuration>
+```
+Above we have 2 spring profiles one for local with standard output, second for prod with json output.
+To test prod add to `application.properties` active profile `spring.profiles.active=prod`.
+Now output for same java code would be in json format
+```
+logger=ch.qos.logback.classic.Logger
+{"@timestamp":"2020-11-26T18:04:32.017+08:00","@version":"1","message":"error","logger_name":"com.example.demo.App","thread_name":"main","level":"ERROR","level_value":40000}
+{"@timestamp":"2020-11-26T18:04:32.017+08:00","@version":"1","message":"warn","logger_name":"com.example.demo.App","thread_name":"main","level":"WARN","level_value":30000}
+{"@timestamp":"2020-11-26T18:04:32.018+08:00","@version":"1","message":"info","logger_name":"com.example.demo.App","thread_name":"main","level":"INFO","level_value":20000}
+```
+
 There are 5 types of logging:
 * java.util.logging
 * log4j
 * logback
 * apache common logging
 * slf4j
-
 
 More detailed overview:
 * `java.util.logging` - standard package for logging from jdk
@@ -9782,6 +9877,14 @@ public class App{
 ```
 
 * `logback` - replacement for log4j, natively support `slf4j`. By default it uses DEBUG log level.
+Add this to your pom.xml. If you are using spring-boot you don't have to include this into your pom, it's already there.
+```
+<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+    <version>1.2.3</version>
+</dependency>
+```
 To configure logback you should create file in `resources/logback.xml` with at least 1 appender and log level:
 ```
 <configuration>
