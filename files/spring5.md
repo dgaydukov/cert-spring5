@@ -9666,6 +9666,86 @@ logger=ch.qos.logback.classic.Logger
 {"@timestamp":"2020-11-26T18:04:32.018+08:00","@version":"1","message":"info","logger_name":"com.example.demo.App","thread_name":"main","level":"INFO","level_value":20000}
 ```
 
+By default your message contains all your params, like `user userId=123 created for profileID=456`. But it can be nice if you store in elasticSearch params as separate json fields.
+MDU (Mapped Diagnostic Context) - way to separate fields from text, Below is example
+```java
+import java.util.HashMap;
+import java.util.Map;
+import org.slf4j.MDC;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import lombok.extern.slf4j.Slf4j;
+
+@SpringBootApplication
+@Slf4j
+public class App {
+    public void print(){
+        Map<String, String> params = new HashMap<>(Map.of("userId", "123", "profileId", "456"));
+        params.forEach(MDC::put);
+        log.info("User created");
+        /**
+         * we have to clear MDC after each use
+         * If you want to clear all values from mdc you can use: MDC.clear();
+         */
+        params.keySet().forEach(MDC::remove);
+    }
+    public static void main(String[] args) {
+        var context = SpringApplication.run(App.class, args);
+        final App app = context.getBean(App.class);
+        app.print();
+    }
+}
+```
+```
+{"@timestamp":"2020-11-26T18:12:26.985+08:00","@version":"1","message":"User created","logger_name":"com.example.demo.App","thread_name":"main","level":"INFO","level_value":20000,"profileId":"456","userId":"123"}
+```
+As you see now userId & profileId are separate fields. But there are several problems of MDC:
+* it's not supported for local development (you will just see message `user created`)
+* it uses `ThreadLocal` so multi-threading & reactive apps (webflux) may not work out-of-the-box
+In the reactive non-blocking world, request could be processed by multiple threads. This means that setting the MDC context at the beginning of the request is not enough
+To use it in reactive apps you can use some hacks with copying `ThreadLocal` variables between threads
+* we have to manually clear it after each invocation
+
+As you see MDU no the best approach, that's why `logstash-logback-encoder` provides the concept of `StructuredArguments` and you can use it to add fields to json
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
+
+@SpringBootApplication
+@Slf4j
+public class App {
+    public void print(){
+        Person p = new Person();
+        p.setName("John Doe");
+        p.setEmail("john.doe@gmail.com");
+        log.info("User created {} {} for {}", kv("userId", "123"), kv("profileId", "456"), kv("person", p));
+    }
+    public static void main(String[] args) {
+        var context = SpringApplication.run(App.class, args);
+        final App app = context.getBean(App.class);
+        app.print();
+    }
+}
+
+@Data
+class Person{
+    private String name;
+    private String email;
+}
+```
+```
+# if we run with default provide
+2020-11-27 09:46:53.533  INFO 28739 --- [           main] com.example.demo.App                     : User created userId=123 profileId=456 for person=Person(name=John Doe, email=john.doe@gmail.com)
+# if we run with prod profile
+{"@timestamp":"2020-11-27T09:46:03.430+08:00","@version":"1","message":"User created userId=123 profileId=456 for person=Person(name=John Doe, email=john.doe@gmail.com)","logger_name":"com.example.demo.App","thread_name":"main","level":"INFO","level_value":20000,"userId":"123","profileId":"456","person":{"name":"John Doe","email":"john.doe@gmail.com"}}
+```
+As you see this solution works best for both local development and production app sending logs to ELK (elasticsearch, logstash, kibana) stack.
+Notice that we can also log complex objects, and they are created as objects in json.
+
 There are 5 types of logging:
 * java.util.logging
 * log4j
