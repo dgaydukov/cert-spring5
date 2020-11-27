@@ -2382,6 +2382,7 @@ Person2(id=2, name=John, age=20)
 ###### Task scheduling
 `java.util.concurrent` Provides a lot of standard classes to manage concurrent execution. Although you can use spring default classes (they are just wrappers around jdk classes) you either can use jdk classes directly.
 In spring there are 2 useful annotations `@Scheduled` and `@Async`. To use them you should enable scheduling with `@EnableScheduling`.
+Notice that since we are using spring aop `@Async` won't work inside same class due to proxy self-invocation. If you need it from same class then enable `AspectJ` proxy mode for the `@EnableAsync` and provide `weaver`.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
