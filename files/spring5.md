@@ -7280,7 +7280,12 @@ By default `delete` return void, but you still can verify that row was deleted. 
 If you want to subscribe on events for some repository you can extend `AbstractRepositoryEventListener<YourRepo>` and implements methods like `afterCreate` and have some custom logic there.
 
 ###### JTA - java transaction API
-`@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into some transaction management code.
+Don't confuse:
+* `javax.transaction.Transactional` - java EE7 annotation, but since spring3 also supported by spring framework. It doesn't have isolation, and use `Transactional.TxType` as value param for propagation.
+Yet it doesn't support nested transaction. There is no NESTED type in `Transactional.TxType`, but other 6 types same as for `org.springframework.transaction.annotation.Propagation`.
+* `org.springframework.transaction.annotation.Transactional` - has more options and will always execute the right way.
+
+`@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into some transaction management code, using jdk proxy (or other type if class not inhereted from interface).
 
 `Propagation` what to do when you call annotated method from another: 
 * `REQUIRED` - default value, if no transaction exists, create new, otherwise run in current
@@ -7306,10 +7311,6 @@ There are 5 isolation types:
 By default all `RuntimeException` and `Error` rollback transaction whereas checked exceptions don't. This is an EJB legacy. You can configure this by using `rollbackFor()` and `noRollbackFor()` annotation parameters `@Transactional(rollbackFor=Exception.class)`
 You can also pass array of strings for `rollbackForClassName/noRollbackForClassName`.
 In test framework you have `@Rollback/@Commit`. Rollback - by default true, can set to false (same as set just `@Commit`). If you don't specify anything, for all integration tests all transactions would be rollbacked after test run.
-
-Don't confuse 
-* `javax.transaction.Transactional` - java EE7 annotation, but since spring3 also supported by spring framework, 
-* `org.springframework.transaction.annotation.Transactional` - has more options and will always execute the right way.
 
 If for some reason you don't want to use this annotation (for example you have a method that takes too long to run and if you put `@Transactional` on it, you will use all available connections), you can use programmatic transaction with `TransactionTemplate` (it's thread-safe)
 ```java
