@@ -27,6 +27,7 @@ Although there is paid mocks, the quality is of no good, so you should google an
 * [Notes for preparing for Spring Professional Certification](https://github.com/MrR0807/SpringCertification5.0) - pdf files with detailed explanation based on questions from official study guide
 * [Spring Professional v.5 Preparation Repository](https://github.com/vshemyako/spring-certification-5.0) - java project with detailed spring/java examples based on questions from official study guide
 * [Free mobile mock](https://play.google.com/store/apps/details?id=com.springqcm) - good free easy mock
+* [Paid mock](https://www.certification-questions.com/practice-exam/vmware/edu-1202) - mock I used for preparation, quality is good, but many questions similar to free mobile mock
 
 
 ### My Results
