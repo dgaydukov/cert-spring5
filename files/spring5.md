@@ -9669,7 +9669,7 @@ logger=ch.qos.logback.classic.Logger
 ```
 
 By default your message contains all your params, like `user userId=123 created for profileID=456`. But it can be nice if you store in elasticSearch params as separate json fields.
-MDU (Mapped Diagnostic Context) - way to separate fields from text, Below is example
+MDC (Mapped Diagnostic Context) - way to separate fields from text, Below is example
 ```java
 import java.util.HashMap;
 import java.util.Map;
@@ -9708,7 +9708,7 @@ In the reactive non-blocking world, request could be processed by multiple threa
 To use it in reactive apps you can use some hacks with copying `ThreadLocal` variables between threads
 * we have to manually clear it after each invocation
 
-As you see MDU no the best approach, that's why `logstash-logback-encoder` provides the concept of `StructuredArguments` and you can use it to add fields to json
+As you see MDC no the best approach, that's why `logstash-logback-encoder` provides the concept of `StructuredArguments` and you can use it to add fields to json
 ```java
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
