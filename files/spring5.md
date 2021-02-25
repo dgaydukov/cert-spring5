@@ -9893,6 +9893,9 @@ You can use different appenders and log to console or to file (change to `<Appen
         <FILE name="LogToFile" fileName="logs/app.log">
             <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
         </FILE>
+        <RandomAccessFile name="LogToRandomAccessFile" fileName="asyncLogs.log" immediateFlush="false" append="false">
+            <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </RandomAccessFile>
     </Appenders>
     <Loggers>
         <Root level="DEBUG">
@@ -9957,7 +9960,16 @@ public class App{
     }
 }
 ```
-
+You can make your log async:
+* add lmax disruptor dependency (internally async log4j uses lmax disruptor as queue to log)
+* add `-Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector` to your java app
+```
+<dependency>
+    <groupId>com.lmax</groupId>
+    <artifactId>disruptor</artifactId>
+    <version>3.4.2</version>
+</dependency>
+```
 * `logback` - replacement for log4j, natively support `slf4j`. By default it uses DEBUG log level.
 Add this to your pom.xml. If you are using spring-boot you don't have to include this into your pom, it's already there.
 ```
