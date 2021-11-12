@@ -9668,6 +9668,32 @@ logger=ch.qos.logback.classic.Logger
 {"@timestamp":"2020-11-26T18:04:32.018+08:00","@version":"1","message":"info","logger_name":"com.example.demo.App","thread_name":"main","level":"INFO","level_value":20000}
 ```
 
+Stack trace - if you want to show stack trace, you should always pass `Throwable` into your `log.error` function as last argument
+```java
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class App{
+    public void run(){
+        try{
+            throw new RuntimeException("oops, something went wrong");
+        } catch (Exception ex){
+            log.error("Catch exception msg={}", ex.getLocalizedMessage(), ex);
+        }
+    }
+    public static void main(String[] args) {
+        App app = new App();
+        app.run();
+    }
+}
+```
+```
+2021-11-12 18:01:53.317 [main] ERROR com.example.spring5.App - Catch exception msg=oops, something went wrong
+java.lang.RuntimeException: oops, something went wrong
+	at com.example.spring5.App.run(App.java:9)
+	at com.example.spring5.App.main(App.java:16)
+```
+
 By default your message contains all your params, like `user userId=123 created for profileID=456`. But it can be nice if you store in elasticSearch params as separate json fields.
 MDC (Mapped Diagnostic Context) - way to separate fields from text, Below is example
 ```java
