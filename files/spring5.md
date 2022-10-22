@@ -990,6 +990,39 @@ A.m2
 Finish m2, time=0
 Finish m1, time=13
 ```
+Yet if you use proxy + BPP, you can get this results
+```java
+import com.example.logic.ann.postprocessors.LoggingWrapperBPP;
+import com.example.logic.ann.postprocessors.logger.MyLogger;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class App {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext("com.example.logic.ann.postprocessors");
+        context.getBeanFactory().addBeanPostProcessor(new LoggingWrapperBPP());
+        System.out.println("__START__");
+        MyLogger printer = context.getBean(MyLogger.class);
+        printer.m1();
+        System.out.println();
+        printer.m2();
+    }
+}
+```
+```
+__start logging__
+m1
+m2
+__end logging__
+
+__start logging__
+m2
+__end logging__
+```
+As you can see if we call directly m2, we can see out BPP applied logging logic. Yet when we call it from inside m1, no logic applied.
+This is the limitation of JDK proxy, cause inside m1, you don't call `proxy.m2`, but you call m2 directly, that's why in order for this to work you need to self-inject, and then call proxy.m2 inside m1.
+AOP doesn't extend your class and add logic during compile time, like example above with `TimeLoggingA`. This is called compile time weaving. and it only supported by AspectJ.
+AOP doing dynamic code change on runtime. When you call your method from the proxy, code is being executed during runtime, so there is no way to intercept internal calls made with `this`.
+
 To activate your BFPP/BPP you can either add `@Component` to it, or add it as static bean to java config file (bean should be static so it would be executed first, before instantiating config class), or you can do it manually by code.
 `DefaultListableBeanFactory => ConfigurableListableBeanFactory => ConfigurableBeanFactory`
 `ConfigurableBeanFactory.addBeanPostProcessor` - method to programmatically add BPP
@@ -10362,10 +10395,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.reflections.Reflections;
-
-
 import lombok.SneakyThrows;
 
 public class App{
@@ -10379,10 +10409,10 @@ public class App{
 
 @Retention(RetentionPolicy.RUNTIME)
 @interface InjectType {}
-@Retention(RetentionPolicy.RUNTIME)
 /**
  * Inject property by value or if it's empty by variable's name
  */
+@Retention(RetentionPolicy.RUNTIME)
 @interface InjectProperty {
     String value() default "";
 }
