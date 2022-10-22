@@ -16,7 +16,6 @@ public class LoggingWrapperBPP implements BeanPostProcessor {
     private Map<String, List<String>> map = new HashMap<>();
 
     public Object postProcessBeforeInitialization(Object bean, String beanName) {
-
         for(var method: bean.getClass().getMethods()){
             if(method.getAnnotation(LoggingWrapper.class) != null){
                 map.merge(beanName, new ArrayList<>(List.of(method.getName())), (l1, l2)->{

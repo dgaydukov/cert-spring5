@@ -113,26 +113,21 @@
 #### DI and IoC
 ###### Dependency injection
 Singleton beans should be stateless and prototype beans should be stateful. 
-Stateless doesn't mean object doesn't have a state, it means that once objects was configured we don't change it's state compare to data object (like person), once you get it from hibernate you can change it's state and it's ok.
-Although both of them can have state, according to the Spring documentation, "you should use the prototype scope for all beans that are stateful, while the singleton scope should be used for stateless beans."
-                                     
+Stateless doesn't mean object doesn't have a state, it means that once objects was configured we don't change its state compare to data object (like person), once you get it from hibernate you can change it's state and it's ok.
+Although both of them can have state, according to the Spring documentation, "you should use the prototype scope for all beans that are stateful, while the singleton scope should be used for stateless beans."                               
 Rewrite filed injection with `@Autowired` (performed by `AutowiredAnnotationBeanPostProcessor`), has one filed `boolean required default true`. If no dep found will throw `NoSuchBeanDefinitionException`, if set `required = false`, null will be injected.
-
-Pros of constructor injection
+Pros of constructor injection:
 - you can use `final` keyword with constructor injection, can’t be done with filed injection
 - it’s easy to see when you break S in SOLID. If your class has more than 10 dependencies, your constructor would be bloated, and it’s easy to spot
 - works with unit tests without di support (generally it's best practice to use app context in integration tests only, not in unit tests)
-
 Generally `@Autowired` is a bad design. If you don’t want to write constructor code use lombok's `@AllArgsConstructor/@RequiredArgsConstructor` it will generate constructor based on all/final fields in your class and spring automatically will inject them.
-
 Use Interfaces for every class, at least for every Service class. The naming convention is `MyService` for interface and `MyServiceImpl` or `DefaultMyService` for implementation itself.
-Pros of using interfaces
+Pros of using interfaces:
 - Interface clear defines contract. Who knows why developer made the method public (maybe he just forget to rename it to private). Classes generally unclear and cluttered to define public contract.
 - interfaces allow di and mocking without use of reflection (don’t need to parse class implementation)
 - JDK dynamic proxy can work only with interfaces (if class implement any it use it), otherwise java switch to CGLIB to create proxies
 - now interfaces can have static, default and private methods, so you can use them as first class citizens.
 - If you have a class and you add advice to it it would work fine. But if later you will add any interface with 1 method (like `AutoClosable`) you lookup by class name would fail.
-
 Xml constructor injection (`value` - inject value directly, `ref` - inject other bean, in this case bean with such a name should exist in app context)
 ```
 <bean id="" type="MyService">
@@ -143,7 +138,6 @@ Xml constructor injection (`value` - inject value directly, `ref` - inject other
 * for name debug-mode should be enabled
 * constructor modifier can be any (private/protected) spring will create it anyway
 If we have a bean with private constructor and static method creation we can use `<bean id="" class="" factory-method=""/>`
-
 Since `@Component` doesn't have a property for factory method, if you create factory bean with `@Component` it will create it with private constructor call.
 If you have custom factory method, you should remove `@Component` and create bean with `@Bean`.
 ```java
@@ -207,24 +201,19 @@ class MyBean {
 Say one instance of bean say bean1 just needs attr1 and attr2 whereas another say bean2 instance needs all four the attributes.
 ```
 <bean id="bean1" class="MyBean">
-    <property name="attrib1" value="val1" />
-    <property name="attrib2" value="val2" />
+    <property name="attr1" value="val1" />
+    <property name="attr2" value="val2" />
 </bean>
 
 <bean id="bean2" parent="bean1">
-    <property name="attrib3" value="val3" />
-    <property name="attrib4" value="val4" />
+    <property name="attr3" value="val3" />
+    <property name="attr4" value="val4" />
 </bean>
 ```
-
-
-
 If we want to init one bean only after other we can use `<bean id="" class="" depends-on="bean1, bean2"/>`. We can do the same with `@DependsOn({"bean1", "bean2"})`.
-
 `@Autowired` => `@Inject`
 `@Autowired + @Qualifier("myName")` => `@Resource("myName")` (resource - only on fields and setters)
 `@Required` - used with xml config, and indicate that property is required, throws `BeanInitializationException` if property not set in xml (deprecated of spring 5).
-
 If you put annotation into abstract methods => those annotations are stripped when you override these methods. But on `default` methods it would work fine.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -259,7 +248,6 @@ class MyPrinter implements Printer {
 ```
 print2
 ```
-
 Bean id and name is same thing. When you create beans with java config with `@Bean`, by default bean name is function name, but you can override it by supplying array of names.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -291,10 +279,9 @@ com.example.spring5.Printer@4ec4f3a0
 Exception in thread "main" org.springframework.beans.factory.NoSuchBeanDefinitionException: No bean named 'printer' available
 ```
 Since we override bean names, there is no name `printer`.
-
-Note that calls to static `@Bean` methods will never get intercepted by the container, not even within `@Configuration` classes (see above). 
-This is due to technical limitations: CGLIB subclassing can only override non-static methods. As a consequence, a direct call to another @Bean method will have standard Java semantics, 
-resulting in an independent instance being returned straight from the factory method itself.
+Note that calls to static `@Bean` methods will never get intercepted by the container, not even within `@Configuration` classes (see below). 
+This is due to technical limitations: CGLIB subclassing can only override non-static methods (it works by creating subclass, and since it's impossible to override static methods, so static methods - not supported)
+As a consequence, a direct call to another @Bean method will have standard Java semantics, resulting in an independent instance being returned straight from the factory method itself.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -382,10 +369,9 @@ s2 => com.example.spring5.MyService@459e9125
 com.example.spring5.MyService@3c19aaa5
 ```
 As you see all 3 beans are different.
-
 `@Configuration` - create proxy, so it can't be final, as well as `@Bean` methods can't be final. Even if your config class extends interface, spring still will use cglib.
 The reason for the Spring container subclassing `@Configuration` classes is to control bean creation, for singleton beans, subsequent requests to the method creating the bean 
-should return the same bean instance as created at the first invocation of the @Bean annotated method.
+should return the same bean instance as created at the first invocation of the `@Bean` annotated method.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Configuration;
@@ -410,10 +396,9 @@ class B{}
 com.example.spring5.A
 com.example.spring5.B$$EnhancerBySpringCGLIB$$a868d187
 ```
-
-There are 2 ways to pass dependency in java config
-1. directly call method `myController1`. Downside that injected bean should be in the same java config.
-2. pass it as param into method `myController2`. In this case spring will find dependency and inject it into method. This approach is better cause injected bean can be in another java config, or xml file.
+There are 2 ways to pass dependency in java config:
+* directly call method `myController1`. Downside that injected bean should be in the same java config.
+* pass it as param into method `myController2`. In this case spring will find dependency and inject it into method. This approach is better cause injected bean can be in another java config, or xml file.
 ```java
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -429,7 +414,6 @@ class JavaConfig{
     public MyService myService(){
         return new MyService();
     }
-
     @Bean
     public MyController myController1(){
         return new MyController(myService());
@@ -441,13 +425,10 @@ class JavaConfig{
 }
 ```
 
-
-
 ###### Xml, Groovy, Properties example
-Before XML Spring used `DTD` - Document Type Definition. An example of dtd xml
+Before XML, Spring used `DTD` - Document Type Definition. An example of dtd xml
 ```
 <?xml version="1.0"?> 
-
 <!DOCTYPE bookstore [ 
   <!ELEMENT bookstore (name,topic+)> 
   <!ELEMENT topic (name,book*)> 
@@ -458,7 +439,6 @@ Before XML Spring used `DTD` - Document Type Definition. An example of dtd xml
   <!ELEMENT isbn (#PCDATA)> 
   <!ATTLIST book isbn CDATA "0"> 
   ]> 
-
 <bookstore> 
   <name>Mike's Store</name> 
   <topic> 
@@ -470,11 +450,10 @@ Before XML Spring used `DTD` - Document Type Definition. An example of dtd xml
   </topic> 
 </bookstore>
 ```
-
-If we have same bean in xml, java config, and @Component => xml wins
-Here is quick example to demonstrate how to use di in practice.
+If we have same bean in xml, java config, and with `@Component` => xml wins
+Here is quick example to demonstrate how to use DI in practice.
 Notice, that `BeanDefinitionReader` takes `BeanDefinitionRegistry` instance, so our factory should be both `BeanFactory & BeanDefinitionRegistry`.
-There are 3 ways to externalize your configs with `BeanDefinitionRegistry` interface
+There are 3 ways to externalize your configs with `BeanDefinitionRegistry` interface:
 * groovy script
 * xml
 * properties files
@@ -490,19 +469,15 @@ public class SimpleBean {
     public SimpleBean(){
         System.out.println("constructing SimpleBean...");
     }
-
     public void init(){
         System.out.println("initializing SimpleBean...");
     }
-
     public void setName(String name){
         this.name = name;
     }
-
     public void setPrinter(SimplePrinter printer){
         this.printer = printer;
     }
-
     public void print(){
         printer.print("I'm SimpleBean, my name is " + name);
     }
@@ -518,12 +493,10 @@ public class SimplePrinter {
     }
 }
 ```
-
-And 3 configurations
+And 3 configurations:
 File: `app.groovy`
 ```
 import com.example.logic.xml.*
-
 beans {
     simplePrinter(SimplePrinter)
     simpleBean(SimpleBean) { bean ->
@@ -538,7 +511,6 @@ File: `app.properties` (there is no way to add `init-method` to bean with this c
 simpleBean.(class)=com.example.logic.xml.SimpleBean
 simpleBean.name=goodBean
 simpleBean.printer(ref)=simplePrinter
-
 simplePrinter.(class)=com.example.logic.xml.SimplePrinter
 ```
 File: `app.xml`
@@ -622,10 +594,6 @@ Loading PROPERTIES
 constructing SimpleBean...
 printer => I'm SimpleBean, my name is goodBean
 ```
-
-
-
-
 Generally you should prefer `ApplicationContext` over `BeanFactory`, cause it adds di, bpp, bfpp, aop, i18n and so on... Remember that you need to call `refresh()` of `ConfigurableApplicationContext` after context update.
 ```java
 package com.example.spring5;
@@ -677,11 +645,9 @@ public class App {
 	}
 }
 ```
-
 If we want to add annotation support to xml file we should add `<context:component-scan base-package="your.package"/>`. This will scan package `your.package` for all annotated with `@Component` and related to it.
-
-By default there is no `BeanDefinitionReader` implementation for annotations. But we can use 2 other classes
-* `AnnotatedBeanDefinitionReader` (compare to other readers, it not implements `BeanDefinitionReader`) - with method `register` - to register a list of java config classes
+By default there is no `BeanDefinitionReader` implementation for annotations. But we can use 2 other classes:
+* `AnnotatedBeanDefinitionReader` (compare to other readers, it doesn't implement `BeanDefinitionReader`) - with method `register` - to register a list of java config classes
 * `ClassPathBeanDefinitionScanner` - with method `scan` - to scan package with annotations like `@Component`.
 If you register only config file and it has annotation `@ComponentScan("yourPackage")`, internally it uses `ClassPathBeanDefinitionScanner`.
 `@ComponentScan` has field `boolean lazyInit() default false;`, which you can set to true and it will lazy load only those beans that you really using.
@@ -724,7 +690,7 @@ public class App{
     }
 }
 ```
-
+Or you can use with constructor that takes classpath, and it will load it automatically.
 We can also use `GenericApplicationContext` to load data, cause it's both `ApplicationContext and BeanDefinitionRegistry`.
 Notice that for xml and groovy we have specialized generic contexts with `load` method, where `reader.loadBeanDefinitions` logic is hidden.
 Here we can also use fourth type with java config file.
@@ -752,7 +718,6 @@ public class JavaConfig {
         return new SimplePrinter();
     }
 }
-
 ```
 Context initialization
 ```java
@@ -812,7 +777,6 @@ public class App {
 	}
 }
 ```
-
 Instead of using java config with manually creating beans with `@Bean` annotation, we can inject annotations directly into beans
 File: `AnSimpleBean.java`
 ```java
@@ -830,22 +794,18 @@ public class AnSimpleBean {
     private String name;
     @Autowired
     private SimplePrinter printer;
-
     public AnSimpleBean(){
         System.out.println("constructing SimpleBean...");
     }
-
     @PostConstruct
     public void init(){
         System.out.println("initializing SimpleBean...");
     }
-
     public void print(){
         printer.print("I'm SimpleBean, my name is " + name);
     }
 }
 ```
-
 File: `AnSimplePrinter.java`
 ```java
 package com.example.logic.ann;
@@ -859,7 +819,6 @@ public class AnSimplePrinter {
     }
 }
 ```
-
 Main method. By default bean id are like bean class name with first lowercase, in our example => anSimpleBean. But you can change it to whatever you want like this `@Service("myCoolBeanName")`
 ```java
 package com.example.spring5;
@@ -883,24 +842,20 @@ constructing SimpleBean...
 initializing SimpleBean...
 printer => I'm SimpleBean, my name is goodBean
 ```
-
-We can have nested application contexts. `GenericApplicationContext` have `setParent` method, where you can pass parent context. And you can get all beans in child context from parent context
+We can have nested application contexts. `GenericApplicationContext` have `setParent` method, where you can pass parent context. And you can get all beans in child context from parent context.
+So you can create context hierarchy where child context inherits all classes from parent context, but can override some of them.
+In most cases only 1 context per application is enough, but sometimes you may like to have more then 1.
 * `ClassPathXmlApplicationContext` - load context from xml file that is located in the class path
 * `FileSystemXmlApplicationContext` - load context from xml file located anywhere in the file system
 * `XmlWebApplicationContext` - load web context from xml file
 
-
-
-
 ###### BFPP, BPP, ApplicationListener, @EventListener
-If you want to implement some custom logic during app lifecycle you should have classes that implement following interfaces
+If you want to implement some custom logic during app lifecycle you should have classes that implement following interfaces:
 * `BeanFactoryPostProcessor` - fires when bean definitions has been loaded from xml/javaConfig/annotations, but none bean has been created
 * `BeanPostProcessor` - fires when beans has been created, it has 2 methods
     * `postProcessBeforeInitialization` - fires before init, we can be sure that in this method we have original beans
     * `postProcessAfterInitialization` - fires after init, usually here we can substitute our bean with dynamic proxy
 * `ApplicationListener<E extends ApplicationEvent>` - fires after bfpp and bpp, when we got some events
-
-
 Since app context is also `ApplicationEventPublisher`, you can use context to publish `ApplicationEvent`. 
 `start/stop` events can be called only from app context, spring will never issue them, inside they just call `publishEvent`.
 ```java
@@ -933,9 +888,7 @@ event => org.springframework.context.event.ContextStartedEvent[source=org.spring
 16:56:08.192 [main] DEBUG org.springframework.context.annotation.AnnotationConfigApplicationContext - Closing org.springframework.context.annotation.AnnotationConfigApplicationContext@4cc0edeb, started on Tue May 12 16:56:08 HKT 2020
 event => org.springframework.context.event.ContextClosedEvent[source=org.springframework.context.annotation.AnnotationConfigApplicationContext@4cc0edeb, started on Tue May 12 16:56:08 HKT 2020]
 ```
-
 `@Order` - not working for BPP, if you want them ordered, they should implement `Ordered/PriorityOrdered`.
-
 When you create a bean with java config and try to get class from BFPP you got null. The reason, is that spring can't determine method return type before executing methods.
 ```java
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -977,22 +930,74 @@ class MyBFPP implements BeanFactoryPostProcessor {
     }
 }
 ```
-
-
+```
+org.springframework.context.annotation.internalConfigurationAnnotationProcessor => org.springframework.context.annotation.ConfigurationClassPostProcessor
+org.springframework.context.annotation.internalAutowiredAnnotationProcessor => org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor
+org.springframework.context.annotation.internalCommonAnnotationProcessor => org.springframework.context.annotation.CommonAnnotationBeanPostProcessor
+org.springframework.context.annotation.internalPersistenceAnnotationProcessor => org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor
+org.springframework.context.event.internalEventListenerProcessor => org.springframework.context.event.EventListenerMethodProcessor
+org.springframework.context.event.internalEventListenerFactory => org.springframework.context.event.DefaultEventListenerFactory
+javaConfig => com.example.spring5.JavaConfig$$EnhancerBySpringCGLIB$$19f6a634
+myService => com.example.spring5.MyService
+myBFPP => com.example.spring5.MyBFPP
+printer => null
+```
 When working with `BeanPostProcessor` or aspects the common problem is nested calls.
-If you have logging through custom annotation @TimeLogging (that handles by custom BPP), and you have 2 methods annotated with it
-if you call them separately both would be wrapped into time-logging. But if you call one from another, only one logging would be displayed To fix this you can do self-injection like `private @Autowired MyService proxy;`
+If you have logging through custom annotation `@TimeLogging` (that handles by custom BPP), and you have 2 methods annotated with it
+if you call them separately both would be wrapped into time-logging. But if you call one from another, only one logging would be displayed.
+To fix this you can do self-injection like `private @Autowired MyService proxy;`
 And call one method from another, not with `this`, but with `proxy`. Or you can also create your own annotation `@SelfAutowired` and custom BPP to inject proxy.
+Yet it strange behavior, cause our proxy in java can override nested methods
+```java
+public class App{
+    public static void main(String[] args) {
+        A a = new TimeLoggingA();
+        a.m1();
+    }
+}
 
+class A{
+    public void m1(){
+        System.out.println("A.m1");
+        m2();
+    }
+    public void m2(){
+        System.out.println("A.m2");
+    }
+}
+class TimeLoggingA extends A{
+    @Override
+    public void m1(){
+        long start = System.currentTimeMillis();
+        System.out.println("Start executing m1");
+        super.m1();
+        System.out.println("Finish m1, time=" + (System.currentTimeMillis()-start));
+    }
+    @Override
+    public void m2(){
+        long start = System.currentTimeMillis();
+        System.out.println("Start executing m2");
+        super.m2();
+        System.out.println("Finish m2, time=" + (System.currentTimeMillis()-start));
+    }
+}
+```
+```
+Start executing m1
+A.m1
+Start executing m2
+A.m2
+Finish m2, time=0
+Finish m1, time=13
+```
 To activate your BFPP/BPP you can either add `@Component` to it, or add it as static bean to java config file (bean should be static so it would be executed first, before instantiating config class), or you can do it manually by code.
 `DefaultListableBeanFactory => ConfigurableListableBeanFactory => ConfigurableBeanFactory`
-`ConfigurableBeanFactory.addBeanPostProcessor` - method to programatically add BPP
+`ConfigurableBeanFactory.addBeanPostProcessor` - method to programmatically add BPP
 here is example
 ```java
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-
 import com.example.logic.ann.postprocessors.LoggingWrapperBPP;
 
 public class App {
@@ -1009,8 +1014,6 @@ public class App {
 beanFactory => org.springframework.beans.factory.support.DefaultListableBeanFactory
 beanFactory instanceof ConfigurableBeanFactory => true
 ```
-
-
 If we need to listen some events we can use `@EventListener` annotation
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -1023,7 +1026,6 @@ public class App{
     public static void main(String[] args) {
         var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
     }
-
     @EventListener(ContextRefreshedEvent.class)
     void run(){
         System.out.println("run");
@@ -1031,14 +1033,12 @@ public class App{
 }
 ```
 
-
 ###### Prototype into Singleton
 You can create you custom scope by implementing `org.springframework.beans.factory.config.Scope`. To register your scope, you have to implement BFPP and register it there.
 Below is example how to get scope from app context, and how to create your own scope.
 ```java
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
@@ -1049,7 +1049,6 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-
 public class App{
     public static void main(String[] args) {
         var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
@@ -1057,10 +1056,11 @@ public class App{
         System.out.println("MyPrinter => " + getScopeByClass(context, MyPrinter.class));
         System.out.println("MyBean => " + getScopeByClass(context, MyBean.class));
     }
-
     private static String getScopeByClass(ConfigurableApplicationContext context, Class<?> cls){
         ConfigurableListableBeanFactory factory = context.getBeanFactory();
         for(String name: factory.getBeanNamesForType(cls)){
+            // since we usually have 1 class per interface, it's ok to return first implementation
+            // although if our interface is inherited by multiple classes, here you will see all implementations
             return factory.getBeanDefinition(name).getScope();
         }
         return null;
@@ -1131,7 +1131,6 @@ MyService => singleton
 MyPrinter => prototype
 MyBean => global
 ```
-
 If prototype bean is dependency of singleton, then it would be eagerly created once, and stay inside container until close.
 To add ability for singleton to get every time new prototype we should add `@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE, proxyMode = ScopedProxyMode.TARGET_CLASS)`
 `ScopedProxyMode.TARGET_CLASS` - use cglib proxy, `ScopedProxyMode.INTERFACES` - use jdk proxy.
@@ -1156,7 +1155,6 @@ PrototypePrinter constructor...
 529 => I'm SingletonBean
 ```
 As you see for every call new object is created inside proxy.
-
 In case of xml configuration, we would need to make singleton abstract, and add abstract method to get prototype instance, and add it to xml like `<lookup-method name="getPrinter" bean="prototypePrinter"/>`.
 You can also use `Supplier` or `Provider` interface.
 ```java
@@ -1165,8 +1163,6 @@ public Supplier<MyService> getMyService(){
     return this::myService;
 }
 ```
-
-
 ```java
 import com.example.logic.ann.prototypeintosingleton.lookup.SingletonBean;
 
@@ -1177,8 +1173,6 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 public class App {
 	public static void main(String[] args) {
 		ApplicationContext context = new AnnotationConfigApplicationContext("com.example.logic.ann");
-		System.out.println();
-
 		context.getBean("singletonBean", SingletonBean.class).sayHello();
 		context.getBean("singletonBean", SingletonBean.class).sayHello();
 	}
@@ -1228,10 +1222,8 @@ public class App {
 963 => I'm SingletonBean
 752 => I'm SingletonBean
 ```
-
 If you don't want to manually create a bean and override abstract method, you can add `@Lookup` annotation on it, and spring will use cglib to create such a bean and will override your abstract method.
 The same way you can declare your method as non-abstract and return null, but anyway when you add `@Lookup` spring will use cglib to override it.
-
 If you declare BFPP with `@Bean`, you should make your method static
 ```java
 @Bean
@@ -1241,17 +1233,12 @@ public static MyBFPP myBFPP(){
 ```
 Otherwise you will get error `@Bean method JavaConfig.myBFPP is non-static and returns an object assignable to Spring's BeanFactoryPostProcessor interface. This will result in a failure to process annotations such as @Autowired, @Resource and @PostConstruct within the method's declaring @Configuration class. Add the 'static' modifier to this method to avoid these container lifecycle issues; see @Bean javadoc for complete details.`
 Because BFPP objects must be instantiated very early in the container lifecycle, they can interfere with processing of annotations such as `@Autowired`, `@Value`, and `@PostConstruct` within @Configuration classes. To avoid these lifecycle issues, mark BFPP-returning @Bean methods as static. 
-
-
-If you want to use both annotation and xml config you can do
+If you want to use both annotation and xml config you can do:
 * In case of `AnnotationConfigApplicationContext`, add `@ImportResource("app.xml")` to your `@Configuration` class. This annotation also helpful if you have `@SpringBootApplication` and want to import xml config
 * In case of `GenericXmlApplicationContext`, add `<context:annotation-config/>` to your xml file
-
 If you have multiple configs annotated with `@Configuration` you can use `@Import` to import one into another. 
 Since now we are using component scanning, we don't need to explicitly define it. But is still can be useful in testing where you can have multiple configs.
 `@Import` - take list of classes, `@ImportResource` - take list of paths to xml or packages.
-
-
 When we have several beans with same type and name, they are evaluated in order in which we meet them and latest overwrite previous
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -1285,8 +1272,6 @@ class Config2{
 bean => str2
 ```
 Since str from Config2 was evaluated later it overwrites str from Config1, that's why final bean is `str2`.
-
-
 We can override it by adding evaluation order.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -1323,7 +1308,6 @@ class Config2{
 bean => str1
 ```
 Since Config1 has order 2 it is evaluated after Config2, that's why it's bean str overwrite str from Config2, and final result is str1.
-
 Don't confuse it when you have 2 beans of the same type but with different names. In this case they don't overwrite each other. They both inside reside inside container, so if you try to get them by name you will get exact bean (cause names are unique). But if you try to get them by type you will got `NoUniqueBeanDefinitionException`.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -1349,7 +1333,6 @@ interface Printer{}
 com.example.spring5.OldPrinter@4cc451f2
 Exception in thread "main" org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type 'com.example.spring5.Printer' available: expected single matching bean but found 2: oldPrinter,newPrinter
 ```
-
 Yet if you set the same name, only 1 bean would be created.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -1377,10 +1360,8 @@ com.example.spring5.OldPrinter@7b9a4292
 ```
 Pay attention on ordering. If we declare them inside `@Configuration` classes, second would overwrite the first. But since they declared as component first - overwrite last.
 
-
 ###### PostConstruct and PreDestroy
-
-You have 4 options to hook to post construct event (when spring has set all properties)
+You have 4 options to hook to post construct event (when spring has set all properties):
 * add `@PostConstruct` annotation above any method you would like to be called (in this case you can annotate as many methods as you want, in previous 2 works only with one method)
 * Bean should implement `InitializingBean` interface with one method `afterPropertiesSet`, and put init logic there. (If we add `@PostConstruct` to this method, it would be called only once)
 * Define init method in xml config `init-method=init`
@@ -1390,18 +1371,13 @@ In case of 1 and 3, you can add `private` to init method (spring still would be 
 But in case of implementing interface, `afterPropertiesSet` - is public, and can be called directly from your bean. More over in this case you are coupling your logic with spring.
 If you set all 4 the order is this: 
 `@PostConstruct` (registered with `CommonAnnotationBeanPostProcessor`) => `afterPropertiesSet` => `xml config init` => `@Bean config init`
-
-
-
-The same way you can hook up to destroy event
+The same way you can hook up to destroy event:
 * Add `@PreDestroy` annotation
 * Implement `DisposableBean` interface with `destroy` method
 * `destroy-method=destory` in xml config
 * Add `@Bean(destoryMethod=destroy)` to java config
 Destroy events are not fired automatically, you have to call `((ConfigurableApplicationContext)context).close();`. 
 Method `destroy` in context is deprecated, and inside just make a call to `close`.
-
-
 Order of execution: 
 `PostConstruct => afterPropertiesSet => initMethod`
 `PreDestroy => destroy => destroyMethod`
@@ -1468,7 +1444,6 @@ PreDestroy
 destroy
 destroyMethod
 ```
-
 `close` - close context right now, `registerShutdownHook` - close context when jvm exit. Both method in `ConfigurableApplicationContext`.
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -1488,7 +1463,6 @@ public class App {
     }
 }
 ```
-
 Overriding `@PostConstruct/@PreDestroy`. 
 Since parent init is private, and child - public, it's not overriding. So when we create child bean parent init also called. 
 If it was public, it would be valid overriding and it won't be called.
@@ -1517,7 +1491,6 @@ Parent
 Child
 ```
 
-
 ###### BeanNameAware, BeanFactoryAware, ApplicationContextAware
 If you want to have bean name or app context to be injected into your bean you can implement this interfaces
 ```java
@@ -1538,17 +1511,14 @@ public class App{
 
 @Component
 class AwareBean implements BeanNameAware, BeanFactoryAware, ApplicationContextAware {
-
     @Override
     public void setBeanName(String beanName) {
         System.out.println("setBeanName => " + beanName);
     }
-
     @Override
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         System.out.println("setBeanFactory => " + beanFactory);
     }
-
     @Override
     public void setApplicationContext(ApplicationContext context) {
         System.out.println("setApplicationContext => " + context);
@@ -1561,14 +1531,12 @@ setBeanFactory => org.springframework.beans.factory.support.DefaultListableBeanF
 setApplicationContext => org.springframework.context.annotation.AnnotationConfigApplicationContext@482f8f11, started on Tue Apr 28 15:21:55 HKT 2020
 ```
 
-
 ###### BeanFactory and FactoryBean<?>
-
-Don't confuse the 2 interfaces
+Don't confuse the 2 interfaces:
 * `BeanFactory` - basic di interface, `ApplicationContext` is inherited from it
 * `FactoryBean<?>` - helper interface to create factory objects (used when you need to implement factory pattern)
 
-There are 3 ways we can use factory 
+There are 3 ways we can use factory:
 * Use any class, just add static method to get other class
 * Use singleton (private constructor, static method to get oneself), add non-static method to get other class
 * Implement `FactoryBean`. In this case we can omit `factory-method` in xml config
@@ -1696,10 +1664,6 @@ English Resource
 French Resource
 ```
 
-
-
-
-
 ###### Resource interface
 Since `ApplicationContext` extends `ResourceLoader`, that has method `getResource`, you can load resources using context
 ```java
@@ -1717,7 +1681,6 @@ public class App{
 ```
 class path resource [app.xml]
 ```
-
 
 ###### Environment and PropertySource
 Since `ApplicationContext` extends `EnvironmentCapable` interface with single method `getEnvironment()`, you can get env object from context.
@@ -1766,13 +1729,10 @@ public class PropsJavaConfig {
 }
 ```
 
-
-
 ###### Profile, Primary, Aurowired, Qualifier, Order, Lazy
 * If we have 1 constructor we can omit `@Autowired`
 * If we have multiple constructors at least one of them should be `@Autowired` so spring will know which one to use. Only one single constructor may be annotated with `@Autowired`.
 * We can have only 1 constructor with `@Aurowired` that is required. Or have many constructor with `@Aurowired(required=false)` - in this case spring will automatically determine which to use.
-
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
@@ -1802,13 +1762,9 @@ class MyService{
 ```
 BeanInstantiationException: Failed to instantiate [com.example.spring5.MyService]: No default constructor found; nested exception is java.lang.NoSuchMethodException: com.example.spring5.MyService.<init>()
 ```
-
 But you can't have multiple constructor where some are `required=false` and 1 or more required (just `@Autowored` ,cause `required` is `true` by default).
-
 `@Primary` - if we have more than 1 bean implementing particular interface, you can use this annotation, so spring will inject exactly this bean.
-`@Qualifier("beanName")` - you can inject any bean you want. It's stronger than primary, so it injects bean by name.
-
-`@Qualifier` overwrites `@Primary`.
+`@Qualifier("beanName")` - you can inject any bean you want. It's stronger than primary, so it injects bean by name and overwrites `@Primary`.
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -1828,7 +1784,6 @@ public class App{
     }
 }
 
-
 interface Printer{}
 
 @Component
@@ -1841,8 +1796,6 @@ class OldPrinter implements Printer{}
 ```
 com.example.spring5.OldPrinter@52bf72b5
 ```
-
-
 We have spring qualifier and also `JSR-330` from `javax.inject` package. You cad add to your `pom.xml` this dependency
 ```
 <dependency>
@@ -1851,7 +1804,6 @@ We have spring qualifier and also `JSR-330` from `javax.inject` package. You cad
     <version>1</version>
 </dependency>
 ```
-
 `javax.inject.Qualifier` - same as spring `@Qualifier`
 Spring support both of them. Moreover you can create your own qualifiers based on any of these 2.
 
@@ -2497,18 +2449,15 @@ public class CallerConfig {
 With this settings you can call logic from caller app that will fetch all data from remote web app.
 Of course you should share code for `MyService` between 2 apps.
 
-
-
 ###### Conditional Annotation
 There are several annotations that can help you determine should you create a bean or not. 
 `@Profile` - can be used to determine should bean be created for certain profile. Can be used on class and methods (in case method is a `@Bean`)
-But there also class of `@Conditional` annotations.
-`@ConditionalOnClass(MyService.class)` - bean would be created if class `MyService` is in classpath. Since this annotation is parsed by loading class bytecode, it is safe to specify classes here that may ultimately not be on the classpath.
-`@ConditionalOnBean(name = "myService")` - bean would be created if bean with name myService exists
-`@ConditionalOnMissingClass/@ConditionalOnMissingBean` - bean would be created if bean of type/name doesn't exist
-`@ConditionalOnProperty(prefix = "my.starter", name = "show", matchIfMissing = true)` - bean would be created if value of `my.starter.show` not false, or it doesn't exist in configuration.
-`@ConditionalOnResource(resources = "classpath:my.properties")` - bean would be created only if my.properties exist
-
+But there also class of `@Conditional` annotations:
+* `@ConditionalOnClass(MyService.class)` - bean would be created if class `MyService` is in classpath. Since this annotation is parsed by loading class bytecode, it is safe to specify classes here that may ultimately not be on the classpath.
+* `@ConditionalOnBean(name = "myService")` - bean would be created if bean with name myService exists
+* `@ConditionalOnMissingClass/@ConditionalOnMissingBean` - bean would be created if bean of type/name doesn't exist
+* `@ConditionalOnProperty(prefix = "my.starter", name = "show", matchIfMissing = true)` - bean would be created if value of `my.starter.show` not false, or it doesn't exist in configuration.
+* `@ConditionalOnResource(resources = "classpath:my.properties")` - bean would be created only if my.properties exist
 We can create custom condition by extending `SpringBootCondition`
 ```java
 import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
@@ -2730,7 +2679,6 @@ aroundAdvice, retVal => Mike
 afterAdvice => NewName, sayHello, [Mike], com.example.spring5.Person@491cc5c9
 name => NewName
 ```
-
 With `ThrowsAdvice` you can do some processing and rethrow exception(if you don't rethrow, original exception would be thrown).
 It awaits method with name `afterThrowing`, that takes exception. You can specify more exact exception to have more control
 ```java
@@ -7284,34 +7232,28 @@ Don't confuse:
 * `javax.transaction.Transactional` - java EE7 annotation, but since spring3 also supported by spring framework. It doesn't have isolation, and use `Transactional.TxType` as value param for propagation.
 Yet it doesn't support nested transaction. There is no NESTED type in `Transactional.TxType`, but other 6 types same as for `org.springframework.transaction.annotation.Propagation`.
 * `org.springframework.transaction.annotation.Transactional` - has more options and will always execute the right way.
-
-`@Transactional` use `TransactionInterceptor` internally to intercept and wrap methods into some transaction management code, using jdk proxy (or other type if class not inhereted from interface).
-
-`Propagation` what to do when you call annotated method from another: 
+Under-the-hood they use `TransactionInterceptor` internally to intercept and wrap methods into some transaction management code, using jdk proxy (or other type if class not inherited from interface).
+`Propagation` what to do when you call annotated method from another:
 * `REQUIRED` - default value, if no transaction exists, create new, otherwise run in current
-* `SUPPORTS` - if transaction exists, run in int, otherwise run as non-transactional
+* `SUPPORTS` - if transaction exists, run inside it, otherwise run as non-transactional
 * `MANDATORY` - throw exception if method was called from non-transactional method
 * `REQUIRES_NEW` - always create and run in new transaction
 * `NOT_SUPPORTED` - stop current transaction, run as non-transactional
 * `NEVER` - throw exception if there is active transaction
 * `NESTED` - if a transaction exists, create a savepoint. If method throws an exception, then transaction rollbacks to this savepoint. If there's no active transaction, it works like REQUIRED.
-             
-`Isolation` - how changes applied by concurrent transactions are visible to each other:
 There are 3 isolation level:
 * dirty read - read the uncommitted change of a concurrent transaction
 * nonrepeatable read - get different value on re-read of a row if a concurrent transaction updates the same row and commits
 * phantom read - get different rows after re-execution of a range query if another transaction adds or removes some rows in the range and commits
-There are 5 isolation types:
+`Isolation` - how changes applied by concurrent transactions are visible to each other:
 * `DEFAULT` - use database default transaction level (be careful, cause if db admin change this, your transactional operations can start to behave different)
 * `READ_UNCOMMITTED` - dirty reads, repeatable reads, phantom reads
 * `READ_COMMITTED` - repeatable reads, phantom reads
 * `REPEATABLE_READ` - phantom reads
 * `SERIALIZABLE` - prevent all 3 types of reads. So with this reads would be same as if 2 concurrent transaction run sequentially one after another.
-
 By default all `RuntimeException` and `Error` rollback transaction whereas checked exceptions don't. This is an EJB legacy. You can configure this by using `rollbackFor()` and `noRollbackFor()` annotation parameters `@Transactional(rollbackFor=Exception.class)`
 You can also pass array of strings for `rollbackForClassName/noRollbackForClassName`.
 In test framework you have `@Rollback/@Commit`. Rollback - by default true, can set to false (same as set just `@Commit`). If you don't specify anything, for all integration tests all transactions would be rollbacked after test run.
-
 If for some reason you don't want to use this annotation (for example you have a method that takes too long to run and if you put `@Transactional` on it, you will use all available connections), you can use programmatic transaction with `TransactionTemplate` (it's thread-safe)
 ```java
 import org.springframework.orm.jpa.JpaTransactionManager;
@@ -7346,7 +7288,6 @@ public class App{
     }
 }
 ```
-
 You can even work without this template and use tx manager directly
 ```java
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -7374,7 +7315,6 @@ public class App{
     }
 }
 ```
-
 There are 2 types of transactions:
 * Local - work with single resource (single db) and either commit or rollback
 * Global - work with many resources (like one mysql and one oracle db), and either all changes to all db committed or rollbacked. Using `XA` protocol.
@@ -9417,8 +9357,9 @@ public class MyConfig {
 And then also use auto-complete to tune your starter from main project
 
 ###### Spring Cloud
-Spring Cloud - allows easy production deployment. It consist of
+Spring Cloud - allows easy production deployment. It consist of:
 * `Eureka` (service discovery from Netflix) - distinct service that store all services by name and provide them to other services
+you can use it for secure intra-service communication (microservices in private network still need some security so only authorized microservices can call other microservices)
 * `Ribbon` (client-side load balancer) - client library that help to work with eureka server
 * `Config server` - distinct service that pull configuration from git or vault service and provide it to your microservices
 * `Spring Cloud Bus` - automatic update of configuration in the Config Server, once they has been committed to git server
@@ -10408,7 +10349,6 @@ So `di` solves these 3 problems. To simplify work with reflections you can use [
     <version>0.9.12</version>
 </dependency>
 ```
-
 Here is code
 ```java
 import java.lang.annotation.Retention;
