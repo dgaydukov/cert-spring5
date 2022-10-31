@@ -120,6 +120,9 @@ Pros of constructor injection:
 - you can use `final` keyword with constructor injection, can’t be done with filed injection
 - it’s easy to see when you break S in SOLID. If your class has more than 10 dependencies, your constructor would be bloated, and it’s easy to spot
 - works with unit tests without di support (generally it's best practice to use app context in integration tests only, not in unit tests)
+So in spring boot you can't do unit tests if you have field injection, for each unit test, then you would need to use `@SpringBootTest` which would start the whole context
+it good for integration tests, but bad for unit tests, cause now for each test whole context should start app.
+That's why constructor injection is the best approach here. Moreover since spring5, there is no need to add `Autowired`, and you can omit constructor by adding lombok annotation `RequiredArgsConstructor`
 Generally `@Autowired` is a bad design. If you don’t want to write constructor code use lombok's `@AllArgsConstructor/@RequiredArgsConstructor` it will generate constructor based on all/final fields in your class and spring automatically will inject them.
 Use Interfaces for every class, at least for every Service class. The naming convention is `MyService` for interface and `MyServiceImpl` or `DefaultMyService` for implementation itself.
 Pros of using interfaces:
