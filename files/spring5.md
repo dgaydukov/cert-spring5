@@ -8450,14 +8450,13 @@ interface MyService{
     void print();
 }
 ```
-
 You can also use declarative approach to register beans with jmx console using following annotations:
 * `@EnableMBeanExport` to config bean to enable support for registering mbeans with annotations.
 * `@ManagedResource(description = "JMX managed resource", objectName = "jmxDemo:name=myService")` to your bean directly.
 * `@ManagedOperation` to any method you want to be able to call from jmx console. If you want to expose property add `@ManagedAttribute(description = "myProp")`
 
 You can also add hibernate to jmx console by adding following props
-```java
+```
 props.put("hibernate.jmx.enabled", true);
 props.put("hibernate.generate_statistics", true);
 props.put("hibernate.session_factory_name", "sessionFactory");
@@ -8471,8 +8470,7 @@ First you should add this dependency
     <artifactId>spring-boot-starter-actuator</artifactId>
 </dependency>
 ```
-By default these 2 would be available `/actuator/health` and `/actuator/info`
-
+By default 2 endpoints would be available `/actuator/health` and `/actuator/info`
 ```java
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
@@ -8486,29 +8484,31 @@ public class App{
     }
 }
 ```
-
 By default all mapping are `/actuator/health` and so on, so base path is `actuator`. You can change that mapping to whatever you want, in your config file
 ```
 management.endpoints.web.base-path = /
 management.endpoints.web.path-mapping.health = apphealth
 ```
 By default only `/health` & `/info` are enabled, cause actuator doesn't have any security (yet it autoconfigure security with bean `ManagementWebSecurityAutoConfiguration`). 
-You can secure it with spring security, and enable other features by adding `management.endpoints.web.exposure.include = health,info,beans,conditions`, or set it to `*` to include all endpoints.
-If you want to include all, except a few you can add `include=*` and `management.endpoints.web.exposure.exclude = info, beans`.
-
+You can secure it with spring security, and enable other features:
+```
+# expose only 4 specified endpoints
+management.endpoints.web.exposure.include = health,info,beans,conditions
+# expose all avaialbe actuator endpoints
+management.endpoints.web.exposure.include = *
+# if you want exclude some, include all and add
+management.endpoints.web.exposure.exclude = info, beans
+```
 If you want to work with `jmx` rather than with web, than you should add to config like `management.endpoints.jmx.`
-
 `/info` - empty by default, but you can add whatever you want there, by adding properties with prefix `info`, like
 ```
 info.my.v1=100
 info.my.v2=200
 ```
-
 Health by default just show status (`up/down/unknown/out_of_service`), but if you want more details you can add `management.endpoint.health.show-details=always`
 If you want to add new status you should add `anagement.health.status.order=FATAL, DOWN, OUT_OF_SERVICE, UNKNOWN, UP` to your props file (order also change severity).
 If you want to map health status to http status you should add `management.health.status.http-mapping.FATAL=422` (this would map FATAL status to http 422 unproccessible entity)
-
-List of default endpoints
+List of available endpoints:
 * `/beans` - view context configuration
 * `/conditions` - view autoconfiguration rules (which beans has been autoconfigured)
 * `/env` - info about env variables. It's not only GET, but calling POST with valid json, you can create/update env vars on the fly (they would apply to current running instance, and would be lost once we restart app)
@@ -8516,16 +8516,13 @@ List of default endpoints
 * `/loggers` - view logging level for every component (like with env, you can change logging level with POST request)
 * `/heapdump` - download gzip heap dump file with info about heap, memory and so on (useful in debugging memory leaks or heap problems)
 * `/metrics` - view all metrics of running app
-
-Customizing actuator
+Customizing actuator:
 * `/info` - you should implement `InfoContributor`
 * `/health` - you should implement `HealthIndicator`
 * `/metics` - you can inject `MeterRegistry` into any bean, and add info into it
-
 You can also create custom endpoint. For this annotate class with `@Endpoint`, method should be annotated with `@ReadOperation/@WriteOperation/@DeleteOperation`.
-The reason actuator use it's own annotation instead of `@Controller`, is that actuator is not just controller, it's also expose data to JMX console. So that's why adding only ``@Controller` not enough.
-
-To secure actuator you should use spring security. Since `/actuator` path can be changed from config file, it's better to use `EndpointRequest` like
+The reason actuator use it's own annotation instead of `@Controller`, is that actuator is not just controller, it's also expose data to JMX console. So that's why adding only `@Controller` not enough.
+To secure actuator you should use spring security. Since `/actuator` path can be changed from config file, it's better to use `EndpointRequest` like:
 ```
 protected void configure(HttpSecurity http) throws Exception {
     http
@@ -8536,7 +8533,6 @@ protected void configure(HttpSecurity http) throws Exception {
     .httpBasic();
 }
 ```
-
 If you want to have nice ui to view actuator endpoints you should add spring boot admin to your `pom.xml`
 ```
 <dependency>
@@ -8565,9 +8561,7 @@ spring.artemis.password=password
 First you need to download [artemis](https://activemq.apache.org/components/artemis/download/)
 After downloading you can create broker `./apache-artemis-2.11.0/bin/artemis create mybroker`. It will create mybroker folder, and you can run it `./mybroker/bin/artemis run`.
 You can also access console from `http://localhost:8161/`
-
 If we are using `@SpringBootApplication`, `JmsTemplate` would be automatically created (because of auto-configuration). If not we should explicitly declare such a bean.
-
 To convert between your object and message you can use `org.springframework.jms.support.converter.MessageConverter`, you can implement it to crete your own, but there is no need, cause you can use `SimpleMessageConverter` or `MappingJackson2MessageConverter`.
 Config file
 ```java
@@ -8651,7 +8645,6 @@ public class MyJmsSender {
     }
 }
 ```
-
 Receiver
 ```java
 package com.example.logic.ann.message.jms;
@@ -8679,7 +8672,6 @@ public class MyJmsListener implements MessageListener {
     }
 }
 ```
-
 Main code
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -8708,7 +8700,6 @@ First add this dependency to your `pom.xml`
 ```
 Adding this starter to your build will trigger autoconfiguration that will create AMQP connection factory and `RabbitTemplate` beans.
 So if you don't use spring boot you will have to configure them manually.
-
 You also need to install RabbitMQ `sudo apt-get install rabbitmq-server`. You can start/stop and check status with following commands
 ```shell script
 sudo systemctl start rabbitmq-server.service
@@ -8724,7 +8715,6 @@ sudo rabbitmqctl add_user user password
 sudo rabbitmqctl set_user_tags user administrator
 sudo rabbitmqctl set_permissions -p / user ".*" ".*" ".*"
 ```
-
 Config file
 ```java
 package com.example.logic.ann.message.amqp;
@@ -8764,7 +8754,6 @@ public class RabbitJavaConfig {
     }
 }
 ```
-
 Sender
 ```java
 package com.example.logic.ann.message.amqp;
@@ -8791,7 +8780,6 @@ public class MyRabbitSender {
     }
 }
 ```
-
 Receiver
 ```java
 package com.example.logic.ann.message.amqp;
@@ -8806,7 +8794,6 @@ public class MyRabbitListener implements MessageListener {
     }
 }
 ```
-
 Main code
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -8831,7 +8818,6 @@ Kafka is new generation message system offers clustering out of the box. First y
 </dependency>
 ```
 If you are using spring boot it will auto configure `KafkaTemplate`, otherwise you have to do it manually.
-
 To install kafka you have to install zookeeper and kafka
 ```shell script
 sudo apt-get install zookeeperd
@@ -8847,14 +8833,12 @@ tar -xvzf kafka_2.13-2.4.1.tgz --strip 1
 rm kafka_2.13-2.4.1.tgz
 ./bin/kafka-server-start.sh config/server.properties
 ```
-
 Config file
 ```java
 package com.example.logic.ann.message.kafka;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -8909,13 +8893,11 @@ public class KafkaJavaConfig {
 
 }
 ```
-
 Sender
 ```java
 package com.example.logic.ann.message.kafka;
 
 import java.time.LocalDateTime;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -8930,7 +8912,6 @@ public class MyKafkaSender {
     }
 }
 ```
-
 Listener
 ```java
 package com.example.logic.ann.message.kafka;
@@ -8945,14 +8926,13 @@ public class MyKafkaListener implements MessageListener<String, String> {
     }
 }
 ```
-
 Main file
 ```java
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import com.example.logic.ann.message.kafka.MyKafkaSender;
 
 public class App{
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
         var context = new AnnotationConfigApplicationContext("com.example.logic.ann.message.kafka");
         var sender = context.getBean(MyKafkaSender.class);
         sender.send();
@@ -8973,7 +8953,6 @@ KafkaStreams - streaming library designed by creators of apache kafka. Add these
     <version>5.5.0-ccs</version>
 </dependency>
 ```
-
 Kafka command line examples. For each examples we use `--bootstrap-server`, yet if we use multiple brokers, we may better use `--zookeeper=localhost:2181`, in this case zookeeper would know all brokers
 ```
 # run zookeeper & kafka locally
@@ -9002,20 +8981,11 @@ sudo lsof -i | grep 9092
 # create topic with 4 partitions
 ./bin/kafka-topics.sh --create --topic=my4 --partitions=4 --bootstrap-server=localhost:9092
 ```
-
 Run kafka from docker
 ```
 cd files/docker
 docker-compose -f docker-compose.kafka.yml up -d
 ```
-
-TODO:
-There are a few things you need to know how to run single broker kafka and multiple-broker kafka:
-* 
-https://github.com/bitnami/bitnami-docker-kafka
-https://www.confluent.io/blog/kafka-listeners-explained
-https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc
-
 Example of sending/polling data using `KafkaProducer/KafkaConsumer`. You should include either `kafka-clients` or `spring-kafka` (which already includes kafka-clients).
 ```java
 import java.util.List;
@@ -9109,7 +9079,6 @@ public class App{
     }
 }
 ```
-
 Example of using kafka stream. You should include `kafka-streams` dependency (`spring-kafka` won't help cause although it has `kafka-stream` dependency, but it declared as optional).
 ```java
 import java.util.Arrays;
@@ -9192,7 +9161,7 @@ POM - project object model. BOM - bill of materials.
 Bom - special kind of pom, that helps control versions, and provide a central place to update these versions,
 it usually include block `<dependencyManagement/>` where all dependencies are stored. 
 When maven try to build project it first look for dependency in pom, and if can't find it goes to bom. 
-There are 2 ways to use bom
+There are 2 ways to use bom:
 1. Inherit it as parent.
 ```
 <parent>
@@ -9201,7 +9170,6 @@ There are 2 ways to use bom
     <version>0.0.1-SNAPSHOT</version>
 </parent>
 ```
-
 In case you already have a parent, you can just import it
 ```
 <dependency>
@@ -9304,8 +9272,7 @@ public class App{
 ```
 Here we using P2P channel, if we want to send message to many channels we should use `PublishSubscribeChannel`
 `@BridgeFrom` - can connect PubSub channel with P2P
-
-There are several building blocks of integration
+There are several building blocks of integration:
 * `Channel(PublishSubscribeChannel/FluxMessageChannel)` - pipes that connect all other parts
 * `Filter` (Bean annotated with `@Filter`) - can be placed between channels to determine should message go further
 * `Transformer` (Bean with `@Transformer` returning `GenericTransformer<S, T>`) - can transform data 
@@ -9333,7 +9300,7 @@ To use devtools add this to your `pom.xml`
 ```
 
 ###### YML Autocompletion
-By default auto-completion work in ultimate ide for both `.yml` and `.properties`.
+By default auto-completion work in ultimate IDE for both `.yml` and `.properties`.
 If you are using `CE (community edition)` you should download plugin `Spring Assistant`, it will enable auto-completion for `.yml` files.
 You can also have auto-completion for your custom props, you should add this to your `pom.xml`
 ```
@@ -9371,7 +9338,6 @@ class MyConf{
 }
 ```
 And if you go to `application.yml` and start to type you will see that user.name and user.age are auto-completed.
-
 The same way, when you write your custom starter you can add to `/resources/META-INF/spring.factories`
 this line `org.springframework.boot.autoconfigure.EnableAutoConfiguration=com.example.logic.ann.postprocessors.MyConfig`
 java class
@@ -9394,7 +9360,6 @@ public class MyConfig {
     private String name;
 }
 ```
-
 And then also use auto-complete to tune your starter from main project
 
 ###### Spring Cloud
@@ -9406,7 +9371,6 @@ you can use it for secure intra-service communication (microservices in private 
 * `Spring Cloud Bus` - automatic update of configuration in the Config Server, once they has been committed to git server
 * `Spring Cloud Stream` - inter-service communication with RabbitMQ or kafka (can be used to propagate changes from config server to all microservices)
 * `Hystrix (Circuit Breaker)` - netflix library to handle bad responses from other microservices
-
 To work with eureka add this to your `pom.xml`
 ```
 <dependency>
@@ -9438,7 +9402,6 @@ public WebClient.Builder webClientBuilder() {
     return WebClient.builder();
 }
 ```
-
 You can also use `feign` client, that works like spring data, automatically generating rest code. First add this dependency to your `pom.xml`
 ```
 <dependency>
@@ -9453,7 +9416,6 @@ First enable feign config
 public RestClientConfiguration {
 }
 ```
-
 Then create rest api like
 ```java
 // employee-service - name of service by which you get actual url from eureka
@@ -9463,7 +9425,6 @@ public interface EmployeeClient {
     Employee getEmployee(@PathVariable("id") String id);
 }
 ```
-
 To create config server, add this to your `pom.xml`
 ```
 <dependency>
@@ -9483,7 +9444,6 @@ For client to consume properties from config server add this dependency
     <artifactId>spring-cloud-starter-config</artifactId>
 </dependency>
 ```
-
 Hystrix implemented as an aspect applied to a method that triggers a fallback method should the target method fail. Aspect also tracks how frequently the target method fails and then forwards all requests to the fallback if the failure rate exceeds some threshold.
 To work with hystrix add it to your `pom.xml`
 ```
@@ -9544,8 +9504,7 @@ null
 By default spring uses:
 * `internal logging` => apache common logging
 * `external logging` => slf4j(with logback). So you don't need to manually include `logback-classic` dependency. It's already included when you add `spring-boot-starter` to your `pom.xml`.
-Log levels goes in this direction `ERROR > WARN > INFO > DEBUG > TRACE`, next includes all previous (so if you set to `TRACE` all previous would be displayed)
-
+Log levels goes in this direction `ERROR > WARN > INFO > DEBUG > TRACE`, next includes all previous (so if you set to `TRACE` all previous would be displayed).
 You can use spring boot + lombok and use logback logger (again no need to add it explicitly to pom.xml)
 ```java
 import org.springframework.boot.SpringApplication;
@@ -9588,13 +9547,11 @@ Order of execution (from least to most strong, next overwrites previous):
 * `logback.xml`
 * `application.properties`
 * program arguments param (most strong overwrites all other)
-
 Logging group - you can group several packages to have same level (instead of assigning this level to each package). Add this to you `application.properties` file:
 ```
 logging.group.tomcat=org.apache.catalina, org.apache.coyote, org.apache.tomcat
 logging.level.tomcat=TRACE
 ```
-
 If you want to use other logger (for example log4j you should exclude logback and include desired logger)
 ```
 <dependency>
@@ -9614,7 +9571,6 @@ If you want to use other logger (for example log4j you should exclude logback an
 ```
 Or exclude/include not starters but loggers itself.
 For log4j you can also use 2 config files `log4j2-spring.xml` or `log4j2.xml`
-
 ElasticSearch - require json output. For this you can use (logstash integration with logback):
 ```
 <dependency>
@@ -9649,7 +9605,6 @@ logger=ch.qos.logback.classic.Logger
 {"@timestamp":"2020-11-26T18:04:32.017+08:00","@version":"1","message":"warn","logger_name":"com.example.demo.App","thread_name":"main","level":"WARN","level_value":30000}
 {"@timestamp":"2020-11-26T18:04:32.018+08:00","@version":"1","message":"info","logger_name":"com.example.demo.App","thread_name":"main","level":"INFO","level_value":20000}
 ```
-
 Stack trace - if you want to show stack trace, you should always pass `Throwable` into your `log.error` function as last argument
 ```java
 import lombok.extern.slf4j.Slf4j;
@@ -9675,7 +9630,6 @@ java.lang.RuntimeException: oops, something went wrong
 	at com.example.spring5.App.run(App.java:9)
 	at com.example.spring5.App.main(App.java:16)
 ```
-
 By default your message contains all your params, like `user userId=123 created for profileID=456`. But it can be nice if you store in elasticSearch params as separate json fields.
 MDC (Mapped Diagnostic Context) - way to separate fields from text, Below is example
 ```java
@@ -9715,7 +9669,6 @@ As you see now userId & profileId are separate fields. But there are several pro
 In the reactive non-blocking world, request could be processed by multiple threads. This means that setting the MDC context at the beginning of the request is not enough
 To use it in reactive apps you can use some hacks with copying `ThreadLocal` variables between threads
 * we have to manually clear it after each invocation
-
 As you see MDC no the best approach, that's why `logstash-logback-encoder` provides the concept of `StructuredArguments` and you can use it to add fields to json
 ```java
 import org.springframework.boot.SpringApplication;
@@ -9755,14 +9708,12 @@ class Person{
 ```
 As you see this solution works best for both local development and production app sending logs to ELK (elasticsearch, logstash, kibana) stack.
 Notice that we can also log complex objects, and they are created as objects in json.
-
 There are 5 types of logging:
 * java.util.logging
 * log4j
 * logback
 * apache common logging
 * slf4j
-
 More detailed overview:
 * `java.util.logging` - standard package for logging from jdk
 Add config file `jul.logging` 
@@ -10134,7 +10085,6 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
-
 import lombok.SneakyThrows;
 
 @RestController
@@ -10184,7 +10134,6 @@ class JavaConfig{
     public static final String CACHE_NAME = "my_name";
 }
 ```
-
 Main code
 ```java
 import org.springframework.boot.SpringApplication;
@@ -10201,7 +10150,7 @@ public class App{
     }
 }
 ```
-First time you run ` curl http://localhost:8080/` you will wait for 3 sec, later you would get response immediately.
+First time you run `curl http://localhost:8080/` you will wait for 3 sec, later you would get response immediately.
 To clear cache call `curl -X POST http://localhost:8080/`
 
 ###### JavaBeans, POJO, Spring Beans
@@ -10217,27 +10166,25 @@ class User{
     String name;
 }
 ```
-We are using lombok to generate getter/setter but you can also write them by hand
-
+We are using lombok to generate getter/setter but you can also write them by hand.
 `POJO` - plain old java object (term invented by Martin Fowler) - refers to any java object that's not coupled to any framework. 
 Spring Bean - a java object managed by spring container. Since POJO = plain old java object, so any class is a POJO, so spring beans also POJO.
-We associate Spring with `POJO` to express that with Spring, the beans stay simple, testable, adaptable, etc..., not or rather few coupled to specific framework interfaces or implementations.
+We associate Spring with `POJO` to express that with Spring, the beans stay simple, testable, adaptable, etc..., not coupled to specific framework interfaces or implementations.
 `POJO` brings a low coupling by using generally metadata such as XML or code annotations (often preferred as less verbose and located directly in the concerning class) to bind the beans to the framework.
 
 ###### Maven scope/optional/exclusions
-There are 2 types of dependencies
+There are 2 types of dependencies:
 * Direct - directly included into project under `<dependency/>` tag
 * Transitive - dependencies of your direct dependencies. Although you don't explicitly add them to project, they are still there.
 We can list all of dependencies by running `mvn dependency:tree`
 Scopes can help to limit transitivity and modify classpath for different built tasks. There are 6 scopes:
 * `compile` - default scope if no other set. Dependencies with this scope available on the classpath for all builds. They are transitive.
 * `provided` - dependency should be provided by jdk or container. So it only available during compile-time. At run-time they won't be available. For example `spring-starter-tomcat` for `.war` application.
-* `runtime` - dependency only available at run-time not compile time. For example jdbc driver, since for compilation we are using `DataSource` to obtain connection we don't need driver at compile time, be we definitely need it during runtime.
+* `runtime` - dependency only available at run-time not compile time. For example JDBC driver, since for compilation we are using `DataSource` to obtain connection we don't need driver at compile time, be we definitely need it during runtime.
 * `test` - dependency of junit types would be available only in testing scope, not inside main app. For example class `AopTestUtils` is available under test folder, but you can't import it into main code.
 * `system` - similar to provided, but we should declare the exact path to jar file using `<systemPath/>` tag
 * `import` - available for type `pom`, should be replaced with all respective dependencies from it's pom.
 Dependencies with scopes provided and test will never be included in the main project.
-
 Optional - special tag that denotes, that dependency is non-transitive. Possible values are true/false. If you set false is the same as omit this tag, so it pretty useless to set optional=false.
 ```
 <dependency>
@@ -10246,7 +10193,6 @@ Optional - special tag that denotes, that dependency is non-transitive. Possible
 ```
 Declaring dependency as optional means, that project that depend on that project won't see this dependency. If we have A->B->C.
 If C is declared as optional inside B, B doesn't affect in anyway. But project A that depends on B, won't see this optional dependency.
-
 If you want to exclude any dependency (for example C wasn't declared as optional), inside A, when you import B, you should manually exclude C
 ```
 <dependency>
@@ -10657,7 +10603,6 @@ class RubCurrencyRate implements CurrencyRate{
     }
 }
 ```
-
 But with the help of spring you can create truly useful singleton. In this case spring itself will care to monitor that only
 single instance of object is used throughout the app. It's easy to mock it also.
 Self-made singleton (with static invocation and private constructor) also breaks single responsibility principle. Cause right now
@@ -10692,7 +10637,6 @@ class RubCurrencyRate implements CurrencyRate{
     }
 }
 ```
-
 `Chain of responsibility`. Suppose we have a code
 ```java
 class Operation{
@@ -10734,7 +10678,6 @@ interface Task{
     int getOrder();
 }
 ```
-
 From now on you can add as many tasks as you want, and also decide the order in which they are executed.
 `Strategy` - if we have some logic that depends on condition run one or another code, instead of using long switch we can use this pattern.
 ```java
@@ -10772,7 +10715,6 @@ interface MailTemplate{
     String getBody();
 }
 ```
-
 If we need to lazy load beans after context has created we can use another approach. In this case every bean that has been loaded
 would add itself to a map (so not MailSender build it's map, but all beans add themselves to this map)
 ```java
@@ -10811,7 +10753,6 @@ interface MailTemplate{
     }
 }
 ```
-
 
 ###### Write object as JSON
 Sometimes it can be useful for logging purposes not to log object, but json instead. For this we should use `ObjectMapper/ObjectWriter` from `jackson` library.
@@ -10997,7 +10938,6 @@ spring.mail.password=<login password to smtp server>
 ```
 After this you just autowire `JavaMailSender` where you need.
 * manually configure `JavaMailSenderImpl` by setting all these gmail props
-
 But we are going to use amazon settings. Go to `Services=>Customer Engagement=>Simple Email Service=>SMTP Settings`. Create credentials (username & password).
 Internally SES create user `ses-smtp-user.20200916-122952` with attached policy `AmazonSesSendingAccess` with single action `ses:SendRawEmail`. So if you want to remove SES SMPT credentials, just remove user from IAM.
 You can get `org.springframework.mail.MailSendException: Failed messages: com.sun.mail.smtp.SMTPSendFailedException: 554 Message rejected: Email address is not verified. The following identities failed the check in region US-EAST-1: noreply@domain.com, gaydukov89@gmail.com`.
@@ -11020,10 +10960,8 @@ If you want to use messaging templates `QueueMessagingTemplate/NotificationMessa
 </dependency>
 ```
 This dependency includes `spring-cloud-aws-messaging` with templates. But if you just add `spring-cloud-aws-messaging`, then `SqsListener` won't work.
-
 This will allow to use same code for sqs/sns messages `convertAndSend` method from `AbstractMessageChannelMessagingSendingTemplate` (they both extend this class).
 ```java
-
 import org.springframework.cloud.aws.messaging.core.NotificationMessagingTemplate;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
@@ -11608,7 +11546,6 @@ public class App{
     }
 }
 ```
-
 But better approach is to use declarative style, where you have message handler and all reading logic hidden behind. For you it looks like that sqs pushes messages to your handler.
 You have to add to your `pom.xml`
 ```
