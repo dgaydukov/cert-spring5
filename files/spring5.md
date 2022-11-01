@@ -7917,7 +7917,17 @@ class UserService {
 
 #### Spring Testing
 When you add spring test starter (`spring-boot-starter-test`), `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.
-Spring is commonly used and has a strong support for unit & integration testing. Moreover for unit you generally should start app context. Just use some mocks. But if you run integration tests then generally you need to start your app and have full app context.
+Don't confuse:
+* unit test - you test only code, you don't need to run application, or start sprint context. Just test particular class and it functions. Use mocks, if your class depends upon others.
+    For unit testing use:
+    * constructor injection - in this case you can easily inject mocks into tested class
+    * use `@Mock` on beans that you are going to inject into your class
+    * use `@InjectMocks` for the bean you are going to be unit-tested (of course you can manually construct this bean with mocks, for cleaner code this approach is better)
+    for this to work add `@ExtendWith(MockitoExtension.class)` to your test class
+    * don't use any spring boot annotations, no need to run anything, don't start db, you just testing java code here
+* integration test - here you start either whole application or just part of it, initialize context, and test whole app (or part like only db & repository)
+Here you use `@SpringBootTest`, which basically start whole app, loads context and your test behave as you are testing live system.
+Here you can change config values, test your api endptoins with `MockMvc`, test controllers/services/models, whole application would be running with fully loaded context.
 `UAT (user acceptance test`) - special tests that run by end users to verify that business flow is correct. The need arises cause developers use unit/integration tests. Qa have their tests, but no one of them test the system as a whole (end to end flow).
 `@WebAppConfiguration` - class-level annotation that is used to declare that the `ApplicationContext` loaded for an integration test should be a `WebApplicationContext`, must be used in conjunction with `@ContextConfiguration`.
 
@@ -8052,7 +8062,7 @@ If you are using Junit version < 5, so you have to use `@RunWith(SpringRunner.cl
 If you are using Junit version = 5, so you have to use `@ExtendWith(SpringExtension.class)` or `@ExtendWith(MockitoExtension.class)` etc.
 
 If we want to load context or use `@Autowired` we should annotate test class with
-```java
+```
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = JavaConfig.class)
 ```
@@ -8143,9 +8153,8 @@ public class ControllerTest {
     }
 }
 ```
-
 You can use `@ContextConfiguration(locations={"classpath:config.xml"}, classes={Config.class})` and pass either list of xml configs or java configs.
-To get access to shared context you can also extend your class from abstract `AbstractJUnit4SpringContextTests` (which implements `AbstractJUnit4SpringContextTests`) or directly implement this interface to get context injected.
+To get access to shared context you can also extend your class from abstract `AbstractJUnit4SpringContextTests` (which implements `ApplicationContextAware`) or directly implement this interface to get context injected.
 `@ContextConfiguration` is `@Inherited`, so you can create base test config class and extend all other classes from it to use same context.
 If you don't specify any data to this annotation, it will load inner classes marked with `@Configuration`
 If you use this annotation across multiple test, spring will automatically cache context, when you use the same `locations`. This will enable to speed up your tests.
@@ -8157,15 +8166,12 @@ If you want to have separate contexts for different tests you should use `@Conte
 })
 ```
 If you are using `@SpringBootTest`, context automatically cached.
-
 If you want to scan package you should add just `@ContextConfiguration` and add inner static config class
 `@Mock` - create just proxy object and when you call methods, it doesn't execute them. Yet you can overwrite behavior with `when/then`.
 `@Spy` - create real bean, but you still can overwrite behaviour with `when/then`.
 `@InjectMocks` - create real bean, and inject all `@Mock/@Spy` beans declared within test class. If some undeclared, inject null.
-
 `@Mock/@Spy` - plain mockito annotation to be used in unit tests
 `@MockBean/@SpyBean` - spring boot test annotation used in integration tests (They add mock to spring application context, so every call to such bean within context would be replaced with mock bean)
-
 ```java
 package com.example.spring5;
 
@@ -8214,8 +8220,9 @@ public class BeansIntegrationTest {
 
 ###### Mock WebServer
 If you need to mock calls to external API from your tests you have 2 options
-* mock method invocation - in this case API method won't be called at all, instead just some mock object would be returned
-* mock api itself - you create mock web server that has same endpoints as original API, and pass it's url as base url to your test config
+* mock method invocation - in this case API method won't be called at all, instead just some mock object would be returned (mostly used for unit tests)
+* mock api itself - you create mock web server that has same endpoints as original API, and pass it's url as base url to your test config 
+(for integration tests, since your whole app is running, and it depends upon external webserver, it make sense to run mock external webservice, that would behave like norma api and return desired data)
 To mock api itself you should use [MockServer](https://www.mock-server.com). First add this dependency to you pom.xml
 ```
 <dependency>
@@ -8317,7 +8324,6 @@ class MockWebServer {
 curl localhost:8080
 # check that mock webserver works
 curl localhost:8888
-
 # in response you see reason phrase: HTTP/1.1 500 Internal Server Error
 curl localhost:8888/error -v
 ```
@@ -8336,7 +8342,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-
 
 @SpringBootApplication
 public class App{
@@ -8404,7 +8409,7 @@ public class MySimpleTest {
 cars => [com.example.spring5.SportCar, com.example.spring5.SuvCar, com.example.spring5.SportCar$MockitoMock$1796575649, com.example.spring5.SuvCar$MockitoMock$1520031441]
 ```
 As you see, our beans were not substituted in context, but instead were added there. There are a few ways to fix this
-* In project code: Define beans inside config class `MyConfig` as their bean types `SportCar/SuvCar`, not as interface or declare them as `@Component`
+* In project code: Define beans inside config class `MyConfig` as their bean types `SportCar/SuvCar` or declare them as `@Component`
 * Inside test just replace list with desired beans: `ReflectionTestUtils.setField(service, "cars", List.of(sportCar, suvCar));`
 * Inside test load only single service `@SpringBootTest(classes = MyService.class)` - in this case other beans won't be loaded
 
