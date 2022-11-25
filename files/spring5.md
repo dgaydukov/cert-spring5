@@ -4947,8 +4947,6 @@ afterCompletion => url=/, handler=com.example.spring5.MyController#handlePost(Pe
 There are 2 default https filters (you can also create your custom filter, for example to handle cookie or custom headers)
 * `BasicAuthenticationFilter` - authenticate user using `httpBasic`
 * `UsernamePasswordAuthenticationFilter` - authenticate user using `formLogin`
-
-
 `UserDetailsService` - used to retrieve user information by username and authenticate user
 * Convert your `UserDetails` object into `Authentication` object
 * You should add `BasicAuthenticationFilter` to chain of filters by adding `httpBasic()` to `HttpSecurity`
@@ -6402,6 +6400,41 @@ class WebConfig implements WebMvcConfigurer {
             .allowedHeaders("*")
             .allowCredentials(true)
             .maxAge(3600);
+    }
+}
+```
+In latest version of spring security, class `WebSecurityConfigurerAdapter` is deprecated.
+So instead of this
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+
+@Configuration
+@EnableWebSecurity
+class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests().anyRequest().authenticated();
+    }
+}
+```
+We will have to add new security Bean with `SecurityFilterChain`
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+class SecurityConfig {
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
+        http.authorizeRequests().anyRequest().authenticated();
+        return http.build();
     }
 }
 ```
