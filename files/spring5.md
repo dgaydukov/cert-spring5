@@ -57,6 +57,7 @@
 * 5.7 [Cascade types](#cascade-types)
 * 5.8 [DB AutoConfiguration](#db-autoconfiguration)
 * 5.9 [MySql Sharding](#mysql-sharding)
+* 5.10 [Mapping with mapstruct](#mapping-with-mapstruct)
 6. [Spring Testing](#spring-testing)
 * 6.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
 * 6.2 [OutputCaptureRule](#outputcapturerule)
@@ -7946,6 +7947,66 @@ class UserService {
         return repository.findByEmail(email).orElse(null);
     }
 }
+```
+
+###### Mapping with mapstruct
+You can use `mapstruct` package to implement mapping:
+* add dependency
+* add step to compilation plugin to handle mapstrcut - cause you would need to pre-generate mapping classes
+* if using lombok - handle this in compile plugin
+```java
+import lombok.Data;
+import org.mapstruct.AfterMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class App{
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(App.class.getPackageName());
+        PersonMapper mapper = context.getBean(PersonMapper.class);
+        PersonEntity entity = new PersonEntity();
+        entity.setEntityName("mike");
+        entity.setAge(30);
+        System.out.println(mapper.entityToDto(entity));
+    }
+}
+
+@Data
+class Person{
+    private String name;
+    private int age;
+}
+
+@Data
+class PersonEntity{
+    private String entityName;
+    private int age;
+}
+
+@Mapper(componentModel = "spring")
+interface PersonMapper {
+    @Mapping(source = "entityName", target = "name", qualifiedByName = "nameDto")
+    Person entityToDto(PersonEntity personEntity);
+    PersonEntity dtoToEntity(Person person);
+
+    @Named("nameDto")
+    default String entityNameToNameDto(String entityName) {
+        return "Mr. " + entityName;
+    }
+
+    @AfterMapping
+    default void afterEntityToDto(PersonEntity entity, @MappingTarget Person person) {
+        System.out.println("mapping is completed => " + person);
+        person.setAge(entity.getAge() + 1);
+    }
+}
+```
+```
+mapping is completed => Person(name=Mr. mike, age=30)
+Person(name=Mr. mike, age=31)
 ```
 
 #### Spring Testing
