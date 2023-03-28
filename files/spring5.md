@@ -58,6 +58,7 @@
 * 5.8 [DB AutoConfiguration](#db-autoconfiguration)
 * 5.9 [MySql Sharding](#mysql-sharding)
 * 5.10 [Mapping with mapstruct](#mapping-with-mapstruct)
+* 5.11 [AttributeConverter](#attributeconverter)
 6. [Spring Testing](#spring-testing)
 * 6.1 [TestPropertySource and TestPropertyValues](#testpropertysource-and-testpropertyvalues)
 * 6.2 [OutputCaptureRule](#outputcapturerule)
@@ -5239,6 +5240,9 @@ class ApiController{
     }
 }
 ```
+Keep in mind, that you can inject `Principal` into controller method, but upi can't autowire it.
+But you can create [custom processor](https://stackoverflow.com/questions/44435897/spring-get-current-user-through-injection/44437740) to be able to autowire `Principal` bean ()
+Or you can call static method `SecurityContextHolder.getContext().getAuthentication().getPrincipal()` anywhere im your code.
 
 ###### Http security
 Spring's `DelegatingFilterProxy` provides the link between `web.xml` (below) and the application context
@@ -8008,6 +8012,88 @@ interface PersonMapper {
 mapping is completed => Person(name=Mr. mike, age=30)
 Person(name=Mr. mike, age=31)
 ```
+
+###### AttributeConverter
+If we want to store some complex type like enum or json in db column we have to notify JPA how are we going to convert these types into db string and back.
+Traditional way is to implement `AttributeConverter` interface, and write your rules there.
+Yet for enum, there is a standard converter that do the job. Use `@Enumerated(EnumType.STRING)` annotation, and it will take `name()` value of enum.
+So even if you have customized enum, it would still work. One caution don't use `EnumType.ORDINAL`, there is risk that you modify enum, and order is broken
+then you don't have backward compatibility.
+Checkout below code with custom converter & built-in solution for enum conversions
+```java
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Data;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import javax.persistence.AttributeConverter;
+import javax.persistence.Convert;
+import javax.persistence.Converter;
+import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+@Data
+@Entity
+@Table(name = "users")
+@EntityListeners(AuditingEntityListener.class)
+class UserEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Convert(converter = DaysConverter.class)
+    private DAYS d1;
+    @Enumerated(EnumType.STRING)
+    private DAYS d2;
+}
+
+@Converter
+class DaysConverter implements AttributeConverter<DAYS, String> {
+    @Override
+    public String convertToDatabaseColumn(DAYS e) {
+        return e.toString();
+    }
+
+    @Override
+    public DAYS convertToEntityAttribute(String str) {
+        return DAYS.fromValue(str);
+    }
+}
+
+enum DAYS {
+    N("monday"),
+    T("tuesday");
+
+    private String value;
+
+    DAYS(String value) {
+        this.value = value;
+    }
+
+    @Override
+    public String toString() {
+        return value;
+    }
+
+    @JsonValue
+    public String getValue() {
+        return value;
+    }
+
+    @JsonCreator
+    public static DAYS fromValue(String str) {
+        for (var e: DAYS.values()) {
+            if (e.value.equals(str)) {
+                return e;
+            }
+        }
+        throw new IllegalArgumentException("Unknown DAYS=" + str);
+    }
+}
+``` 
 
 #### Spring Testing
 When you add spring test starter (`spring-boot-starter-test`), `junit` is added by default. `TestNG` is not supported. If you want to use `TestNG` instead of `junit` you have to manually add it to `pom.xml`.
