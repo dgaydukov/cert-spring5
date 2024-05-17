@@ -9774,21 +9774,23 @@ ElasticSearch - require json output. For this you can use (logstash integration 
     <version>6.4</version>
 </dependency>
 ```
-Add this `logback.xml` file:
+Add this `logback.xml` file. Couple of notes here:
+* because this files loads before app configs, to get app name from config props `spring.application.name` we need to explicitly load it
+* root leve is info, because if you say error, no logs would be shown, only those that produce `error` would be shown
 ```
+<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <springProfile name="default">
-        <include resource="org/springframework/boot/logging/logback/base.xml"/>
-    </springProfile>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <springProperty scope="context" name="appName" source="spring.application.name"/>
 
-    <springProfile name="prod">
-        <appender name="jsonConsoleAppender" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
-        </appender>
-        <root level="INFO">
-            <appender-ref ref="jsonConsoleAppender"/>
-        </root>
-    </springProfile>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [${appName:-}] [%thread]  %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <root level="info">
+        <appender-ref ref="STDOUT" />
+    </root>
 </configuration>
 ```
 Above we have 2 spring profiles one for local with standard output, second for prod with json output.
