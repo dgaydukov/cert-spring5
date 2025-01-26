@@ -9905,12 +9905,14 @@ class Person{
 ```
 As you see this solution works best for both local development and production app sending logs to ELK (elasticsearch, logstash, kibana) stack.
 Notice that we can also log complex objects, and they are created as objects in json.
+
 There are 5 types of logging:
 * java.util.logging
 * log4j
 * logback
 * apache common logging
 * slf4j
+
 More detailed overview:
 * `java.util.logging` - standard package for logging from jdk
 Add config file `jul.logging` 
