@@ -11694,6 +11694,8 @@ customUser => User(super=Person(name=John, age=30), email=jonh.doe@gmail.com)
 ```
 
 ###### Lombok Logging Annotations
+Before we start digging, I'll just summarize conclusion here. If you think what annotation to use with lombok for logging `@Log4j2 or @Slf4j`. The answer is simple. Always use `@Slf4j`. Because `@Log4j2` insert code to use `log4j` logger, and if you want later to change it to `logbqck` you will have to manually change the source code of java files and recompile the app. But if you use `@Slf4j` - then you can use any concrete implementation you want. You can also use `log4j`, but if you want to change it later to `logback` you have to only change dependency in your `pom.xml` file, and you don't need to change any java code. That's why this annotation is always preferrable to use
+
 There are 2 main annotations in Lombok:
 * `@Log4j2` - if your main logger is `log4j`.
 If you try to delombok (go to `Refactor => Delombok`) this annotation you will that, it add this java code
@@ -11805,7 +11807,7 @@ logger => class org.slf4j.simple.SimpleLogger
 [main] WARN com.java.app.App - warn
 [main] INFO com.java.app.App - info
 ```
-So the conclusion is simple, `log4j` is concrete emp
+So the conclusion is simple, `log4j` is concrete implementation, where `SLF4J` is rather an interface with which you can use any concrete logging framework like `logbak/log4j/slf4j` and so on.
 
 ###### Aws Sqs and no_redrive deletion policy
 Although you can use aws java sdk to work with sqs and create message request send it, then receive and delete message manually.
