@@ -11743,7 +11743,37 @@ If we Delombok it we can see that it inserted following code
 ```java
 private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(App.class);
 ```
-Here you see we use different logger.
+Here you see we use different logger. Compare to `log4j` we don't use implementation but rather a standard. And underneath we can use any logging stack. For example, we can use `logback`
+<br>
+To use `logback` with `slf4j` add this dependency to `pom.xml`
+```xml
+<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+    <version>1.5.16</version>
+    <scope>test</scope>
+</dependency>
+```
+Don't confuse it with `logback-core` which provides pure `logback`, where this dependency provide `logback with slf4j` implementation. If you read the description of this dependency it says `Implementation of the SLF4J API for Logback, a reliable, generic, fast and flexible logging framework`
+```java
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class App {
+  public static void main(String[] args) {
+    System.out.println("logger => " + log.getClass());
+    log.error("error");
+    log.warn("warn");
+    log.info("info");
+  }
+}
+```
+```
+logger => class ch.qos.logback.classic.Logger
+20:13:05.738 [main] ERROR com.java.app.App -- error
+20:13:05.739 [main] WARN com.java.app.App -- warn
+20:13:05.739 [main] INFO com.java.app.App -- info
+```
 
 ###### Aws Sqs and no_redrive deletion policy
 Although you can use aws java sdk to work with sqs and create message request send it, then receive and delete message manually.
