@@ -11743,7 +11743,7 @@ If we Delombok it we can see that it inserted following code
 ```java
 private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(App.class);
 ```
-Here you see we use different logger. Compare to `log4j` we don't use implementation but rather a standard. And underneath we can use any logging stack. For example, we can use `logback`
+Here you see we use different logger. Compare to `log4j` we don't use implementation but rather a standard. And underneath we can use any logging stack. For example, we can use `logback` or `lot4j` or any other logging framework.
 <br>
 To use `logback` with `slf4j` add this dependency to `pom.xml`
 ```xml
@@ -11768,12 +11768,44 @@ public class App {
   }
 }
 ```
+The output is below
 ```
 logger => class ch.qos.logback.classic.Logger
 20:13:05.738 [main] ERROR com.java.app.App -- error
 20:13:05.739 [main] WARN com.java.app.App -- warn
 20:13:05.739 [main] INFO com.java.app.App -- info
 ```
+
+To use `log4j` with SLF4J you have to add this dependency to your `pom.xml`
+```xml
+  <dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-slf4j-impl</artifactId>
+    <version>2.24.3</version>
+  </dependency>
+```
+Now if you run the same code as above (from example with logbak) you will get this output
+```
+logger => class org.apache.logging.slf4j.Log4jLogger
+20:15:47.474 [main] ERROR com.java.app.App - error
+```
+
+You can also use default SLF4J implementation, add this dependency to your `pom.xml`
+```xml
+  <dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-simple</artifactId>
+    <version>2.0.16</version>
+  </dependency>
+```
+Now if you again run the same code as with first example with logback, you will get this output
+```
+logger => class org.slf4j.simple.SimpleLogger
+[main] ERROR com.java.app.App - error
+[main] WARN com.java.app.App - warn
+[main] INFO com.java.app.App - info
+```
+So the conclusion is simple, `log4j` is concrete emp
 
 ###### Aws Sqs and no_redrive deletion policy
 Although you can use aws java sdk to work with sqs and create message request send it, then receive and delete message manually.
