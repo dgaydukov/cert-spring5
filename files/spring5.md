@@ -11808,6 +11808,7 @@ logger => class org.slf4j.simple.SimpleLogger
 [main] INFO com.java.app.App - info
 ```
 So the conclusion is simple, `log4j` is concrete implementation, where `SLF4J` is rather an interface with which you can use any concrete logging framework like `logbak/log4j/slf4j` and so on.
+The confusion starts with `slf4j` implementation. So you see, we can say that `SLF4J` is both the interface and concrete implementation of itself. But other logging systems like `logbak` or `log4j` also implement `SLF4J` interface. But if we are speaking about lombok annotation then `@Slf4j` is always preferable compare to others like `@Log4j/@Log4j2`.
 
 ###### Aws Sqs and no_redrive deletion policy
 Although you can use aws java sdk to work with sqs and create message request send it, then receive and delete message manually.
