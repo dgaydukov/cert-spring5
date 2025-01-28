@@ -101,15 +101,13 @@
 * 9.25 [3 ways to send email using aws with JavaMailSender/AmazonSimpleEmailService/AmazonSNS](#3-ways-to-send-email-using-aws-with-javamailsenderamazonsimpleemailserviceamazonsns)
 * 9.26 [RestTemplate/WebClient vs HttpClient/OkHttpClient vs Retrofit2/Feign](#resttemplatewebclient-vs-httpclientokhttpclient-vs-retrofit2feign)
 * 9.27 [AWS Access with 2FA](#aws-access-with-2fa)
-* 9.28 [Lombok ToString parent class](#lombok-tostring-parent-class)
+* 9.28 [Lombok](#lombok)
+  * 9.28.1 [Lombok ToString parent class](#lombok-tostring-parent-class)
+  * 9.28.2 [Lombok Logging Annotations](#lombok-logging-annotations)
 * 9.29 [Aws Sqs and no_redrive deletion policy](#aws-sqs-and-no_redrive-deletion-policy)
 * 9.30 [ChronicleMap vs ConcurrentMap](#chroniclemap-vs-concurrentmap)
 * 9.31 [Cognito Auth Flow](#cognito-auth-flow)
 * 9.32 [Jackson Serialization](#jackson-serialization)
-
-
-
-
 
 
 
@@ -11636,6 +11634,8 @@ ERR => Access Denied (Service: Amazon S3; Status Code: 403; Error Code: AccessDe
 buckets => [my-lifecycle-s3-bucket-1, my-object-lock-s3-bucket-1, my-test-s3-bucket-1, www.aumingo.com]
 ```
 
+###### Lombok
+
 ###### Lombok ToString parent class
 If you want custom toString there are 2 options:
 * for parent class only - add `@ToString(callSuper = true)`
@@ -11692,6 +11692,48 @@ class CustomUser extends Person{
 user => User(super=Person(name=John, age=30), email=jonh.doe@gmail.com)
 customUser => User(super=Person(name=John, age=30), email=jonh.doe@gmail.com)
 ```
+
+###### Lombok Logging Annotations
+There are 2 main annotations in Lombok:
+* `@Log4j2` - if your main logger is `log4j`.
+If you try to delombok (go to `Refactor => Delombok`) this annotation you will that, it add this java code
+```java
+private static final org.apache.logging.log4j.Logger log = org.apache.logging.log4j.LogManager.getLogger(App.class);
+```
+As you can see, the magic behind this annotation, it just adds `org.apache.logging.log4j.Logger` 
+to your class. Then you can use `log` env vars inside your class code.
+By default, in spring boot, `log4j` dependency would already be included, but if you have project from scratch you have to add this dependency to your `pom.xml` file
+```xml
+ <dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-core</artifactId>
+    <version>2.24.3</version>
+  </dependency>
+```
+Then you can add this code to test it out
+```java
+import lombok.extern.log4j.Log4j2;
+
+@Log4j2
+public class App {
+  public static void main(String[] args) {
+    System.out.println("logger => " + log.getClass());
+    log.error("error");
+    log.warn("warn");
+    log.info("info");
+  }
+}
+```
+Below is the output
+```
+logger => class org.apache.logging.log4j.core.Logger
+16:14:16.349 [main] ERROR com.java.app.App - error
+```
+A few comments regarding the output:
+* you can see the implemented class is `org.apache.logging.log4j.core.Logger`, this is the default logger for `log4j`
+* by default only `ERROR` level is enabled, since we don't have any configuration, only errors are sent to console
+<br/>
+* `@Log4j2`
 
 ###### Aws Sqs and no_redrive deletion policy
 Although you can use aws java sdk to work with sqs and create message request send it, then receive and delete message manually.
