@@ -11733,7 +11733,17 @@ A few comments regarding the output:
 * you can see the implemented class is `org.apache.logging.log4j.core.Logger`, this is the default logger for `log4j`
 * by default only `ERROR` level is enabled, since we don't have any configuration, only errors are sent to console
 <br/>
-* `@Log4j2`
+* `@@Log4j` - old version of `log4j` package. If we try to delombok this annotation we would see included text
+```java
+private static final org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(App.class);
+```
+Look into different class of `Logger` as compare to `@Log4j2`
+* `@Slf4j` - another logging annotation, very popular 
+If we Delombok it we can see that it inserted following code
+```java
+private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(App.class);
+```
+Here you see we use different logger.
 
 ###### Aws Sqs and no_redrive deletion policy
 Although you can use aws java sdk to work with sqs and create message request send it, then receive and delete message manually.
