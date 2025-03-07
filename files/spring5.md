@@ -11745,13 +11745,12 @@ private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(Ap
 ```
 Here you see we use different logger. Compare to `log4j` we don't use implementation but rather a standard. And underneath we can use any logging framework. For example, we can use `logback` or `lot4j` or any other logging framework.
 <br>
-To use `logback` with `slf4j` add this dependency to `pom.xml`
+To use `logback` with `slf4j` add this dependency to `pom.xml` and add `logback.xml` file under `resources` folder.
 ```xml
 <dependency>
     <groupId>ch.qos.logback</groupId>
     <artifactId>logback-classic</artifactId>
     <version>1.5.16</version>
-    <scope>test</scope>
 </dependency>
 ```
 Don't confuse it with `logback-core` which provides pure `logback`, where this dependency provide `logback with slf4j` implementation. If you read the description of this dependency it says `Implementation of the SLF4J API for Logback, a reliable, generic, fast and flexible logging framework`
