@@ -11694,16 +11694,15 @@ customUser => User(super=Person(name=John, age=30), email=jonh.doe@gmail.com)
 ```
 
 ###### Lombok Logging Annotations
-Before we start digging, I'll just summarize conclusion here. If you think what annotation to use with lombok for logging `@Log4j2 or @Slf4j`. The answer is simple. Always use `@Slf4j`. Because `@Log4j2` insert code to use `log4j` logger, and if you want later to change it to `logbqck` you will have to manually change the source code of java files and recompile the app. But if you use `@Slf4j` - then you can use any concrete implementation you want. You can also use `log4j`, but if you want to change it later to `logback` you have to only change dependency in your `pom.xml` file, and you don't need to change any java code. That's why this annotation is always preferrable to use
+Before we start digging, I'll just summarize conclusion here. If you think what annotation to use with lombok for logging `@Log4j2 or @Slf4j`. The answer is simple. Always use `@Slf4j`. Because `@Log4j2` insert code to use `log4j` logger, and if you want later to change it to `logbqck` you will have to manually change the source code of java files and recompile the app. But if you use `@Slf4j` - then you can use any concrete implementation you want. You can also use `log4j`, but if you want to change it later to `logback` you have to only change dependency in your `pom.xml` file, and you don't need to change any java code. That's why this annotation is always preferable to use
 
 There are 2 main annotations in Lombok:
-* `@Log4j2` - if your main logger is `log4j`.
-If you try to delombok (go to `Refactor => Delombok`) this annotation you will that, it add this java code
+* `@Log4j2` (Logging for Java 2) - if your main logger is `log4j`.
+If you try to delombok (go to `Refactor => Delombok`) this annotation you will that, it adds this java code
 ```java
 private static final org.apache.logging.log4j.Logger log = org.apache.logging.log4j.LogManager.getLogger(App.class);
 ```
-As you can see, the magic behind this annotation, it just adds `org.apache.logging.log4j.Logger` 
-to your class. Then you can use `log` env vars inside your class code.
+As you can see, the magic behind this annotation, it just adds `org.apache.logging.log4j.Logger` to your class. Then you can use `log` env vars inside your class code.
 By default, in spring boot, `log4j` dependency would already be included, but if you have project from scratch you have to add this dependency to your `pom.xml` file
 ```xml
  <dependency>
@@ -11740,12 +11739,11 @@ A few comments regarding the output:
 private static final org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(App.class);
 ```
 Look into different class of `Logger` as compare to `@Log4j2`
-* `@Slf4j` - another logging annotation, very popular 
-If we Delombok it we can see that it inserted following code
+* `@Slf4j` (Simple Logging Facade for Java) - another logging annotation, very popular. If we delombok it we can see that it inserted following code
 ```java
 private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(App.class);
 ```
-Here you see we use different logger. Compare to `log4j` we don't use implementation but rather a standard. And underneath we can use any logging stack. For example, we can use `logback` or `lot4j` or any other logging framework.
+Here you see we use different logger. Compare to `log4j` we don't use implementation but rather a standard. And underneath we can use any logging framework. For example, we can use `logback` or `lot4j` or any other logging framework.
 <br>
 To use `logback` with `slf4j` add this dependency to `pom.xml`
 ```xml
@@ -11786,7 +11784,7 @@ To use `log4j` with SLF4J you have to add this dependency to your `pom.xml`
     <version>2.24.3</version>
   </dependency>
 ```
-Now if you run the same code as above (from example with logbak) you will get this output
+Now if you run the same code as above (from example with `logback-classic`) you will get this output
 ```
 logger => class org.apache.logging.slf4j.Log4jLogger
 20:15:47.474 [main] ERROR com.java.app.App - error
