@@ -108,6 +108,7 @@
 * 9.30 [ChronicleMap vs ConcurrentMap](#chroniclemap-vs-concurrentmap)
 * 9.31 [Cognito Auth Flow](#cognito-auth-flow)
 * 9.32 [Jackson Serialization](#jackson-serialization)
+* 9.33 [Netty, Jetty and Tomcat](#netty-jetty-and-tomcat)
 
 
 
@@ -12226,4 +12227,41 @@ class Booking{
 user => {"id":0,"bookings":[{"id":1}]}
 booking => {"id":1}
 User(id=1, bookings=null)
+```
+
+###### Netty, Jetty and Tomcat
+Don't confuse:
+* netty
+* jetty
+* tomcat
+By default when you add `spring-boot-starter-web` dependency, Tomcat automatically added as embedded web server. You can view it in logs
+```
+2025-04-14T12:36:30.525+03:00  INFO 7768 --- [http] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-04-14T12:36:30.531+03:00  INFO 7768 --- [http] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-04-14T12:36:30.531+03:00  INFO 7768 --- [http] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
+2025-04-14T12:36:30.549+03:00  INFO 7768 --- [http] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+```
+You can change Tomcat for Jetty, add this to your pom.xml (exclude Tomcat and add Jetty dependency)
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-jetty</artifactId>
+</dependency>
+```
+Once you add this you will see startup logs with jetty
+```
+2025-04-14T12:49:07.386+03:00  INFO 8179 --- [http] [           main] o.s.b.w.e.j.JettyServletWebServerFactory : Server initialized with port: 8080
+2025-04-14T12:49:07.388+03:00  INFO 8179 --- [http] [           main] org.eclipse.jetty.server.Server          : jetty-12.0.19; built: 2025-04-01T13:28:40.005Z; git: 23436cd577b4238238eb192683dfc2b1476c6b87; jvm 21.0.5
+2025-04-14T12:49:07.690+03:00  INFO 8179 --- [http] [           main] o.e.jetty.server.AbstractConnector       : Started ServerConnector@5eed6dfb{HTTP/1.1, (http/1.1)}{0.0.0.0:8080}
+2025-04-14T12:49:07.691+03:00  INFO 8179 --- [http] [           main] o.s.b.web.embedded.jetty.JettyWebServer  : Jetty started on port 8080 (http/1.1) with context path '/'
 ```
