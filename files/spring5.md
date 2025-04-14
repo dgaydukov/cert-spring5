@@ -12231,9 +12231,9 @@ User(id=1, bookings=null)
 
 ###### Netty, Jetty and Tomcat
 Don't confuse:
-* netty
-* jetty
-* tomcat
+* netty - a framework to write TCP and UDP applications (asynchronous event-driven network application framework. You can write your own servlet container or http client app with help of the Netty framework)
+* jetty - framework to write HTTP applications (lightweight servlet container, easy to embed within a java application)
+* tomcat - servlet app just like jetty. There is also `undertow`, but they all 3 quite similar, and usually you don't need to change default Tomcat, unless you really have urgency to do so.
 By default when you add `spring-boot-starter-web` dependency, Tomcat automatically added as embedded web server. You can view it in logs
 ```
 2025-04-14T12:36:30.525+03:00  INFO 7768 --- [http] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
